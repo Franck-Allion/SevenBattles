@@ -1,0 +1,17 @@
+{
+  "name": "SevenBattles.Tests",
+  "rootNamespace": "SevenBattles.Tests",
+  "references": [
+    "SevenBattles.Core",
+    "SevenBattles.Battle"
+  ],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "noEngineReferences": false,
+  "optionalUnityReferences": ["TestAssemblies"]
+}

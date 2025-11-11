@@ -1,0 +1,92 @@
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Rr]elease/
+[Ll]fs
+[Aa]ssets/Lana Studio
+[Aa]ssets/Plugins/AllIn1SpriteShader
+[Aa]ssets/JMO Assets
+[Aa]ssets/DamageNumbersPro/
+[Aa]ssets/Simple Tooltip/
+[Aa]ssets/Hovl Studio/
+[Aa]ssets/SuperScrollView/
+[Aa]ssets/Plugins
+[Aa]ssets/GUIPackCartoon
+[Aa]ssets/HeroEditor4D
+[Aa]ssets/Tank & Healer Studio
+[Aa]ssets/Simple Tooltip
+[Aa]ssets/ModernWater2D
+[Aa]ssets/Layer Lab
+
+# Never ignore Asset meta data
+!/[Aa]ssets/**/*.meta
+!/[Ww]iki/**
+![Aa]ssets/ModernWater2D/Resources/Shaders/reflections/Reflection.shadergraph
+![Aa]ssets/ModernWater2D/Resources/Shaders/water/waterg.shadergraph
+
+# Visual Studio / MonoDevelop generated
+.vs/
+.vscode/
+.idea/
+.consulo/
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.dll
+*.dll.meta
+*.log
+
+# Unity3D generated meta files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Unity3D generated file on crash reports
+sysinfo.txt
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Crashlytics generated file
+crashlytics-build.properties
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Unity Package Manager
+/[Pp]ackages/packages-lock.json
+
+# ProBuilder generated
+/[Aa]ssets/ProBuilder Data/
+/[Aa]ssets/ProBuilder Data.meta
+
+# Generated Android Files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Temporary auto-generated Android Assets
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*

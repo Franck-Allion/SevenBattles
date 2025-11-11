@@ -1,0 +1,16 @@
+{
+  "name": "SevenBattles.UI",
+  "rootNamespace": "SevenBattles.UI",
+  "references": [
+    "SevenBattles.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "noEngineReferences": false
+}
+

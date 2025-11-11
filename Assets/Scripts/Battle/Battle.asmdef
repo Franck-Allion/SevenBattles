@@ -1,0 +1,15 @@
+{
+  "name": "SevenBattles.Battle",
+  "rootNamespace": "SevenBattles.Battle",
+  "references": [
+    "SevenBattles.Core"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "noEngineReferences": false
+}
