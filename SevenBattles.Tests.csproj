@@ -63,7 +63,7 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridQuadTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\StartBattleControllerTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\StartSquadControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
   </ItemGroup>
   <ItemGroup>

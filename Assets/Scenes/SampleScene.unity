@@ -285,6 +285,7 @@ MonoBehaviour:
   _highlightSortingLayer: Default
   _highlightSortingOrder: 10
   _autoHoverUpdate: 1
+  _logTileClicks: 1
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0
@@ -698,12 +699,18 @@ MonoBehaviour:
   m_GameObject: {fileID: 2121761484}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f749be9d06cd73d45b112230ff06ee40, type: 3}
+  m_Script: {fileID: 11500000, guid: 0094944aa4e8688499c7a115af98568e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _board: {fileID: 0}
-  _heroPrefab: {fileID: 3803635452434026846, guid: 049a7b079b1db0542843e3981e2774eb, type: 3}
-  _spawnTile: {x: 1, y: 1}
+  _board: {fileID: 461991018}
+  _wizardPrefabs:
+  - {fileID: 3803635452434026846, guid: 049a7b079b1db0542843e3981e2774eb, type: 3}
+  - {fileID: 3803635452434026846, guid: 049a7b079b1db0542843e3981e2774eb, type: 3}
+  - {fileID: 3803635452434026846, guid: 049a7b079b1db0542843e3981e2774eb, type: 3}
+  _tileXs: 
+  _rowY: 0
+  _sortingLayer: Characters
+  _baseSortingOrder: 0
   _autoStartOnPlay: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

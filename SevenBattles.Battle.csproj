@@ -62,9 +62,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Battle\Board\FullscreenSpriteFitter.cs" />
-    <Compile Include="Assets\Scripts\Battle\Start\BattleStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiTileHighlightGraphic.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldBattleStartController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Start\WorldSquadStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\WorldPerspectiveBoard.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiPerspectiveBoard.cs" />
   </ItemGroup>
