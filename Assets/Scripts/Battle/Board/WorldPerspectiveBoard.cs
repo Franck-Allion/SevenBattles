@@ -1,5 +1,6 @@
 using SevenBattles.Core.Math;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace SevenBattles.Battle.Board
 {
@@ -31,6 +32,7 @@ namespace SevenBattles.Battle.Board
         private Camera _cam;
         private Mesh _highlightMesh;
         private MeshRenderer _highlightMr;
+        private Color _highlightColor = Color.white;
 
         private void Awake()
         {
@@ -73,17 +75,66 @@ namespace SevenBattles.Battle.Board
             UpdateHighlightMesh(tl, tr, br, bl);
         }
 
+        public void SetHighlightVisible(bool visible)
+        {
+            if (_highlightMr == null) EnsureHighlightObjects();
+            if (_highlightMr != null && _highlightMr.gameObject.activeSelf != visible)
+            {
+                _highlightMr.gameObject.SetActive(visible);
+            }
+        }
+
+        public void SetHighlightColor(Color color)
+        {
+            _highlightColor = color;
+            if (_highlightMr != null)
+            {
+                var mat = _highlightMr.sharedMaterial;
+                if (mat != null && mat.HasProperty("_Color"))
+                {
+                    mat.color = _highlightColor;
+                }
+            }
+        }
+
         public void PlaceHero(Transform hero, int x, int y, string sortingLayer = "Characters", int sortingOrder = 0)
         {
             if (hero == null) return;
             hero.position = TileCenterWorld(x, y);
 
-            var sr = hero.GetComponentInChildren<SpriteRenderer>();
-            if (sr != null)
+            // Prefer SortingGroup if present
+            var group = hero.GetComponentInChildren<SortingGroup>(true);
+            if (group != null)
             {
-                sr.sortingLayerName = sortingLayer;
-                sr.sortingOrder = sortingOrder;
+                group.sortingLayerName = sortingLayer;
+                group.sortingOrder = sortingOrder;
             }
+            else
+            {
+                var renderers = hero.GetComponentsInChildren<SpriteRenderer>(true);
+                for (int i = 0; i < renderers.Length; i++)
+                {
+                    renderers[i].sortingLayerName = sortingLayer;
+                    renderers[i].sortingOrder = sortingOrder;
+                }
+            }
+        }
+
+        // Computes a stable sorting order so that tiles closer to the bottom/front of the board
+        // render above tiles further back. Increase rowStride to leave gaps for intra-row ordering.
+        public int ComputeSortingOrder(int x, int y, int @base = 0, int rowStride = 10, int intraRowOffset = 0)
+        {
+            // Higher order should be more in front. Assume y=0 is front row.
+            // So invert y relative to total rows to push back rows behind.
+            int rows = Rows;
+            if (rows <= 0) rows = 1;
+            int backToFront = (rows - 1 - y) * (-rowStride); // negative so y=0 gets highest when added to base
+            // Alternatively: compute frontToBack then invert sign to maintain increasing order on front rows.
+            // For clarity, compute directly:
+            int frontBias = (rows - 1 - y) * 0; // unused but left for readability
+            // We want: y=0 -> largest addend; y=rows-1 -> smallest addend.
+            int addend = (rows - 1 - y) * rowStride;
+            return @base + addend + intraRowOffset;
         }
 
         private void EnsureHighlightObjects()
@@ -150,5 +201,9 @@ namespace SevenBattles.Battle.Board
             _highlightMesh.triangles = t;
             _highlightMesh.RecalculateBounds();
         }
+
+        // Expose grid size for placement logic consumers.
+        public int Columns => _grid.IsValid ? _grid.Columns : 0;
+        public int Rows => _grid.IsValid ? _grid.Rows : 0;
     }
 }

@@ -22,6 +22,8 @@
 [Aa]ssets/Simple Tooltip
 [Aa]ssets/ModernWater2D
 [Aa]ssets/Layer Lab
+[Aa]ssets/RVFX
+[Aa]ssets/TextMesh Pro
 
 # Never ignore Asset meta data
 !/[Aa]ssets/**/*.meta

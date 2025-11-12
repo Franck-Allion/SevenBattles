@@ -1,5 +1,7 @@
 using UnityEngine;
 using SevenBattles.Battle.Board;
+using SevenBattles.Core.Players;
+using SevenBattles.Core.Wizards;
 
 namespace SevenBattles.Battle.Start
 {
@@ -11,8 +13,10 @@ namespace SevenBattles.Battle.Start
         [SerializeField] private WorldPerspectiveBoard _board;
 
         [Header("Squad Prefabs")]
-        [Tooltip("Wizards to spawn. Expected size: 3.")]
+        [Tooltip("Optional: legacy prefabs list. If PlayerSquad is assigned, it is used instead.")]
         [SerializeField] private GameObject[] _wizardPrefabs = new GameObject[3];
+        [Tooltip("Preferred: data-driven squad.")]
+        [SerializeField] private PlayerSquad _playerSquad;
 
         [Header("Placement")]
         [Tooltip("Tile X indices for each wizard on row 0. If empty or shorter than prefabs, defaults to 0,1,2.")]
@@ -45,25 +49,40 @@ namespace SevenBattles.Battle.Start
                 return;
             }
 
-            if (_wizardPrefabs == null || _wizardPrefabs.Length == 0)
+            var defs = _playerSquad != null ? _playerSquad.Wizards : null;
+            if ((defs == null || defs.Length == 0) && (_wizardPrefabs == null || _wizardPrefabs.Length == 0))
             {
                 Debug.LogWarning("WorldSquadStartController: No wizard prefabs configured.");
                 return;
             }
 
-            for (int i = 0; i < _wizardPrefabs.Length; i++)
+            if (defs != null && defs.Length > 0)
             {
-                var prefab = _wizardPrefabs[i];
-                if (prefab == null) continue;
-
-                int tileX = GetTileXForIndex(i);
-                var go = Object.Instantiate(prefab);
-                if (!Mathf.Approximately(_scaleMultiplier, 1f))
+                for (int i = 0; i < defs.Length; i++)
                 {
-                    go.transform.localScale = go.transform.localScale * _scaleMultiplier;
+                    var def = defs[i];
+                    if (def == null || def.Prefab == null) continue;
+                    int tileX = GetTileXForIndex(i);
+                    var go = Object.Instantiate(def.Prefab);
+                    SevenBattles.Battle.Wizards.WizardVisualUtil.ApplyScale(go, _scaleMultiplier);
+                    int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);
+                    SevenBattles.Battle.Wizards.WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
+                    _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
                 }
-                InitializeHeroEditor4D(go, desired: DirectionFacing.Up, sortingOrder: _baseSortingOrder + i);
-                _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, _baseSortingOrder + i);
+            }
+            else
+            {
+                for (int i = 0; i < _wizardPrefabs.Length; i++)
+                {
+                    var prefab = _wizardPrefabs[i];
+                    if (prefab == null) continue;
+                    int tileX = GetTileXForIndex(i);
+                    var go = Object.Instantiate(prefab);
+                    SevenBattles.Battle.Wizards.WizardVisualUtil.ApplyScale(go, _scaleMultiplier);
+                    int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);
+                    SevenBattles.Battle.Wizards.WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
+                    _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
+                }
             }
         }
 
@@ -76,52 +95,5 @@ namespace SevenBattles.Battle.Start
         }
 
         private enum DirectionFacing { Front, Back, Left, Right, Up = Back, Down = Front }
-
-        // Uses HeroEditor4D Character4D.SetDirection if present (via reflection).
-        // If not available, logs a debug message and does not try to toggle directional children.
-        private void InitializeHeroEditor4D(GameObject instance, DirectionFacing desired, int sortingOrder)
-        {
-            if (instance == null) return;
-
-            // Try to find the Character4D component and call SetDirection(Vector2)
-            bool setByCharacter4D = false;
-            try
-            {
-                var components = instance.GetComponents<MonoBehaviour>();
-                for (int i = 0; i < components.Length; i++)
-                {
-                    var comp = components[i];
-                    if (comp == null) continue;
-                    var type = comp.GetType();
-                    if (type.Name != "Character4D" && type.FullName != "Assets.HeroEditor4D.Common.Scripts.CharacterScripts.Character4D") continue;
-
-                    var method = type.GetMethod("SetDirection", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, new System.Type[] { typeof(Vector2) }, null);
-                    if (method != null)
-                    {
-                        // In our other project, Vector2.down shows the back-facing view (towards top of screen)
-                        method.Invoke(comp, new object[] { Vector2.up });
-                        setByCharacter4D = true;
-                        break;
-                    }
-                }
-            }
-            catch
-            {
-                // Intentionally swallow and proceed to debug log below
-            }
-
-            if (!setByCharacter4D)
-            {
-                Debug.Log("WorldSquadStartController: Character4D.SetDirection(Vector2) not found. Prefab shows its default visuals.");
-            }
-
-            var renderers = instance.GetComponentsInChildren<SpriteRenderer>(true);
-            for (int r = 0; r < renderers.Length; r++)
-            {
-                var sr = renderers[r];
-                sr.sortingLayerName = _sortingLayer;
-                sr.sortingOrder = sortingOrder;
-            }
-        }
     }
 }

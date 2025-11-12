@@ -63,10 +63,14 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\Battle\Board\FullscreenSpriteFitter.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiTileHighlightGraphic.cs" />
+    <Compile Include="Assets\Scripts\Battle\Wizards\WizardStats.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldBattleStartController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Start\SquadPlacementModel.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldSquadStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\WorldPerspectiveBoard.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiPerspectiveBoard.cs" />
+    <Compile Include="Assets\Scripts\Battle\Start\WorldSquadPlacementController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Wizards\WizardVisualUtil.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\Battle\Battle.asmdef" />

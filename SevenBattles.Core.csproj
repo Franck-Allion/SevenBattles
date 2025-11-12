@@ -61,8 +61,12 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.39f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Core\Players\PlayerSquad.cs" />
+    <Compile Include="Assets\Scripts\Core\Wizards\WizardStatsData.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGrid.cs" />
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
+    <Compile Include="Assets\Scripts\Core\Wizards\WizardDefinition.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\Core\Core.asmdef" />
