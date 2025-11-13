@@ -212,7 +212,12 @@ namespace SevenBattles.Battle.Start
 
         public bool TryPlaceAt(int index, Vector2Int tile)
         {
-            if (_locked || _model == null) return false;
+            if (_locked) return false;
+            if (_model == null)
+            {
+                EnsureModel();
+                if (_model == null) return false;
+            }
             if (index < 0 || index >= SquadSize) return false;
             if (!_model.CanPlace(tile)) return false;
             PlaceWizard(index, tile);

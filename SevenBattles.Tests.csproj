@@ -67,6 +67,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\WizardDefinitionControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\UI\SquadPlacementHUDTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\Tests\Tests.asmdef" />
@@ -1056,12 +1057,16 @@
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.39f1\Editor\Data\UnityReferenceAssemblies\unity-4.8-api\Facades\System.Xml.XPath.XDocument.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEditor.UI">
-      <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>Library\ScriptAssemblies\Unity.TextMeshPro.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>Library\ScriptAssemblies\UnityEngine.UI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEditor.UI">
+      <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>
@@ -1073,6 +1078,10 @@
     <ProjectReference Include="SevenBattles.Battle.csproj">
       <Project>{36964088-0D0C-62F4-CC2A-05A0E1F5616C}</Project>
       <Name>SevenBattles.Battle</Name>
+    </ProjectReference>
+    <ProjectReference Include="SevenBattles.UI.csproj">
+      <Project>{1A86DB10-03A8-55C0-F467-744673C46B2C}</Project>
+      <Name>SevenBattles.UI</Name>
     </ProjectReference>
     <ProjectReference Include="UnityEngine.TestRunner.csproj">
       <Project>{D8E363A2-283E-FCD4-F099-A3B17D6F5064}</Project>

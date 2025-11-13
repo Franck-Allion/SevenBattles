@@ -3,7 +3,10 @@
   "rootNamespace": "SevenBattles.Tests",
   "references": [
     "SevenBattles.Core",
-    "SevenBattles.Battle"
+    "SevenBattles.Battle",
+    "SevenBattles.UI",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI"
   ],
   "includePlatforms": ["Editor"],
   "excludePlatforms": [],

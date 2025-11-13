@@ -128,6 +128,7 @@
     <None Include="Assets\Layer Lab\GUI Pro-FantasyRPG\ResourcesData\Fonts\JosefinSans - OFL.txt" />
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\Multiplicative\EdgeEffect_Electric_Multiplicative.shader" />
     <None Include="Assets\TextMesh Pro\Resources\LineBreaking Following Characters.txt" />
+    <None Include="Assets\Art\Fonts\Alata - OFL.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Masking.shader" />
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\Electric_Additive.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF Overlay.shader" />

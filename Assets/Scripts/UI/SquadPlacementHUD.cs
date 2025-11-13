@@ -48,6 +48,13 @@ namespace SevenBattles.UI
         private Text _startButtonText;
         [SerializeField, Tooltip("Optional explicit reference to the Button label TMP_Text component. If not set, a child TMP_Text will be auto-found at runtime.")]
         private TMP_Text _startButtonTMP;
+        [Space]
+        [SerializeField, Tooltip("Localized instructional text describing how to place units (e.g., Table: UI.Common, Entry: Placement.Instructions)")]
+        private LocalizedString _placementInstructions;
+        [SerializeField, Tooltip("Optional explicit reference to the instructions Text component.")]
+        private Text _instructionsText;
+        [SerializeField, Tooltip("Optional explicit reference to the instructions TMP_Text component.")]
+        private TMP_Text _instructionsTMP;
 
         [Header("Layout")]
         [SerializeField, Tooltip("Optional container that holds the portrait buttons. If it has a HorizontalLayoutGroup, centering is handled automatically.")]
@@ -65,6 +72,7 @@ namespace SevenBattles.UI
             _controller = _controllerBehaviour as ISquadPlacementController;
             WireButtons();
             SetupStartButtonLocalization();
+            SetupInstructionLocalization();
         }
 
         private void OnEnable()
@@ -81,6 +89,8 @@ namespace SevenBattles.UI
             UpdateStartButtonVisibility();
             // Ensure localized label is applied when shown
             RefreshStartButtonLabel();
+            RefreshInstructionLabel();
+            SetInstructionsVisible(!_controller.IsLocked);
         }
 
         private void OnDisable()
@@ -92,6 +102,7 @@ namespace SevenBattles.UI
             _controller.ReadyChanged -= HandleReady;
             _controller.PlacementLocked -= HandlePlacementLocked;
             TeardownStartButtonLocalization();
+            TeardownInstructionLocalization();
         }
 
         private void WireButtons()
@@ -160,6 +171,38 @@ namespace SevenBattles.UI
             if (_startButtonLabel != null)
             {
                 _startButtonLabel.RefreshString();
+            }
+        }
+
+        private void SetupInstructionLocalization()
+        {
+            // If explicit references are not set, do not auto-pick arbitrary children here to avoid grabbing unrelated labels.
+            if (_placementInstructions != null)
+            {
+                _placementInstructions.StringChanged += HandleInstructionChanged;
+                _placementInstructions.RefreshString();
+            }
+        }
+
+        private void TeardownInstructionLocalization()
+        {
+            if (_placementInstructions != null)
+            {
+                _placementInstructions.StringChanged -= HandleInstructionChanged;
+            }
+        }
+
+        private void HandleInstructionChanged(string value)
+        {
+            if (_instructionsTMP != null) _instructionsTMP.text = value;
+            else if (_instructionsText != null) _instructionsText.text = value;
+        }
+
+        private void RefreshInstructionLabel()
+        {
+            if (_placementInstructions != null)
+            {
+                _placementInstructions.RefreshString();
             }
         }
 
@@ -455,10 +498,20 @@ namespace SevenBattles.UI
             {
                 _startBattleButton.gameObject.SetActive(false);
             }
+            SetInstructionsVisible(false);
             var root = _hudRoot != null ? _hudRoot : this.gameObject;
             if (root != null)
             {
                 root.SetActive(false);
+            }
+        }
+
+        private void SetInstructionsVisible(bool visible)
+        {
+            var target = _instructionsTMP != null ? _instructionsTMP.gameObject : (_instructionsText != null ? _instructionsText.gameObject : null);
+            if (target != null && target.activeSelf != visible)
+            {
+                target.SetActive(visible);
             }
         }
     }
