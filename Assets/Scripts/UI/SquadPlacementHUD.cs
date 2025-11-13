@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Localization;
+using TMPro;
 using SevenBattles.Core;
 
 namespace SevenBattles.UI
@@ -39,6 +41,13 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Up to 8 portrait buttons, mapped by index to wizard prefabs.")]
         private Button[] _portraitButtons = new Button[8];
         [SerializeField] private Button _startBattleButton;
+        [Header("Localization")]
+        [SerializeField, Tooltip("Localized label for the Start Battle button (e.g., Table: UI.Common, Entry: StartBattle)")]
+        private LocalizedString _startButtonLabel;
+        [SerializeField, Tooltip("Optional explicit reference to the Button label Text component. If not set, a child Text will be auto-found at runtime.")]
+        private Text _startButtonText;
+        [SerializeField, Tooltip("Optional explicit reference to the Button label TMP_Text component. If not set, a child TMP_Text will be auto-found at runtime.")]
+        private TMP_Text _startButtonTMP;
 
         [Header("Layout")]
         [SerializeField, Tooltip("Optional container that holds the portrait buttons. If it has a HorizontalLayoutGroup, centering is handled automatically.")]
@@ -55,6 +64,7 @@ namespace SevenBattles.UI
                 Debug.LogWarning("SquadPlacementHUD: Please assign a controller (MonoBehaviour implementing ISquadPlacementController).", this);
             _controller = _controllerBehaviour as ISquadPlacementController;
             WireButtons();
+            SetupStartButtonLocalization();
         }
 
         private void OnEnable()
@@ -69,6 +79,8 @@ namespace SevenBattles.UI
             ClearAllHighlights();
             UpdatePortraitButtons(recenter: true);
             UpdateStartButtonVisibility();
+            // Ensure localized label is applied when shown
+            RefreshStartButtonLabel();
         }
 
         private void OnDisable()
@@ -79,6 +91,7 @@ namespace SevenBattles.UI
             _controller.WizardRemoved -= HandleRemoved;
             _controller.ReadyChanged -= HandleReady;
             _controller.PlacementLocked -= HandlePlacementLocked;
+            TeardownStartButtonLocalization();
         }
 
         private void WireButtons()
@@ -106,6 +119,47 @@ namespace SevenBattles.UI
             {
                 _startBattleButton.onClick.RemoveAllListeners();
                 _startBattleButton.onClick.AddListener(() => _controller?.ConfirmAndLock());
+            }
+        }
+
+        private void SetupStartButtonLocalization()
+        {
+            // Ensure we have a Text component to write into (legacy uGUI Text).
+            if (_startBattleButton != null)
+            {
+                if (_startButtonTMP == null)
+                    _startButtonTMP = _startBattleButton.GetComponentInChildren<TMP_Text>(true);
+                if (_startButtonText == null)
+                    _startButtonText = _startBattleButton.GetComponentInChildren<Text>(true);
+            }
+
+            if (_startButtonLabel != null)
+            {
+                // Subscribe to label changes (locale switches, smart string updates)
+                _startButtonLabel.StringChanged += HandleStartLabelChanged;
+                _startButtonLabel.RefreshString();
+            }
+        }
+
+        private void TeardownStartButtonLocalization()
+        {
+            if (_startButtonLabel != null)
+            {
+                _startButtonLabel.StringChanged -= HandleStartLabelChanged;
+            }
+        }
+
+        private void HandleStartLabelChanged(string value)
+        {
+            if (_startButtonTMP != null) _startButtonTMP.text = value;
+            else if (_startButtonText != null) _startButtonText.text = value;
+        }
+
+        private void RefreshStartButtonLabel()
+        {
+            if (_startButtonLabel != null)
+            {
+                _startButtonLabel.RefreshString();
             }
         }
 

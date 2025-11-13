@@ -2,7 +2,9 @@
   "name": "SevenBattles.UI",
   "rootNamespace": "SevenBattles.UI",
   "references": [
-    "SevenBattles.Core"
+    "SevenBattles.Core",
+    "Unity.Localization",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
@@ -13,4 +15,3 @@
   "defineConstraints": [],
   "noEngineReferences": false
 }
-

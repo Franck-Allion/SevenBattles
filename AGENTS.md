@@ -122,6 +122,14 @@ Assets/
 │ ├── SFX/
 │ ├── Music/
 │ ├── VFX/
+└── Localization/
+    ├── UI/
+    │   ├── Common/
+    │   └── Menu/
+    ├── Battle/
+    ├── Preparation/
+    ├── Core/
+    └── Shared/
 
 **Rules**
 - Each domain has its **own `.asmdef`** and optional `Tests.asmdef`.  
@@ -135,6 +143,29 @@ Assets/
 > 💡 **Tip:** Keep domain dependencies explicit and minimal.  
 > A clean architecture simplifies maintenance, testing, and reuse across future SevenBattles projects.
 
+## 7bis. 🌐 LOCALIZATION — String Management and Translations
+
+All player-facing text in **SevenBattle** must be **fully localized** using Unity’s **Localization System**.  
+No hardcoded strings are allowed in scripts, prefabs, or UI elements.
+
+### Localization Rules
+
+- All UI text, dialogue, tooltips, menu labels, and notifications **must use `LocalizedString`** or a reference to a **String Table entry**.  
+- Text should be organized in **String Tables** by functional domain (e.g., `UI.Common`, `Menu.Main`, `Battle.Combat`, `Preparation.Recruitment`).  
+- When creating new UI or gameplay features, always add corresponding localization keys in the correct table.  
+- Each localized key must have **at least English (en)** and **French (fr)** entries.  
+- Never concatenate raw strings at runtime (use Smart Strings with placeholders instead).  
+- The agent must mention in the plan section when **new string keys** are added.
+
+### Example
+
+```csharp
+// ✅ Correct
+[SerializeField] private LocalizedString startBattleLabel;
+
+// ❌ Incorrect
+private const string START_BATTLE_TEXT = "Start Battle";
+button.text = "Start Battle";
 
 ## 8. 🧱 OUTPUT FORMAT — Mandatory section order
 
