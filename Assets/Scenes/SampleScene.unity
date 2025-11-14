@@ -231,6 +231,7 @@ Transform:
   m_Children:
   - {fileID: 2121761485}
   - {fileID: 1825238185}
+  - {fileID: 532915270}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!224 &172837761 stripped
@@ -674,6 +675,8 @@ MonoBehaviour:
     m_LocalVariables: []
   _startButtonText: {fileID: 0}
   _startButtonTMP: {fileID: 1992448209}
+  _startButtonCanvasGroup: {fileID: 0}
+  _startButtonFadeDuration: 0.75
   _placementInstructions:
     m_TableReference:
       m_TableCollectionName: GUID:4ef3c00478f1f3e41863062f04ff4ada
@@ -829,6 +832,59 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &532915269
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 532915270}
+  - component: {fileID: 532915271}
+  m_Layer: 0
+  m_Name: WorldEnemySquadStartController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &532915270
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 532915269}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 83980595}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &532915271
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 532915269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5361c1f997481f64caee8cd0e34916f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _board: {fileID: 461991018}
+  _enemySquad: {fileID: 11400000, guid: 71ab11fda003b5c4c924391cbbf94e7a, type: 2}
+  _enemyRowsFromBack: 2
+  _sortingLayer: Characters
+  _baseSortingOrder: 10
+  _sortingOrderFloor: 50
+  _scaleMultiplier: 9
+  _autoStartOnPlay: 1
+  _ignoreRaycast: 1
 --- !u!1 &619394800
 GameObject:
   m_ObjectHideFlags: 0
