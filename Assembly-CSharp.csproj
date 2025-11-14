@@ -139,7 +139,6 @@
     <None Include="Assets\TextMesh Pro\Fonts\LiberationSans - OFL.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile.shader" />
     <None Include="Assets\Layer Lab\GUI Pro-FantasyRPG\Extensions\UIParticle\UIAdditive.shader" />
-    <None Include="Assets\AddressableAssetsData\link.xml" />
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\EdgeEffect_Electric_Additive.shader" />
     <None Include="Assets\Layer Lab\GUI Pro-FantasyRPG\ResourcesData\Fonts\Play - OFL.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Sprite.shader" />
@@ -622,12 +621,12 @@
       <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Runtime\VisualScripting.Flow\Dependencies\NCalc\Unity.VisualScripting.Antlr3.Runtime.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Mono.Cecil">
-      <HintPath>Library\PackageCache\com.unity.nuget.mono-cecil@d6f9955a5d5f\Mono.Cecil.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Newtonsoft.Json">
       <HintPath>Library\PackageCache\com.unity.nuget.newtonsoft-json@74deb55db2a0\Runtime\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>Library\PackageCache\com.unity.nuget.mono-cecil@d6f9955a5d5f\Mono.Cecil.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="netstandard">
@@ -1224,21 +1223,21 @@
       <Project>{91B6C405-425F-ACCB-CADF-F1D2D7A4693C}</Project>
       <Name>Unity.InputSystem.ForUI</Name>
     </ProjectReference>
+    <ProjectReference Include="Unity.Addressables.Editor.csproj">
+      <Project>{3F415FEF-E338-34D5-967F-A1D207FB75DE}</Project>
+      <Name>Unity.Addressables.Editor</Name>
+    </ProjectReference>
     <ProjectReference Include="SevenBattles.Battle.csproj">
       <Project>{36964088-0D0C-62F4-CC2A-05A0E1F5616C}</Project>
       <Name>SevenBattles.Battle</Name>
-    </ProjectReference>
-    <ProjectReference Include="Unity.Searcher.Editor.csproj">
-      <Project>{608E7A3B-358C-C6E3-C77D-D595D0839703}</Project>
-      <Name>Unity.Searcher.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.Rider.Editor.csproj">
       <Project>{D0BA1BFC-2DDD-72F0-9268-DE2752B0BAAE}</Project>
       <Name>Unity.Rider.Editor</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.Addressables.Editor.csproj">
-      <Project>{3F415FEF-E338-34D5-967F-A1D207FB75DE}</Project>
-      <Name>Unity.Addressables.Editor</Name>
+    <ProjectReference Include="Unity.Searcher.Editor.csproj">
+      <Project>{608E7A3B-358C-C6E3-C77D-D595D0839703}</Project>
+      <Name>Unity.Searcher.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="PsdPlugin.csproj">
       <Project>{4D72F566-D048-4F70-5D4A-E5488F43EECC}</Project>
@@ -1348,9 +1347,9 @@
       <Project>{1492E16C-9638-03C2-26C4-9CADE5BF26F7}</Project>
       <Name>Unity.Collections.Editor</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.2D.Tilemap.Extras.Editor.csproj">
-      <Project>{64919DAC-9F06-53C1-61B0-955E8447BC07}</Project>
-      <Name>Unity.2D.Tilemap.Extras.Editor</Name>
+    <ProjectReference Include="Unity.Profiling.Core.csproj">
+      <Project>{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}</Project>
+      <Name>Unity.Profiling.Core</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.VisualScripting.Shared.Editor.csproj">
       <Project>{FD0C2C77-B2BB-BAC2-0015-48E84802677A}</Project>
@@ -1360,9 +1359,9 @@
       <Project>{22CB855D-374D-A11C-634E-8903565AC2EC}</Project>
       <Name>Unity.VisualScripting.Core.Editor</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.Profiling.Core.csproj">
-      <Project>{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}</Project>
-      <Name>Unity.Profiling.Core</Name>
+    <ProjectReference Include="Unity.2D.Tilemap.Extras.Editor.csproj">
+      <Project>{64919DAC-9F06-53C1-61B0-955E8447BC07}</Project>
+      <Name>Unity.2D.Tilemap.Extras.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.VisualScripting.Flow.Editor.csproj">
       <Project>{07CDD740-9201-192B-B099-68021FFD776A}</Project>
@@ -1396,13 +1395,13 @@
       <Project>{5409ACB2-C736-9D95-FC10-BEC0C2EA1015}</Project>
       <Name>Unity.VisualScripting.State</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.2D.SpriteShape.Editor.csproj">
-      <Project>{27B89835-62C7-AA55-DCBC-1B184085A0B3}</Project>
-      <Name>Unity.2D.SpriteShape.Editor</Name>
-    </ProjectReference>
     <ProjectReference Include="Unity.Localization.Editor.csproj">
       <Project>{08E40F31-B06A-0378-C2AF-FC0EDCFFA4EB}</Project>
       <Name>Unity.Localization.Editor</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.2D.SpriteShape.Editor.csproj">
+      <Project>{27B89835-62C7-AA55-DCBC-1B184085A0B3}</Project>
+      <Name>Unity.2D.SpriteShape.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.2D.Psdimporter.Editor.csproj">
       <Project>{736FF6DB-9092-A119-E93E-FBADA2111327}</Project>

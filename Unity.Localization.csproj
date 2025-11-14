@@ -82,9 +82,9 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\AssemblyInfo.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Property Variants\Tracked Properties\TrackedProperty.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Core\Extensions\IFormatter.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Utilities\SystemTime.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Pseudo\Methods\PreserveTags.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Pseudo\Methods\CharacterSubstitutor.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Utilities\SystemTime.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Property Driver\EditorPropertyDriver.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Property Variants\Tracked Objects\TrackedObject.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Utilities\SmartFormatPools.cs" />
@@ -98,8 +98,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Extensions\IsMatchFormatter.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Settings\PlaymodeState.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Component Localizers\LocalizeTextureEvent.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Tables\LocalizationTable.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Utilities\ObjectPool\IObjectPool.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Tables\LocalizationTable.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Property Driver\VariantsPropertyDriver.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Settings\Extensions\ILocalesProvider.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Operations\LoadAllTablesOperation.cs" />
@@ -115,8 +115,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Metadata\MetadataCollection.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Tables\Keys\SequentialIDGenerator.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Settings\Database\LocalizedStringDatabase.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\SmartFormatterLiteralCharacterExtractor.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Operations\PreloadDatabaseOperation.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\SmartFormatterLiteralCharacterExtractor.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Metadata\PreloadAssetTableMetadata.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Tables\Keys\IKeyGenerator.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Property Variants\Tracked Objects\TrackedUGUI.cs" />
@@ -187,8 +187,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Extensions\ReflectionSource.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Utilities\TimeSpanUtility.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Component Localizers\LocalizedAssetBehaviour.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Tables\DetailedLocalizationTable.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Property Variants\Tracked Objects\TrackedTMP.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Tables\DetailedLocalizationTable.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Core\Extensions\FormatterBase.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Settings\Startup Selectors\SpecificLocaleSelector.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Property Driver\PropertyDriver.cs" />
@@ -199,8 +199,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Extensions\ValueTupleSource.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Settings\LocalizationSettings.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Metadata\SharedTableEntryMetadata.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Extensions\PluralLocalizationFormatter.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Utilities\ObjectPool\CollectionPool.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Extensions\PluralLocalizationFormatter.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Component Localizers\LocalizeAudioClipEvent.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Core\Output\StringOutput.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Core\Output\IOutput.cs" />
@@ -221,8 +221,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Settings\Database\LocalizedAssetDatabase.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Operations\GetTableEntryOperation.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Utilities\StringBuilderPool.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Extensions\TimeFormatter.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Core\Formatting\FormatDetails.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Extensions\TimeFormatter.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Pseudo\IPseudoLocalizationMethod.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Extensions\TemplateFormatter.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Runtime\Smart Format\Core\Extensions\IFormatterLiteralExtractor.cs" />
@@ -730,10 +730,6 @@
       <HintPath>Library\PackageCache\com.unity.ext.nunit@60ef35ffd3cd\net40\unity-custom\nunit.framework.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="unityplastic">
-      <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\unityplastic.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.Plastic.Antlr3.Runtime">
       <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\Unity.Plastic.Antlr3.Runtime.dll</HintPath>
       <Private>False</Private>
@@ -750,8 +746,16 @@
       <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Dependencies\DotNetZip\Unity.VisualScripting.IonicZip.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="unityplastic">
+      <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\unityplastic.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.VisualScripting.Antlr3.Runtime">
       <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Runtime\VisualScripting.Flow\Dependencies\NCalc\Unity.VisualScripting.Antlr3.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Library\PackageCache\com.unity.nuget.newtonsoft-json@74deb55db2a0\Runtime\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.VisualScripting.TextureAssets">
@@ -760,10 +764,6 @@
     </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>Library\PackageCache\com.unity.nuget.mono-cecil@d6f9955a5d5f\Mono.Cecil.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>Library\PackageCache\com.unity.nuget.newtonsoft-json@74deb55db2a0\Runtime\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="netstandard">

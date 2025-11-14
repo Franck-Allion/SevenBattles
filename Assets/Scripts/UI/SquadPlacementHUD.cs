@@ -48,6 +48,11 @@ namespace SevenBattles.UI
         private Text _startButtonText;
         [SerializeField, Tooltip("Optional explicit reference to the Button label TMP_Text component. If not set, a child TMP_Text will be auto-found at runtime.")]
         private TMP_Text _startButtonTMP;
+        [SerializeField, Tooltip("Optional CanvasGroup driving Start button fade. If null, one will be auto-added on the Start button root.")]
+        private CanvasGroup _startButtonCanvasGroup;
+        [SerializeField, Tooltip("Fade-out duration (seconds) for Start button when battle begins.")]
+        private float _startButtonFadeDuration = 0.75f;
+        private bool _startButtonFadePlayed;
         [Space]
         [SerializeField, Tooltip("Localized instructional text describing how to place units (e.g., Table: UI.Common, Entry: Placement.Instructions)")]
         private LocalizedString _placementInstructions;
@@ -142,6 +147,16 @@ namespace SevenBattles.UI
                     _startButtonTMP = _startBattleButton.GetComponentInChildren<TMP_Text>(true);
                 if (_startButtonText == null)
                     _startButtonText = _startBattleButton.GetComponentInChildren<Text>(true);
+                // Ensure CanvasGroup exists for smooth alpha tween without touching individual graphics
+                if (_startButtonCanvasGroup == null)
+                {
+                    _startButtonCanvasGroup = _startBattleButton.GetComponent<CanvasGroup>();
+                    if (_startButtonCanvasGroup == null)
+                        _startButtonCanvasGroup = _startBattleButton.gameObject.AddComponent<CanvasGroup>();
+                    _startButtonCanvasGroup.alpha = 1f;
+                    _startButtonCanvasGroup.interactable = _startBattleButton.interactable;
+                    _startButtonCanvasGroup.blocksRaycasts = _startBattleButton.interactable;
+                }
             }
 
             if (_startButtonLabel != null)
@@ -493,17 +508,62 @@ namespace SevenBattles.UI
                 else AudioSource.PlayClipAtPoint(_startClip, Vector3.zero, 1f);
             }
 
-            // Hide Start button and HUD
-            if (_startBattleButton != null)
+            // Begin Start button fade (one-shot), disable interaction immediately for UX safety
+            if (_startBattleButton != null && !_startButtonFadePlayed)
             {
-                _startBattleButton.gameObject.SetActive(false);
+                _startButtonFadePlayed = true;
+                _startBattleButton.interactable = false;
+                if (_startButtonCanvasGroup == null)
+                {
+                    _startButtonCanvasGroup = _startBattleButton.GetComponent<CanvasGroup>();
+                    if (_startButtonCanvasGroup == null)
+                        _startButtonCanvasGroup = _startBattleButton.gameObject.AddComponent<CanvasGroup>();
+                }
+                _startButtonCanvasGroup.interactable = false;
+                _startButtonCanvasGroup.blocksRaycasts = false;
+                StopCoroutineSafe(nameof(FadeOutStartButtonRoutine));
+                StartCoroutine(FadeOutStartButtonRoutine());
             }
+
+            // Hide instructional text immediately to reduce UI clutter during transition
             SetInstructionsVisible(false);
-            var root = _hudRoot != null ? _hudRoot : this.gameObject;
-            if (root != null)
+        }
+
+        private System.Collections.IEnumerator FadeOutStartButtonRoutine()
+        {
+            if (_startBattleButton == null) yield break;
+            if (_startButtonCanvasGroup == null)
             {
-                root.SetActive(false);
+                _startButtonCanvasGroup = _startBattleButton.GetComponent<CanvasGroup>();
+                if (_startButtonCanvasGroup == null)
+                    _startButtonCanvasGroup = _startBattleButton.gameObject.AddComponent<CanvasGroup>();
             }
+
+            float duration = Mathf.Max(0.01f, _startButtonFadeDuration);
+            float t = 0f;
+            // Make sure we start fully visible (alpha=1)
+            _startButtonCanvasGroup.alpha = 1f;
+            // Unscaled time to avoid timescale effects on transition
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                float p = Mathf.Clamp01(t / duration);
+                // Cubic ease-out for a natural feel, alpha 1 -> 0
+                float alpha = Mathf.Pow(1f - p, 3f);
+                _startButtonCanvasGroup.alpha = alpha;
+                yield return null;
+            }
+            _startButtonCanvasGroup.alpha = 0f;
+            // Finally hide the button in hierarchy for clean state
+            _startBattleButton.gameObject.SetActive(false);
+            // Optionally hide the HUD root once the button is gone to finish the transition
+            var root = _hudRoot != null ? _hudRoot : this.gameObject;
+            if (root != null) root.SetActive(false);
+        }
+
+        private void StopCoroutineSafe(string routineName)
+        {
+            try { StopCoroutine(routineName); } catch { /* ignore if not running */ }
         }
 
         private void SetInstructionsVisible(bool visible)

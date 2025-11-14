@@ -179,8 +179,8 @@
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Controls\InputControlLayout.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\Steam\SteamSupport.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Controls\InputControlList.cs" />
-    <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Utilities\JsonParser.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\HID\HIDDescriptorWindow.cs" />
+    <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Utilities\JsonParser.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Controls\Processors\AxisDeadzoneProcessor.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\Steam\SteamControllerType.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\Users\InputUserSettings.cs" />
@@ -293,8 +293,8 @@
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Actions\Composites\OneModifierComposite.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Editor\PropertyDrawers\InputActionReferenceSearchProviders.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Utilities\DisplayStringFormatAttribute.cs" />
-    <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Controls\Processors\CompensateRotationProcessor.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Editor\Settings\InputSettingsProvider.cs" />
+    <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Controls\Processors\CompensateRotationProcessor.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\State\InputState.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Controls\Vector2Control.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Devices\Pointer.cs" />
@@ -344,8 +344,8 @@
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\InputFeatureNames.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Editor\DeviceSimulator\InputSystemPlugin.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Controls\Processors\InvertVector3Processor.cs" />
-    <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\Steam\SteamIGAConverter.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Devices\InputDeviceChange.cs" />
+    <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\Steam\SteamIGAConverter.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Editor\PropertyDrawers\InputControlPathDrawer.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Editor\Internal\AdvancedDropdown\AdvancedDropdownGUI.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Actions\InputActionAsset.cs" />
@@ -377,8 +377,8 @@
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Actions\IInputActionCollection.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Devices\Joystick.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\Steam\IStreamControllerAPI.cs" />
-    <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\PlayerInput\DefaultInputActions.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Devices\Commands\QuerySamplingFrequencyCommand.cs" />
+    <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\PlayerInput\DefaultInputActions.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Editor\AssetEditor\InputActionTreeViewItems.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Plugins\HID\HIDSupport.cs" />
     <Compile Include="Library\PackageCache\com.unity.inputsystem@ea5ab5b33a26\InputSystem\Actions\InputActionChange.cs" />
@@ -960,10 +960,6 @@
       <HintPath>Library\PackageCache\com.unity.ext.nunit@60ef35ffd3cd\net40\unity-custom\nunit.framework.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="unityplastic">
-      <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\unityplastic.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Unity.Plastic.Antlr3.Runtime">
       <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\Unity.Plastic.Antlr3.Runtime.dll</HintPath>
       <Private>False</Private>
@@ -980,8 +976,16 @@
       <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Dependencies\DotNetZip\Unity.VisualScripting.IonicZip.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="unityplastic">
+      <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\unityplastic.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Unity.VisualScripting.Antlr3.Runtime">
       <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Runtime\VisualScripting.Flow\Dependencies\NCalc\Unity.VisualScripting.Antlr3.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Library\PackageCache\com.unity.nuget.newtonsoft-json@74deb55db2a0\Runtime\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Unity.VisualScripting.TextureAssets">
@@ -990,10 +994,6 @@
     </Reference>
     <Reference Include="Mono.Cecil">
       <HintPath>Library\PackageCache\com.unity.nuget.mono-cecil@d6f9955a5d5f\Mono.Cecil.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="Newtonsoft.Json">
-      <HintPath>Library\PackageCache\com.unity.nuget.newtonsoft-json@74deb55db2a0\Runtime\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="netstandard">

@@ -129,8 +129,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Settings\LocalizationPreferencesProvider.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Plugins\Google\Columns\LocaleMetadataColumn.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Plugins\Device Simulator\LocalizationDeviceSimulatorPlugin.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Plugins\Google\Columns\SheetColumn.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Utility\PropertyDrawerExtended.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Plugins\Google\Columns\SheetColumn.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Smart Format\SmartFormatField.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Platform\Android\BuildPlayerAndroid.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Attributes\LocalizationTablesWindowAttributes.cs" />
@@ -163,8 +163,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Search\AssetTableSearchProvider.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Components\LocalizeStringEventEditor.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Utility\PathHelper.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Tables\GenericAssetTableListViewColumns.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Search\ColumnSelectors.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Tables\GenericAssetTableListViewColumns.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Plugins\Xliff\V2\xliff 2.0.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Platform\iOS\Player.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Utility\AssetUtility.cs" />
@@ -222,8 +222,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Tables\GenericAssetTableListView.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Attributes\CollectionExtensionAttribute.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Localized Reference\LocalizedStringPropertyDrawer.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Metadata\FallbackLocalePropertyDrawer.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Resources.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Metadata\FallbackLocalePropertyDrawer.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Utility\TypeUtility.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Utility\ReorderableList.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Extension Methods\SerializedPropertyExtensionMethods.cs" />
@@ -234,8 +234,8 @@
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Settings\TableEntryReferenceMethod.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Plugins\Google\GoogleSheetsExtensionPropertyDrawer.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Plugins\Xliff\V2\xliff_core_2.0.cs" />
-    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Metadata\PlatformOverridePropertyDrawer.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\Plugins\CSV\MenuItems.cs" />
+    <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Metadata\PlatformOverridePropertyDrawer.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Localized Reference\LocalizedStringTablePropertyDrawer.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Localized Reference\LocalizedTablePropertyDrawer.cs" />
     <Compile Include="Library\PackageCache\com.unity.localization@d45547f9f157\Editor\UI\Localized Reference\LocalizedStringField.cs" />

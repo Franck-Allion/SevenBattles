@@ -4,6 +4,8 @@ using UnityEngine.UI;
 using TMPro;
 using SevenBattles.Core;
 using SevenBattles.UI;
+using UnityEngine.TestTools;
+using System.Collections;
 
 namespace SevenBattles.Tests.UI
 {
@@ -67,9 +69,64 @@ namespace SevenBattles.Tests.UI
             // Lock placement
             fake.ConfirmAndLock();
 
-            // After locking, either the label or the entire HUD root is hidden
-            Assert.IsFalse(instructionsGo.activeSelf || hudGo.activeSelf,
+            // After locking, the instructions label should be hidden immediately (HUD may remain active for fade)
+            Assert.IsFalse(instructionsGo.activeSelf,
                 "Instructions should be hidden after placement is locked");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [UnityTest]
+        public IEnumerator StartButton_FadesAndHides_OnPlacementLocked()
+        {
+            // HUD root
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<SquadPlacementHUD>();
+
+            // Start button with CanvasGroup
+            var startGo = new GameObject("StartButton");
+            startGo.transform.SetParent(hudGo.transform);
+            var btn = startGo.AddComponent<Button>();
+            var cg = startGo.AddComponent<CanvasGroup>();
+            cg.alpha = 1f;
+            cg.interactable = true;
+            cg.blocksRaycasts = true;
+
+            // Minimal Text to satisfy potential lookups
+            var label = new GameObject("Label").AddComponent<TextMeshProUGUI>();
+            label.transform.SetParent(startGo.transform);
+
+            // Fake controller
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakePlacementController>();
+            fake.IsReady = true;
+
+            // Inject fields
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_startBattleButton", btn);
+            SetPrivate(hud, "_startButtonTMP", label);
+            SetPrivate(hud, "_startButtonCanvasGroup", cg);
+            // Speed up the test fade duration
+            SetPrivate(hud, "_startButtonFadeDuration", 0.1f);
+
+            // Lifecycle
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            // Ready makes button visible and interactable
+            fake.FireReady(true);
+            Assert.IsTrue(startGo.activeSelf, "Start button should be active when ready");
+            Assert.IsTrue(btn.interactable, "Start button should be interactable when ready");
+
+            // Lock triggers fade, should disable interaction immediately
+            fake.ConfirmAndLock();
+            Assert.IsFalse(btn.interactable, "Start button must become non-interactable on fade start");
+            Assert.IsFalse(cg.blocksRaycasts, "Start button must stop blocking raycasts on fade start");
+
+            // Wait for fade to complete
+            yield return new WaitForSecondsRealtime(0.15f);
+            Assert.IsFalse(startGo.activeSelf, "Start button should be hidden after fade completes");
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);
@@ -88,4 +145,3 @@ namespace SevenBattles.Tests.UI
         }
     }
 }
-
