@@ -61,17 +61,17 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.39f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\CaptureOptions.cs" />
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\SliderReset.cs" />
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\SpriteSequenceCapture.cs" />
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\NavigateButton.cs" />
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\ColorSetup.cs" />
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\CharacterEditor.cs" />
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\SpriteSheetCapture.cs" />
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\HuePaint.cs" />
+    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\CharacterEditor.cs" />
+    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\HuePaint.cs" />
+    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\SpriteSheetCapture.cs" />
+    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\ColorSetup.cs" />
+    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\NavigateButton.cs" />
+    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\SpriteSequenceCapture.cs" />
+    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\CaptureOptions.cs" />
+    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\SliderReset.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\HeroEditor4D.EditorScripts.asmdef" />
+    <None Include="Assets\HeroEditor4D\Common\Scripts\Editor\EditorScripts\HeroEditor4D.EditorScripts.asmdef" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
