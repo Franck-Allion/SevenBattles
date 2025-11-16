@@ -522,7 +522,16 @@ namespace SevenBattles.UI
                 _startButtonCanvasGroup.interactable = false;
                 _startButtonCanvasGroup.blocksRaycasts = false;
                 StopCoroutineSafe(nameof(FadeOutStartButtonRoutine));
-                StartCoroutine(FadeOutStartButtonRoutine());
+                if (Application.isPlaying)
+                {
+                    StartCoroutine(FadeOutStartButtonRoutine());
+                }
+                else
+                {
+                    // In edit mode (tests), run the fade outcome synchronously so that coroutines are not required.
+                    _startButtonCanvasGroup.alpha = 0f;
+                    _startBattleButton.gameObject.SetActive(false);
+                }
             }
 
             // Hide instructional text immediately to reduce UI clutter during transition

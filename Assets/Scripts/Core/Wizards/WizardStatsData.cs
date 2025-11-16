@@ -8,6 +8,6 @@ namespace SevenBattles.Core.Wizards
         public int MaxHP;
         public int ActionPoints;
         public int Speed;
+        public int Initiative;
     }
 }
-

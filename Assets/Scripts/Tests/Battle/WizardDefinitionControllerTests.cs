@@ -32,7 +32,7 @@ namespace SevenBattles.Tests.Battle
             var def = ScriptableObject.CreateInstance<WizardDefinition>();
             def.Id = "wiz_def_test";
             def.Prefab = wizPrefab;
-            def.BaseStats = new WizardStatsData { MaxHP = 42, ActionPoints = 7, Speed = 3 };
+            def.BaseStats = new WizardStatsData { MaxHP = 42, ActionPoints = 7, Speed = 3, Initiative = 5 };
 
             var ctrlGo = new GameObject("SquadPlacementCtrl");
             var ctrl = ctrlGo.AddComponent<WorldSquadPlacementController>();
@@ -55,6 +55,7 @@ namespace SevenBattles.Tests.Battle
             Assert.AreEqual(42, stats.MaxHP);
             Assert.AreEqual(7, stats.ActionPoints);
             Assert.AreEqual(3, stats.Speed);
+            Assert.AreEqual(5, stats.Initiative);
 
             // Cleanup
             Object.DestroyImmediate(ctrlGo);
