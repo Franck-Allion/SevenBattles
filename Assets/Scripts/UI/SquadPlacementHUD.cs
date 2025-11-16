@@ -32,6 +32,9 @@ namespace SevenBattles.UI
         [Header("HUD Root")]
         [SerializeField, Tooltip("Optional root to hide when placement is confirmed. Defaults to this GameObject if not set.")]
         private GameObject _hudRoot;
+        [Header("Battle HUD")]
+        [SerializeField, Tooltip("Battle HUD root (e.g., TurnOrderHUD canvas). Activated when placement is locked.")]
+        private GameObject _battleHudRoot;
 
         [Header("Explicit Mapping (optional)")]
         [SerializeField, Tooltip("Optional: explicit portrait Image references per slot (overrides auto-find).")]
@@ -532,6 +535,12 @@ namespace SevenBattles.UI
                     _startButtonCanvasGroup.alpha = 0f;
                     _startBattleButton.gameObject.SetActive(false);
                 }
+            }
+
+            // Show Battle HUD once placement is confirmed
+            if (_battleHudRoot != null)
+            {
+                _battleHudRoot.SetActive(true);
             }
 
             // Hide instructional text immediately to reduce UI clutter during transition

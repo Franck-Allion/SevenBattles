@@ -65,6 +65,7 @@
     <Compile Include="Assets\Scripts\Core\Wizards\WizardStatsData.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGrid.cs" />
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
     <Compile Include="Assets\Scripts\Core\Wizards\WizardDefinition.cs" />
   </ItemGroup>

@@ -88,6 +88,7 @@ namespace SevenBattles.Battle.Start
                 WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.down);
                 _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
                 ApplyStatsIfAny(go, def);
+                WizardBattleMetadata.Ensure(go, false, def, tile);
                 if (_ignoreRaycast) TrySetIgnoreRaycast(go);
             }
         }

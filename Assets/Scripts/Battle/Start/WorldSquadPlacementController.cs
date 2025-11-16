@@ -145,6 +145,7 @@ namespace SevenBattles.Battle.Start
             SevenBattles.Battle.Wizards.WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
             _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
             ApplyStatsIfAny(go, index);
+            ApplyMetadataIfAny(go, index, tile);
             _instances[index] = go;
             Play(_placeClip);
             OnWizardPlaced?.Invoke(index);
@@ -178,6 +179,13 @@ namespace SevenBattles.Battle.Start
             _board.SetHighlightVisible(false);
             OnPlacementLocked?.Invoke();
             PlacementLocked?.Invoke();
+
+            // Start battle turns once placement is confirmed.
+            var turnController = FindObjectOfType<SevenBattles.Battle.Turn.SimpleTurnOrderController>();
+            if (turnController != null)
+            {
+                turnController.StartBattle();
+            }
         }
 
         private void Play(AudioClip clip)
@@ -247,6 +255,15 @@ namespace SevenBattles.Battle.Start
             var stats = go.GetComponent<WizardStats>();
             if (stats == null) stats = go.AddComponent<WizardStats>();
             stats.ApplyBase(def.BaseStats);
+        }
+
+        private void ApplyMetadataIfAny(GameObject go, int index, Vector2Int tile)
+        {
+            if (_playerSquad == null || _playerSquad.Wizards == null) return;
+            if (index < 0 || index >= _playerSquad.Wizards.Length) return;
+            var def = _playerSquad.Wizards[index];
+            if (def == null) return;
+            WizardBattleMetadata.Ensure(go, true, def, tile);
         }
 
         private void OnValidate()

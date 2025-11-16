@@ -68,6 +68,7 @@ namespace SevenBattles.Battle.Start
                     int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);
                     SevenBattles.Battle.Wizards.WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
                     _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
+                    SevenBattles.Battle.Wizards.WizardBattleMetadata.Ensure(go, true, def, new Vector2Int(tileX, _rowY));
                 }
             }
             else

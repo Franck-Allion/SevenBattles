@@ -84,6 +84,11 @@ namespace SevenBattles.Tests.UI
             var hudGo = new GameObject("HUD");
             var hud = hudGo.AddComponent<SquadPlacementHUD>();
 
+            // Battle HUD root (initially inactive)
+            var battleHudGo = new GameObject("BattleHUD");
+            battleHudGo.SetActive(false);
+            SetPrivate(hud, "_battleHudRoot", battleHudGo);
+
             // Start button with CanvasGroup
             var startGo = new GameObject("StartButton");
             startGo.transform.SetParent(hudGo.transform);
@@ -118,6 +123,7 @@ namespace SevenBattles.Tests.UI
             fake.FireReady(true);
             Assert.IsTrue(startGo.activeSelf, "Start button should be active when ready");
             Assert.IsTrue(btn.interactable, "Start button should be interactable when ready");
+            Assert.IsFalse(battleHudGo.activeSelf, "Battle HUD should remain inactive during placement");
 
             // Lock triggers fade, should disable interaction immediately
             fake.ConfirmAndLock();
@@ -127,8 +133,10 @@ namespace SevenBattles.Tests.UI
             // Wait for fade to complete
             yield return new WaitForSecondsRealtime(0.15f);
             Assert.IsFalse(startGo.activeSelf, "Start button should be hidden after fade completes");
+            Assert.IsTrue(battleHudGo.activeSelf, "Battle HUD should be activated when placement is locked");
 
             Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(battleHudGo);
             Object.DestroyImmediate(ctrlGo);
         }
 

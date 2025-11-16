@@ -23,7 +23,7 @@ namespace SevenBattles.Battle.Board
         [SerializeField] private Material _highlightMaterial;
         [SerializeField] private string _highlightSortingLayer = "Default";
         [SerializeField] private int _highlightSortingOrder = 10;
-        
+
         [Header("Behavior")]
         [SerializeField] private bool _autoHoverUpdate = true;
         [SerializeField] private bool _logTileClicks = true;
@@ -95,6 +95,13 @@ namespace SevenBattles.Battle.Board
                     mat.color = _highlightColor;
                 }
             }
+        }
+
+        // Enables or disables automatic hover-driven highlight updates.
+        // When disabled, the board will not move the highlight based on the mouse.
+        public void SetHoverEnabled(bool enabled)
+        {
+            _autoHoverUpdate = enabled;
         }
 
         public void PlaceHero(Transform hero, int x, int y, string sortingLayer = "Characters", int sortingOrder = 0)

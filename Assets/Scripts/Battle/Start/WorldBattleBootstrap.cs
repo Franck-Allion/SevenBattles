@@ -1,4 +1,5 @@
 using UnityEngine;
+using SevenBattles.Battle.Turn;
 
 namespace SevenBattles.Battle.Start
 {
@@ -9,11 +10,15 @@ namespace SevenBattles.Battle.Start
         [Header("Sequence")]
         [SerializeField, Tooltip("Spawns enemies in Awake so they are visible before any player placement starts.")]
         private bool _spawnEnemiesOnAwake = true;
+        [SerializeField, Tooltip("When enabled, starts the turn controller once player placement is locked.")]
+        private bool _startTurnsOnPlacementLocked = true;
 
         [Header("Controllers")]
         [SerializeField] private WorldEnemySquadStartController _enemy;
-        [SerializeField, Tooltip("Optional: reference for clarity; not used directly.")]
+        [SerializeField, Tooltip("Player placement controller. If not assigned, will be auto-found at runtime.")]
         private WorldSquadPlacementController _playerPlacement;
+        [SerializeField, Tooltip("Turn order controller. If not assigned, will be auto-found at runtime.")]
+        private SimpleTurnOrderController _turnController;
 
         private void Awake()
         {
@@ -21,7 +26,39 @@ namespace SevenBattles.Battle.Start
             {
                 _enemy.StartEnemySquad();
             }
+
+            if (_startTurnsOnPlacementLocked)
+            {
+                if (_playerPlacement == null)
+                {
+                    _playerPlacement = FindObjectOfType<WorldSquadPlacementController>();
+                }
+                if (_turnController == null)
+                {
+                    _turnController = FindObjectOfType<SimpleTurnOrderController>();
+                }
+
+                if (_playerPlacement != null && _turnController != null)
+                {
+                    _playerPlacement.PlacementLocked += HandlePlacementLocked;
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (_playerPlacement != null)
+            {
+                _playerPlacement.PlacementLocked -= HandlePlacementLocked;
+            }
+        }
+
+        private void HandlePlacementLocked()
+        {
+            if (_turnController != null)
+            {
+                _turnController.StartBattle();
+            }
         }
     }
 }
-
