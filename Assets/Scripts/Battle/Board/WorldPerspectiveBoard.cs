@@ -97,6 +97,19 @@ namespace SevenBattles.Battle.Board
             }
         }
 
+        // Allows callers to override the board highlight material at runtime (e.g., different fill vs outline
+        // when switching from placement to active-unit markers). If the internal highlight renderer has not
+        // been created yet, it will be initialized using the default serialized material and then replaced.
+        public void SetHighlightMaterial(Material material)
+        {
+            if (material == null) return;
+            if (_highlightMr == null) EnsureHighlightObjects();
+            if (_highlightMr != null)
+            {
+                _highlightMr.sharedMaterial = material;
+            }
+        }
+
         // Enables or disables automatic hover-driven highlight updates.
         // When disabled, the board will not move the highlight based on the mouse.
         public void SetHoverEnabled(bool enabled)

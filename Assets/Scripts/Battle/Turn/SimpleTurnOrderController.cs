@@ -16,6 +16,8 @@ namespace SevenBattles.Battle.Turn
         [SerializeField] private WorldPerspectiveBoard _board;
         [SerializeField] private Color _playerHighlightColor = new Color(0.3f, 1f, 0.3f, 0.4f);
         [SerializeField] private Color _enemyHighlightColor = new Color(1f, 0.3f, 0.3f, 0.4f);
+        [SerializeField, Tooltip("Optional material used for the active unit tile highlight during battle (e.g., outline-only). If null, the board's default highlight material is used.")]
+        private Material _activeUnitHighlightMaterial;
 
         [Header("Flow")]
         [SerializeField, Tooltip("If true, BeginBattle is called automatically on Start. Typically disabled when using placement flow.")]
@@ -93,6 +95,10 @@ namespace SevenBattles.Battle.Turn
             {
                 // During combat, disable hover-driven highlight so only the active unit tile is marked.
                 _board.SetHoverEnabled(false);
+                if (_activeUnitHighlightMaterial != null)
+                {
+                    _board.SetHighlightMaterial(_activeUnitHighlightMaterial);
+                }
             }
             SelectFirstUnit();
         }

@@ -15,6 +15,8 @@ namespace SevenBattles.Battle.Start
     {
         [Header("References")]
         [SerializeField] private WorldPerspectiveBoard _board;
+        [SerializeField, Tooltip("Optional material used for tile highlight during squad placement (e.g., filled tile). If null, the board's default material is used.")]
+        private Material _placementHighlightMaterial;
 
         [Header("Squad Data")]
         [Tooltip("Player squad asset (1..8 wizard definitions).")]
@@ -59,8 +61,15 @@ namespace SevenBattles.Battle.Start
         private void Start()
         {
             EnsureModel();
-            _board.SetHighlightVisible(true);
-            _board.SetHighlightColor(_invalidColor);
+            if (_board != null)
+            {
+                if (_placementHighlightMaterial != null)
+                {
+                    _board.SetHighlightMaterial(_placementHighlightMaterial);
+                }
+                _board.SetHighlightVisible(true);
+                _board.SetHighlightColor(_invalidColor);
+            }
         }
 
         private void EnsureModel()
