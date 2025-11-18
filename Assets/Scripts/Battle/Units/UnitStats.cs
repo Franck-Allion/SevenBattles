@@ -19,6 +19,7 @@ namespace SevenBattles.Battle.Units
         [SerializeField] private int _morale;
 
         public int Life => _life;
+        public int MaxLife => _life;
         public int Attack => _attack;
         public int Shoot => _shoot;
         public int Spell => _spell;

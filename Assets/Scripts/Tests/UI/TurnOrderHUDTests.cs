@@ -158,6 +158,7 @@ namespace SevenBattles.Tests.UI
             fake.ActiveStats = new UnitStatsViewData
             {
                 Life = 25,
+                MaxLife = 25,
                 Speed = 7,
                 Initiative = 12
             };
@@ -180,7 +181,7 @@ namespace SevenBattles.Tests.UI
             // First click opens panel and populates stats
             portraitBtn.onClick.Invoke();
             Assert.IsTrue(panelGo.activeSelf, "Stats panel should be visible after portrait click.");
-            Assert.AreEqual("25", lifeText.text);
+            Assert.AreEqual("25 / 25", lifeText.text);
             Assert.AreEqual("7", speedText.text);
             Assert.AreEqual("12", initText.text);
 
@@ -225,7 +226,7 @@ namespace SevenBattles.Tests.UI
             var fake = ctrlGo.AddComponent<FakeTurnController>();
             fake.HasActiveUnit = true;
             fake.IsActiveUnitPlayerControlled = true;
-            fake.ActiveStats = new UnitStatsViewData { Life = 30 };
+            fake.ActiveStats = new UnitStatsViewData { Life = 30, MaxLife = 30 };
 
             SetPrivate(hud, "_controllerBehaviour", fake);
             SetPrivate(hud, "_activePortraitImage", portraitImg);
@@ -243,7 +244,7 @@ namespace SevenBattles.Tests.UI
             // Click the button root (parent of the image).
             portraitBtn.onClick.Invoke();
             Assert.IsTrue(panelGo.activeSelf, "Stats panel should open when clicking a Button parent of the portrait image.");
-            Assert.AreEqual("30", lifeText.text);
+            Assert.AreEqual("30 / 30", lifeText.text);
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);
@@ -276,7 +277,7 @@ namespace SevenBattles.Tests.UI
             var fake = ctrlGo.AddComponent<FakeTurnController>();
             fake.HasActiveUnit = true;
             fake.IsActiveUnitPlayerControlled = true;
-            fake.ActiveStats = new UnitStatsViewData { Life = 10 };
+            fake.ActiveStats = new UnitStatsViewData { Life = 10, MaxLife = 10 };
 
             SetPrivate(hud, "_controllerBehaviour", fake);
             SetPrivate(hud, "_activePortraitImage", portraitImg);
@@ -293,9 +294,9 @@ namespace SevenBattles.Tests.UI
             portraitBtn.onClick.Invoke();
             Assert.IsTrue(panelGo.activeSelf, "Stats panel should be visible after portrait click.");
 
-            // Active unit changes -> panel should close automatically
+            // Active unit changes -> panel should stay open and refresh stats
             fake.FireChanged();
-            Assert.IsFalse(panelGo.activeSelf, "Stats panel should close when active unit changes.");
+            Assert.IsTrue(panelGo.activeSelf, "Stats panel should remain open when active unit changes.");
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);
@@ -332,7 +333,7 @@ namespace SevenBattles.Tests.UI
             var fake = ctrlGo.AddComponent<FakeTurnController>();
             fake.HasActiveUnit = true;
             fake.IsActiveUnitPlayerControlled = true;
-            fake.ActiveStats = new UnitStatsViewData { Life = 10 };
+            fake.ActiveStats = new UnitStatsViewData { Life = 10, MaxLife = 10 };
 
             SetPrivate(hud, "_controllerBehaviour", fake);
             SetPrivate(hud, "_activePortraitImage", portraitImg);
@@ -382,6 +383,63 @@ namespace SevenBattles.Tests.UI
             Assert.AreEqual("Life", lifeLabel.text);
 
             Object.DestroyImmediate(hudGo);
+        }
+
+        [Test]
+        public void LifeValue_Updates_WhenStatsChangeAndEventRaised()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var portraitGo = new GameObject("Portrait");
+            portraitGo.transform.SetParent(hudGo.transform);
+            var portraitImg = portraitGo.AddComponent<Image>();
+            var portraitBtn = portraitGo.AddComponent<Button>();
+
+            var panelGo = new GameObject("StatsPanel");
+            panelGo.transform.SetParent(hudGo.transform);
+            var panelRect = panelGo.AddComponent<RectTransform>();
+            var panelCg = panelGo.AddComponent<CanvasGroup>();
+
+            var lifeText = new GameObject("Life").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(panelGo.transform);
+
+            var endTurnButtonGo = new GameObject("EndTurnButton");
+            endTurnButtonGo.transform.SetParent(hudGo.transform);
+            var endTurnBtn = endTurnButtonGo.AddComponent<Button>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 20, MaxLife = 25 };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_activePortraitImage", portraitImg);
+            SetPrivate(hud, "_portraitButton", portraitBtn);
+            SetPrivate(hud, "_endTurnButton", endTurnBtn);
+            SetPrivate(hud, "_statsPanelRoot", panelRect);
+            SetPrivate(hud, "_statsPanelCanvasGroup", panelCg);
+            SetPrivate(hud, "_lifeText", lifeText);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            // Open panel once, should show initial stats.
+            portraitBtn.onClick.Invoke();
+            Assert.IsTrue(panelGo.activeSelf, "Stats panel should be visible after portrait click.");
+            Assert.AreEqual("20 / 25", lifeText.text);
+
+            // Change stats and raise controller event.
+            fake.ActiveStats = new UnitStatsViewData { Life = 10, MaxLife = 25 };
+            fake.FireChanged();
+
+            // Panel should remain open and reflect new life value.
+            Assert.IsTrue(panelGo.activeSelf, "Stats panel should remain open after stats change.");
+            Assert.AreEqual("10 / 25", lifeText.text);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
         }
 
         private static void SetPrivate(object obj, string field, object value)

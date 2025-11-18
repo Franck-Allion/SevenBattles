@@ -10,6 +10,7 @@ namespace SevenBattles.Core
     public struct UnitStatsViewData
     {
         public int Life;
+        public int MaxLife;
         public int Force;
         public int Shoot;
         public int Spell;
@@ -21,4 +22,3 @@ namespace SevenBattles.Core
         public int Morale;
     }
 }
-

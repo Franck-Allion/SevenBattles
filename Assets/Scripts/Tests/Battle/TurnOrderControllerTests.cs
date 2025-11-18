@@ -99,6 +99,36 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(def);
         }
 
+        [Test]
+        public void TryGetActiveUnitStats_ExposesLifeAndMaxLife()
+        {
+            var go = new GameObject("Wizard");
+            var stats = go.AddComponent<UnitStats>();
+            var data = new UnitStatsData { Life = 50, Initiative = 5 };
+            stats.ApplyBase(data);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            UnitBattleMetadata.Ensure(go, true, def, new Vector2Int(0, 0));
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            Assert.IsTrue(ctrl.HasActiveUnit, "Controller should have an active unit after BeginBattle.");
+
+            bool ok = ctrl.TryGetActiveUnitStats(out var viewData);
+            Assert.IsTrue(ok, "TryGetActiveUnitStats should succeed when an active unit exists.");
+            Assert.AreEqual(50, viewData.Life, "Life should reflect the unit's current life.");
+            Assert.AreEqual(50, viewData.MaxLife, "MaxLife should reflect the unit's maximum life.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(go);
+            Object.DestroyImmediate(def);
+        }
+
         private static void CallPrivate(object obj, string method)
         {
             var mi = obj.GetType().GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

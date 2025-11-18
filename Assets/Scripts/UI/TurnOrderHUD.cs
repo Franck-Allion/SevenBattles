@@ -577,8 +577,12 @@ namespace SevenBattles.UI
         {
             if (_controller == null) return;
 
-            // Always close any open stats panel when the active unit changes to avoid stale data.
-            CloseStatsPanelImmediate();
+            bool wasStatsPanelVisible = _statsPanelVisible;
+
+            if (!_controller.HasActiveUnit)
+            {
+                CloseStatsPanelImmediate();
+            }
 
             if (_activePortraitImage != null)
             {
@@ -593,6 +597,18 @@ namespace SevenBattles.UI
                 if (_endTurnCanvasGroup != null)
                 {
                     _endTurnCanvasGroup.alpha = interactable ? 1f : Mathf.Clamp01(_disabledAlpha);
+                }
+            }
+
+            if (wasStatsPanelVisible && _controller.HasActiveUnit)
+            {
+                if (_controller.TryGetActiveUnitStats(out var stats))
+                {
+                    ApplyStatsToUI(stats);
+                    if (!_statsPanelVisible)
+                    {
+                        ShowStatsPanel();
+                    }
                 }
             }
         }
@@ -624,7 +640,17 @@ namespace SevenBattles.UI
 
         private void ApplyStatsToUI(UnitStatsViewData stats)
         {
-            if (_lifeText != null) _lifeText.text = stats.Life.ToString();
+            if (_lifeText != null)
+            {
+                if (stats.MaxLife > 0)
+                {
+                    _lifeText.text = $"{stats.Life} / {stats.MaxLife}";
+                }
+                else
+                {
+                    _lifeText.text = stats.Life.ToString();
+                }
+            }
             if (_forceText != null) _forceText.text = stats.Force.ToString();
             if (_shootText != null) _shootText.text = stats.Shoot.ToString();
             if (_spellText != null) _spellText.text = stats.Spell.ToString();

@@ -74,6 +74,7 @@ namespace SevenBattles.Battle.Turn
 
             // Map runtime stats to the UI view model using the full unit stat surface.
             stats.Life = u.Stats.Life;
+            stats.MaxLife = u.Stats.MaxLife;
             stats.Force = u.Stats.Attack;
             stats.Shoot = u.Stats.Shoot;
             stats.Spell = u.Stats.Spell;
