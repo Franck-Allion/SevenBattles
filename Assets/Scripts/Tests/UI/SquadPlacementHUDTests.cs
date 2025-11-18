@@ -11,6 +11,7 @@ namespace SevenBattles.Tests.UI
 {
     public class SquadPlacementHUDTests
     {
+#pragma warning disable CS0067
         private class FakePlacementController : MonoBehaviour, ISquadPlacementController
         {
             public int SquadSize { get; set; } = 3;
@@ -39,6 +40,7 @@ namespace SevenBattles.Tests.UI
                 ReadyChanged?.Invoke(ready);
             }
         }
+#pragma warning restore CS0067
 
         [Test]
         public void Instructions_AreVisible_DuringPlacement_AndHidden_WhenLocked()

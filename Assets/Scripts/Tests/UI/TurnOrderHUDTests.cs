@@ -360,16 +360,40 @@ namespace SevenBattles.Tests.UI
             Object.DestroyImmediate(ctrlGo);
         }
 
+        [Test]
+        public void StatsLabelHandlers_UpdateLabelText()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var panelGo = new GameObject("StatsPanel");
+            panelGo.transform.SetParent(hudGo.transform);
+            var panelRect = panelGo.AddComponent<RectTransform>();
+
+            var lifeLabelGo = new GameObject("LifeLabel");
+            lifeLabelGo.transform.SetParent(panelGo.transform);
+            var lifeLabel = lifeLabelGo.AddComponent<TextMeshProUGUI>();
+
+            SetPrivate(hud, "_statsPanelRoot", panelRect);
+            SetPrivate(hud, "_lifeLabel", lifeLabel);
+
+            CallPrivate(hud, "HandleLifeLabelChanged", "Life");
+
+            Assert.AreEqual("Life", lifeLabel.text);
+
+            Object.DestroyImmediate(hudGo);
+        }
+
         private static void SetPrivate(object obj, string field, object value)
         {
             var fi = obj.GetType().GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             fi.SetValue(obj, value);
         }
 
-        private static void CallPrivate(object obj, string method)
+        private static void CallPrivate(object obj, string method, params object[] args)
         {
             var mi = obj.GetType().GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            mi.Invoke(obj, null);
+            mi.Invoke(obj, args);
         }
     }
 }

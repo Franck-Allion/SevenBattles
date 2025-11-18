@@ -63,7 +63,6 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\Core\Players\PlayerSquad.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinition.cs" />
-    <Compile Include="Assets\Scripts\Core\Wizards\UnitStatsData.cs" />
     <Compile Include="Assets\Scripts\Core\UnitStatsViewData.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGrid.cs" />
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />

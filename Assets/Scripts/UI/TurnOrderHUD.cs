@@ -51,6 +51,18 @@ namespace SevenBattles.UI
         [SerializeField] private TMP_Text _initiativeText;
         [SerializeField] private TMP_Text _moraleText;
 
+        [Header("Stats Labels (TMP, optional)")]
+        [SerializeField] private TMP_Text _lifeLabel;
+        [SerializeField] private TMP_Text _attackLabel;
+        [SerializeField] private TMP_Text _shootLabel;
+        [SerializeField] private TMP_Text _spellLabel;
+        [SerializeField] private TMP_Text _speedLabel;
+        [SerializeField] private TMP_Text _luckLabel;
+        [SerializeField] private TMP_Text _defenseLabel;
+        [SerializeField] private TMP_Text _protectionLabel;
+        [SerializeField] private TMP_Text _initiativeLabel;
+        [SerializeField] private TMP_Text _moraleLabel;
+
         [Header("Audio")]
         [SerializeField, Tooltip("AudioSource used to play the End Turn SFX (optional). If not set, PlayClipAtPoint will be used.")]
         private AudioSource _audio;
@@ -65,6 +77,18 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Optional explicit reference to the Button label TMP_Text component. If not set, a child TMP_Text will be auto-found at runtime.")]
         private TMP_Text _endTurnTMP;
 
+        // Runtime-localized stats label bindings (table: UI.Common).
+        private LocalizedString _lifeLabelString;
+        private LocalizedString _attackLabelString;
+        private LocalizedString _shootLabelString;
+        private LocalizedString _spellLabelString;
+        private LocalizedString _speedLabelString;
+        private LocalizedString _luckLabelString;
+        private LocalizedString _defenseLabelString;
+        private LocalizedString _protectionLabelString;
+        private LocalizedString _initiativeLabelString;
+        private LocalizedString _moraleLabelString;
+
         private bool _statsPanelVisible;
         private bool _statsPanelAnimating;
         private Vector2 _statsPanelShownPosition;
@@ -78,6 +102,7 @@ namespace SevenBattles.UI
             EnsureEndTurnCanvasGroup();
             SetupEndTurnLocalization();
             SetupStatsPanel();
+            SetupStatsLabelLocalization();
             WirePortraitClick();
         }
 
@@ -88,6 +113,7 @@ namespace SevenBattles.UI
             _controller.ActiveUnitChanged += HandleActiveUnitChanged;
             HandleActiveUnitChanged();
             RefreshEndTurnLabel();
+            RefreshStatsLabels();
         }
 
         private void OnDisable()
@@ -98,6 +124,7 @@ namespace SevenBattles.UI
             }
 
             TeardownEndTurnLocalization();
+            TeardownStatsLabelLocalization();
             CloseStatsPanelImmediate();
 
             if (_portraitButton != null)
@@ -118,7 +145,7 @@ namespace SevenBattles.UI
             if (_controllerBehaviour == null)
             {
                 // Auto-discover a controller that implements ITurnOrderController in the scene.
-                var behaviours = FindObjectsOfType<MonoBehaviour>();
+                var behaviours = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
                 for (int i = 0; i < behaviours.Length; i++)
                 {
                     var candidate = behaviours[i] as ITurnOrderController;
@@ -203,6 +230,281 @@ namespace SevenBattles.UI
             if (_endTurnLabel != null)
             {
                 _endTurnLabel.RefreshString();
+            }
+        }
+
+        private void SetupStatsLabelLocalization()
+        {
+            if (_statsPanelRoot == null)
+            {
+                return;
+            }
+
+            if (_lifeLabel == null || _attackLabel == null || _shootLabel == null ||
+                _spellLabel == null || _speedLabel == null || _luckLabel == null ||
+                _defenseLabel == null || _protectionLabel == null ||
+                _initiativeLabel == null || _moraleLabel == null)
+            {
+                AutoDiscoverStatsLabelTexts();
+            }
+
+            SetupSingleStatLabel(ref _lifeLabelString, _lifeLabel, "stats.life", HandleLifeLabelChanged);
+            SetupSingleStatLabel(ref _attackLabelString, _attackLabel, "stats.attack", HandleAttackLabelChanged);
+            SetupSingleStatLabel(ref _shootLabelString, _shootLabel, "stats.shoot", HandleShootLabelChanged);
+            SetupSingleStatLabel(ref _spellLabelString, _spellLabel, "stats.spell", HandleSpellLabelChanged);
+            SetupSingleStatLabel(ref _speedLabelString, _speedLabel, "stats.speed", HandleSpeedLabelChanged);
+            SetupSingleStatLabel(ref _luckLabelString, _luckLabel, "stats.luck", HandleLuckLabelChanged);
+            SetupSingleStatLabel(ref _defenseLabelString, _defenseLabel, "stats.defense", HandleDefenseLabelChanged);
+            SetupSingleStatLabel(ref _protectionLabelString, _protectionLabel, "stats.protection", HandleProtectionLabelChanged);
+            SetupSingleStatLabel(ref _initiativeLabelString, _initiativeLabel, "stats.initiative", HandleInitiativeLabelChanged);
+            SetupSingleStatLabel(ref _moraleLabelString, _moraleLabel, "stats.morale", HandleMoraleLabelChanged);
+
+            RefreshStatsLabels();
+        }
+
+        private void TeardownStatsLabelLocalization()
+        {
+            TeardownSingleStatLabel(_lifeLabelString, HandleLifeLabelChanged);
+            TeardownSingleStatLabel(_attackLabelString, HandleAttackLabelChanged);
+            TeardownSingleStatLabel(_shootLabelString, HandleShootLabelChanged);
+            TeardownSingleStatLabel(_spellLabelString, HandleSpellLabelChanged);
+            TeardownSingleStatLabel(_speedLabelString, HandleSpeedLabelChanged);
+            TeardownSingleStatLabel(_luckLabelString, HandleLuckLabelChanged);
+            TeardownSingleStatLabel(_defenseLabelString, HandleDefenseLabelChanged);
+            TeardownSingleStatLabel(_protectionLabelString, HandleProtectionLabelChanged);
+            TeardownSingleStatLabel(_initiativeLabelString, HandleInitiativeLabelChanged);
+            TeardownSingleStatLabel(_moraleLabelString, HandleMoraleLabelChanged);
+        }
+
+        private void RefreshStatsLabels()
+        {
+            RefreshSingleStatLabel(_lifeLabelString);
+            RefreshSingleStatLabel(_attackLabelString);
+            RefreshSingleStatLabel(_shootLabelString);
+            RefreshSingleStatLabel(_spellLabelString);
+            RefreshSingleStatLabel(_speedLabelString);
+            RefreshSingleStatLabel(_luckLabelString);
+            RefreshSingleStatLabel(_defenseLabelString);
+            RefreshSingleStatLabel(_protectionLabelString);
+            RefreshSingleStatLabel(_initiativeLabelString);
+            RefreshSingleStatLabel(_moraleLabelString);
+        }
+
+        private void AutoDiscoverStatsLabelTexts()
+        {
+            if (_statsPanelRoot == null)
+            {
+                return;
+            }
+
+            var texts = _statsPanelRoot.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < texts.Length; i++)
+            {
+                var tmp = texts[i];
+
+                // Skip value fields that are already bound explicitly.
+                if (tmp == _lifeText || tmp == _forceText || tmp == _shootText ||
+                    tmp == _spellText || tmp == _speedText || tmp == _luckText ||
+                    tmp == _defenseText || tmp == _protectionText ||
+                    tmp == _initiativeText || tmp == _moraleText)
+                {
+                    continue;
+                }
+
+                var name = tmp.gameObject.name;
+                switch (name)
+                {
+                    case "StatsLabel_Life":
+                        if (_lifeLabel == null) _lifeLabel = tmp;
+                        break;
+                    case "StatsLabel_Attack":
+                        if (_attackLabel == null) _attackLabel = tmp;
+                        break;
+                    case "StatsLabel_Shoot":
+                        if (_shootLabel == null) _shootLabel = tmp;
+                        break;
+                    case "StatsLabel_Spell":
+                        if (_spellLabel == null) _spellLabel = tmp;
+                        break;
+                    case "StatsLabel_Speed":
+                        if (_speedLabel == null) _speedLabel = tmp;
+                        break;
+                    case "StatsLabel_Luck":
+                        if (_luckLabel == null) _luckLabel = tmp;
+                        break;
+                    case "StatsLabel_Defense":
+                        if (_defenseLabel == null) _defenseLabel = tmp;
+                        break;
+                    case "StatsLabel_Protection":
+                        if (_protectionLabel == null) _protectionLabel = tmp;
+                        break;
+                    case "StatsLabel_Initiative":
+                        if (_initiativeLabel == null) _initiativeLabel = tmp;
+                        break;
+                    case "StatsLabel_Morale":
+                        if (_moraleLabel == null) _moraleLabel = tmp;
+                        break;
+                }
+
+                var raw = tmp.text;
+                if (string.IsNullOrEmpty(raw))
+                {
+                    continue;
+                }
+
+                raw = raw.Trim();
+                var labelKey = raw.EndsWith(":") ? raw.Substring(0, raw.Length - 1) : raw;
+
+                switch (labelKey)
+                {
+                    case "Health":
+                    case "Life":
+                        if (_lifeLabel == null) _lifeLabel = tmp;
+                        break;
+                    case "Force":
+                    case "Attack":
+                        if (_attackLabel == null) _attackLabel = tmp;
+                        break;
+                    case "Shoot":
+                        if (_shootLabel == null) _shootLabel = tmp;
+                        break;
+                    case "Spell":
+                        if (_spellLabel == null) _spellLabel = tmp;
+                        break;
+                    case "Speed":
+                        if (_speedLabel == null) _speedLabel = tmp;
+                        break;
+                    case "Luck":
+                        if (_luckLabel == null) _luckLabel = tmp;
+                        break;
+                    case "Defense":
+                        if (_defenseLabel == null) _defenseLabel = tmp;
+                        break;
+                    case "Protection":
+                        if (_protectionLabel == null) _protectionLabel = tmp;
+                        break;
+                    case "Initiative":
+                        if (_initiativeLabel == null) _initiativeLabel = tmp;
+                        break;
+                    case "Morale":
+                        if (_moraleLabel == null) _moraleLabel = tmp;
+                        break;
+                }
+            }
+        }
+
+        private void SetupSingleStatLabel(ref LocalizedString labelString, TMP_Text labelTarget, string key, LocalizedString.ChangeHandler handler)
+        {
+            if (labelTarget == null)
+            {
+                return;
+            }
+
+            if (labelString == null)
+            {
+                labelString = new LocalizedString("UI.Common", key);
+            }
+
+            labelString.StringChanged += handler;
+        }
+
+        private void TeardownSingleStatLabel(LocalizedString labelString, LocalizedString.ChangeHandler handler)
+        {
+            if (labelString == null)
+            {
+                return;
+            }
+
+            labelString.StringChanged -= handler;
+        }
+
+        private void RefreshSingleStatLabel(LocalizedString labelString)
+        {
+            if (labelString == null)
+            {
+                return;
+            }
+
+            labelString.RefreshString();
+        }
+
+        private void HandleLifeLabelChanged(string value)
+        {
+            if (_lifeLabel != null)
+            {
+                _lifeLabel.text = value;
+            }
+        }
+
+        private void HandleAttackLabelChanged(string value)
+        {
+            if (_attackLabel != null)
+            {
+                _attackLabel.text = value;
+            }
+        }
+
+        private void HandleShootLabelChanged(string value)
+        {
+            if (_shootLabel != null)
+            {
+                _shootLabel.text = value;
+            }
+        }
+
+        private void HandleSpellLabelChanged(string value)
+        {
+            if (_spellLabel != null)
+            {
+                _spellLabel.text = value;
+            }
+        }
+
+        private void HandleSpeedLabelChanged(string value)
+        {
+            if (_speedLabel != null)
+            {
+                _speedLabel.text = value;
+            }
+        }
+
+        private void HandleLuckLabelChanged(string value)
+        {
+            if (_luckLabel != null)
+            {
+                _luckLabel.text = value;
+            }
+        }
+
+        private void HandleDefenseLabelChanged(string value)
+        {
+            if (_defenseLabel != null)
+            {
+                _defenseLabel.text = value;
+            }
+        }
+
+        private void HandleProtectionLabelChanged(string value)
+        {
+            if (_protectionLabel != null)
+            {
+                _protectionLabel.text = value;
+            }
+        }
+
+        private void HandleInitiativeLabelChanged(string value)
+        {
+            if (_initiativeLabel != null)
+            {
+                _initiativeLabel.text = value;
+            }
+        }
+
+        private void HandleMoraleLabelChanged(string value)
+        {
+            if (_moraleLabel != null)
+            {
+                _moraleLabel.text = value;
             }
         }
 

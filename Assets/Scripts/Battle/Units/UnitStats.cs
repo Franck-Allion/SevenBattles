@@ -36,7 +36,9 @@ namespace SevenBattles.Battle.Units
         public void ApplyBase(UnitStatsData data)
         {
             _life = data.Life;
-            _attack = data.Attack;
+            // Prefer the new Attack field when present, but fall back to
+            // ActionPoints for backwards compatibility with existing content.
+            _attack = data.Attack != 0 ? data.Attack : data.ActionPoints;
             _shoot = data.Shoot;
             _spell = data.Spell;
             _speed = data.Speed;
