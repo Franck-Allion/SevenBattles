@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using SevenBattles.Battle.Board;
-using SevenBattles.Battle.Wizards;
+using SevenBattles.Battle.Units;
 using SevenBattles.Core;
 using SevenBattles.Core.Players;
-using SevenBattles.Core.Wizards;
+using SevenBattles.Core.Units;
 
 namespace SevenBattles.Battle.Start
 {
@@ -149,9 +149,9 @@ namespace SevenBattles.Battle.Start
             var prefab = ResolvePrefab(index);
             if (prefab == null) return;
             var go = Instantiate(prefab);
-            SevenBattles.Battle.Wizards.WizardVisualUtil.ApplyScale(go, _scaleMultiplier);
+            SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
             int sortingOrder = _board != null ? _board.ComputeSortingOrder(tile.x, tile.y, _baseSortingOrder, rowStride: 10, intraRowOffset: index % 10) : (_baseSortingOrder + index);
-            SevenBattles.Battle.Wizards.WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
+            SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
             _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
             ApplyStatsIfAny(go, index);
             ApplyMetadataIfAny(go, index, tile);
@@ -261,8 +261,8 @@ namespace SevenBattles.Battle.Start
             if (index < 0 || index >= _playerSquad.Wizards.Length) return;
             var def = _playerSquad.Wizards[index];
             if (def == null) return;
-            var stats = go.GetComponent<WizardStats>();
-            if (stats == null) stats = go.AddComponent<WizardStats>();
+            var stats = go.GetComponent<UnitStats>();
+            if (stats == null) stats = go.AddComponent<UnitStats>();
             stats.ApplyBase(def.BaseStats);
         }
 
@@ -272,7 +272,7 @@ namespace SevenBattles.Battle.Start
             if (index < 0 || index >= _playerSquad.Wizards.Length) return;
             var def = _playerSquad.Wizards[index];
             if (def == null) return;
-            WizardBattleMetadata.Ensure(go, true, def, tile);
+            UnitBattleMetadata.Ensure(go, true, def, tile);
         }
 
         private void OnValidate()

@@ -12,7 +12,12 @@ namespace SevenBattles.Core
 
         event Action ActiveUnitChanged;
 
+        /// <summary>
+        /// Tries to expose the active unit's stats in a UI-friendly snapshot.
+        /// Returns false when there is no active unit or stats are not available.
+        /// </summary>
+        bool TryGetActiveUnitStats(out UnitStatsViewData stats);
+
         void RequestEndTurn();
     }
 }
-

@@ -1,10 +1,10 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace SevenBattles.Battle.Wizards
+namespace SevenBattles.Battle.Units
 {
     // Utility for preparing wizard visuals (direction, sorting, scale) consistently.
-    public static class WizardVisualUtil
+    public static class UnitVisualUtil
     {
         public static void InitializeHero(GameObject instance, string sortingLayer, int sortingOrder, Vector2? desiredDirection)
         {

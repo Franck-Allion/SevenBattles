@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Board;
-using SevenBattles.Battle.Wizards;
+using SevenBattles.Battle.Units;
 using SevenBattles.Core;
 
 namespace SevenBattles.Battle.Turn
 {
     // Basic initiative-based turn controller for wizards.
-    // Discovers WizardBattleMetadata instances at battle start, sorts by WizardStats.Initiative,
+    // Discovers UnitBattleMetadata instances at battle start, sorts by UnitStats.Initiative,
     // and advances turns for player and AI units.
     public class SimpleTurnOrderController : MonoBehaviour, ITurnOrderController
     {
@@ -30,8 +30,8 @@ namespace SevenBattles.Battle.Turn
 
         private struct TurnUnit
         {
-            public WizardBattleMetadata Metadata;
-            public WizardStats Stats;
+            public UnitBattleMetadata Metadata;
+            public UnitStats Stats;
         }
 
         private readonly List<TurnUnit> _units = new List<TurnUnit>();
@@ -48,10 +48,43 @@ namespace SevenBattles.Battle.Turn
         {
             get
             {
-                if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return null;
+                if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
+                {
+                    return null;
+                }
                 var u = _units[_activeIndex];
                 return u.Metadata != null ? u.Metadata.Portrait : null;
             }
+        }
+
+        public bool TryGetActiveUnitStats(out UnitStatsViewData stats)
+        {
+            stats = default;
+
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
+            {
+                return false;
+            }
+
+            var u = _units[_activeIndex];
+            if (u.Stats == null)
+            {
+                return false;
+            }
+
+            // Map runtime stats to the UI view model using the full unit stat surface.
+            stats.Life = u.Stats.Life;
+            stats.Force = u.Stats.Attack;
+            stats.Shoot = u.Stats.Shoot;
+            stats.Spell = u.Stats.Spell;
+            stats.Speed = u.Stats.Speed;
+            stats.Luck = u.Stats.Luck;
+            stats.Defense = u.Stats.Defense;
+            stats.Protection = u.Stats.Protection;
+            stats.Initiative = u.Stats.Initiative;
+            stats.Morale = u.Stats.Morale;
+
+            return true;
         }
 
         public event Action ActiveUnitChanged;
@@ -123,12 +156,12 @@ namespace SevenBattles.Battle.Turn
             _activeIndex = -1;
             _pendingAiEndTime = -1f;
 
-            var metas = FindObjectsOfType<WizardBattleMetadata>();
+            var metas = FindObjectsOfType<UnitBattleMetadata>();
             for (int i = 0; i < metas.Length; i++)
             {
                 var meta = metas[i];
                 if (meta == null || !meta.isActiveAndEnabled) continue;
-                var stats = meta.GetComponent<WizardStats>();
+                var stats = meta.GetComponent<UnitStats>();
                 if (stats == null) continue;
                 _units.Add(new TurnUnit { Metadata = meta, Stats = stats });
             }

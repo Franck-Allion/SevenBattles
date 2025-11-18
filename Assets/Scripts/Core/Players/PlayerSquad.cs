@@ -1,5 +1,5 @@
 using UnityEngine;
-using SevenBattles.Core.Wizards;
+using SevenBattles.Core.Units;
 
 namespace SevenBattles.Core.Players
 {
@@ -7,7 +7,7 @@ namespace SevenBattles.Core.Players
     public class PlayerSquad : ScriptableObject
     {
         [Tooltip("1..8 wizard definitions that make up this player's squad.")]
-        public WizardDefinition[] Wizards = new WizardDefinition[3];
+        public UnitDefinition[] Wizards = new UnitDefinition[3];
     }
 }
 

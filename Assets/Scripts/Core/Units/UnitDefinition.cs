@@ -1,9 +1,9 @@
 using UnityEngine;
 
-namespace SevenBattles.Core.Wizards
+namespace SevenBattles.Core.Units
 {
     [CreateAssetMenu(menuName = "SevenBattles/Wizard Definition", fileName = "WizardDefinition")]
-    public class WizardDefinition : ScriptableObject
+    public class UnitDefinition : ScriptableObject
     {
         [Header("Identity")]
         public string Id;
@@ -15,7 +15,7 @@ namespace SevenBattles.Core.Wizards
         public GameObject Prefab;
 
         [Header("Base Stats")]
-        public WizardStatsData BaseStats;
+        public UnitStatsData BaseStats;
     }
 }
 

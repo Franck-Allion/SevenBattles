@@ -18,6 +18,7 @@ namespace SevenBattles.Tests.UI
             public event System.Action ActiveUnitChanged;
 
             public bool EndTurnRequested { get; private set; }
+            public UnitStatsViewData ActiveStats;
 
             public void RequestEndTurn()
             {
@@ -27,6 +28,12 @@ namespace SevenBattles.Tests.UI
             public void FireChanged()
             {
                 ActiveUnitChanged?.Invoke();
+            }
+
+            public bool TryGetActiveUnitStats(out UnitStatsViewData stats)
+            {
+                stats = ActiveStats;
+                return HasActiveUnit;
             }
         }
 
@@ -112,6 +119,242 @@ namespace SevenBattles.Tests.UI
             Assert.IsFalse(fake.EndTurnRequested);
             btn.onClick.Invoke();
             Assert.IsTrue(fake.EndTurnRequested, "End turn request should be forwarded to controller.");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void PortraitClick_TogglesStatsPanel_AndLoadsStats()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var portraitGo = new GameObject("Portrait");
+            portraitGo.transform.SetParent(hudGo.transform);
+            var portraitImg = portraitGo.AddComponent<Image>();
+            var portraitBtn = portraitGo.AddComponent<Button>();
+
+            var panelGo = new GameObject("StatsPanel");
+            panelGo.transform.SetParent(hudGo.transform);
+            var panelRect = panelGo.AddComponent<RectTransform>();
+            var panelCg = panelGo.AddComponent<CanvasGroup>();
+
+            var lifeText = new GameObject("Life").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(panelGo.transform);
+            var speedText = new GameObject("Speed").AddComponent<TextMeshProUGUI>();
+            speedText.transform.SetParent(panelGo.transform);
+            var initText = new GameObject("Init").AddComponent<TextMeshProUGUI>();
+            initText.transform.SetParent(panelGo.transform);
+
+            var buttonGo = new GameObject("EndTurnButton");
+            buttonGo.transform.SetParent(hudGo.transform);
+            var btn = buttonGo.AddComponent<Button>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData
+            {
+                Life = 25,
+                Speed = 7,
+                Initiative = 12
+            };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_activePortraitImage", portraitImg);
+            SetPrivate(hud, "_portraitButton", portraitBtn);
+            SetPrivate(hud, "_endTurnButton", btn);
+            SetPrivate(hud, "_statsPanelRoot", panelRect);
+            SetPrivate(hud, "_statsPanelCanvasGroup", panelCg);
+            SetPrivate(hud, "_lifeText", lifeText);
+            SetPrivate(hud, "_speedText", speedText);
+            SetPrivate(hud, "_initiativeText", initText);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            Assert.IsFalse(panelGo.activeSelf, "Stats panel should start hidden.");
+
+            // First click opens panel and populates stats
+            portraitBtn.onClick.Invoke();
+            Assert.IsTrue(panelGo.activeSelf, "Stats panel should be visible after portrait click.");
+            Assert.AreEqual("25", lifeText.text);
+            Assert.AreEqual("7", speedText.text);
+            Assert.AreEqual("12", initText.text);
+
+            // Second click closes panel
+            portraitBtn.onClick.Invoke();
+            Assert.IsFalse(panelGo.activeSelf, "Stats panel should be hidden when clicking portrait again.");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void PortraitButton_CanBeParentOfImage()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            // Button root
+            var buttonRoot = new GameObject("PortraitButton");
+            buttonRoot.transform.SetParent(hudGo.transform);
+            var portraitBtn = buttonRoot.AddComponent<Button>();
+
+            // Portrait image as child of the button
+            var portraitChild = new GameObject("PortraitImage");
+            portraitChild.transform.SetParent(buttonRoot.transform);
+            var portraitImg = portraitChild.AddComponent<Image>();
+
+            // Stats panel
+            var panelGo = new GameObject("StatsPanel");
+            panelGo.transform.SetParent(hudGo.transform);
+            var panelRect = panelGo.AddComponent<RectTransform>();
+            var panelCg = panelGo.AddComponent<CanvasGroup>();
+
+            var lifeText = new GameObject("Life").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(panelGo.transform);
+
+            var buttonGo = new GameObject("EndTurnButton");
+            buttonGo.transform.SetParent(hudGo.transform);
+            var endTurnBtn = buttonGo.AddComponent<Button>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 30 };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_activePortraitImage", portraitImg);
+            // Intentionally do NOT assign _portraitButton to ensure auto-wiring via parent lookup.
+            SetPrivate(hud, "_endTurnButton", endTurnBtn);
+            SetPrivate(hud, "_statsPanelRoot", panelRect);
+            SetPrivate(hud, "_statsPanelCanvasGroup", panelCg);
+            SetPrivate(hud, "_lifeText", lifeText);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            Assert.IsFalse(panelGo.activeSelf, "Stats panel should start hidden.");
+
+            // Click the button root (parent of the image).
+            portraitBtn.onClick.Invoke();
+            Assert.IsTrue(panelGo.activeSelf, "Stats panel should open when clicking a Button parent of the portrait image.");
+            Assert.AreEqual("30", lifeText.text);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void StatsPanel_Closes_OnActiveUnitChange()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var portraitGo = new GameObject("Portrait");
+            portraitGo.transform.SetParent(hudGo.transform);
+            var portraitImg = portraitGo.AddComponent<Image>();
+            var portraitBtn = portraitGo.AddComponent<Button>();
+
+            var panelGo = new GameObject("StatsPanel");
+            panelGo.transform.SetParent(hudGo.transform);
+            var panelRect = panelGo.AddComponent<RectTransform>();
+            var panelCg = panelGo.AddComponent<CanvasGroup>();
+
+            var lifeText = new GameObject("Life").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(panelGo.transform);
+
+            var buttonGo = new GameObject("EndTurnButton");
+            buttonGo.transform.SetParent(hudGo.transform);
+            var btn = buttonGo.AddComponent<Button>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 10 };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_activePortraitImage", portraitImg);
+            SetPrivate(hud, "_portraitButton", portraitBtn);
+            SetPrivate(hud, "_endTurnButton", btn);
+            SetPrivate(hud, "_statsPanelRoot", panelRect);
+            SetPrivate(hud, "_statsPanelCanvasGroup", panelCg);
+            SetPrivate(hud, "_lifeText", lifeText);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            // Open the stats panel
+            portraitBtn.onClick.Invoke();
+            Assert.IsTrue(panelGo.activeSelf, "Stats panel should be visible after portrait click.");
+
+            // Active unit changes -> panel should close automatically
+            fake.FireChanged();
+            Assert.IsFalse(panelGo.activeSelf, "Stats panel should close when active unit changes.");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void ClickingOutside_ClosesStatsPanel()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var portraitGo = new GameObject("Portrait");
+            portraitGo.transform.SetParent(hudGo.transform);
+            var portraitImg = portraitGo.AddComponent<Image>();
+            var portraitBtn = portraitGo.AddComponent<Button>();
+
+            var panelGo = new GameObject("StatsPanel");
+            panelGo.transform.SetParent(hudGo.transform);
+            var panelRect = panelGo.AddComponent<RectTransform>();
+            var panelCg = panelGo.AddComponent<CanvasGroup>();
+
+            var lifeText = new GameObject("Life").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(panelGo.transform);
+
+            var overlayGo = new GameObject("Overlay");
+            overlayGo.transform.SetParent(hudGo.transform);
+            var overlayBtn = overlayGo.AddComponent<Button>();
+
+            var buttonGo = new GameObject("EndTurnButton");
+            buttonGo.transform.SetParent(hudGo.transform);
+            var btn = buttonGo.AddComponent<Button>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 10 };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_activePortraitImage", portraitImg);
+            SetPrivate(hud, "_portraitButton", portraitBtn);
+            SetPrivate(hud, "_endTurnButton", btn);
+            SetPrivate(hud, "_statsPanelRoot", panelRect);
+            SetPrivate(hud, "_statsPanelCanvasGroup", panelCg);
+            SetPrivate(hud, "_lifeText", lifeText);
+            SetPrivate(hud, "_statsPanelBackgroundButton", overlayBtn);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            // Open the stats panel
+            portraitBtn.onClick.Invoke();
+            Assert.IsTrue(panelGo.activeSelf, "Stats panel should be visible after portrait click.");
+            Assert.IsTrue(overlayGo.activeSelf, "Overlay should be active while stats panel is open.");
+
+            // Click outside via overlay
+            overlayBtn.onClick.Invoke();
+            Assert.IsFalse(panelGo.activeSelf, "Stats panel should be hidden after clicking outside.");
+            Assert.IsFalse(overlayGo.activeSelf, "Overlay should be hidden when stats panel is closed.");
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);

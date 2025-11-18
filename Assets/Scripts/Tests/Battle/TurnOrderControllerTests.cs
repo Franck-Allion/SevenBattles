@@ -1,8 +1,8 @@
 using NUnit.Framework;
 using UnityEngine;
 using SevenBattles.Battle.Turn;
-using SevenBattles.Battle.Wizards;
-using SevenBattles.Core.Wizards;
+using SevenBattles.Battle.Units;
+using SevenBattles.Core.Units;
 
 namespace SevenBattles.Tests.Battle
 {
@@ -15,19 +15,19 @@ namespace SevenBattles.Tests.Battle
             var aGo = new GameObject("WizardA");
             var bGo = new GameObject("WizardB");
 
-            var aStats = aGo.AddComponent<WizardStats>();
-            var bStats = bGo.AddComponent<WizardStats>();
+            var aStats = aGo.AddComponent<UnitStats>();
+            var bStats = bGo.AddComponent<UnitStats>();
 
-            var aData = new WizardStatsData { Initiative = 5 };
-            var bData = new WizardStatsData { Initiative = 10 };
+            var aData = new UnitStatsData { Initiative = 5 };
+            var bData = new UnitStatsData { Initiative = 10 };
             aStats.ApplyBase(aData);
             bStats.ApplyBase(bData);
 
-            var def = ScriptableObject.CreateInstance<WizardDefinition>();
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
             def.Portrait = null;
 
-            var aMeta = WizardBattleMetadata.Ensure(aGo, true, def, new Vector2Int(0, 0));
-            var bMeta = WizardBattleMetadata.Ensure(bGo, false, def, new Vector2Int(1, 0));
+            var aMeta = UnitBattleMetadata.Ensure(aGo, true, def, new Vector2Int(0, 0));
+            var bMeta = UnitBattleMetadata.Ensure(bGo, false, def, new Vector2Int(1, 0));
             Assert.IsNotNull(aMeta);
             Assert.IsNotNull(bMeta);
 
@@ -65,16 +65,16 @@ namespace SevenBattles.Tests.Battle
             var aGo = new GameObject("WizardA");
             var bGo = new GameObject("WizardB");
 
-            var aStats = aGo.AddComponent<WizardStats>();
-            var bStats = bGo.AddComponent<WizardStats>();
+            var aStats = aGo.AddComponent<UnitStats>();
+            var bStats = bGo.AddComponent<UnitStats>();
 
-            aStats.ApplyBase(new WizardStatsData { Initiative = 5 });
-            bStats.ApplyBase(new WizardStatsData { Initiative = 10 });
+            aStats.ApplyBase(new UnitStatsData { Initiative = 5 });
+            bStats.ApplyBase(new UnitStatsData { Initiative = 10 });
 
-            var def = ScriptableObject.CreateInstance<WizardDefinition>();
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
 
-            WizardBattleMetadata.Ensure(aGo, true, def, new Vector2Int(0, 0));
-            WizardBattleMetadata.Ensure(bGo, false, def, new Vector2Int(1, 0));
+            UnitBattleMetadata.Ensure(aGo, true, def, new Vector2Int(0, 0));
+            UnitBattleMetadata.Ensure(bGo, false, def, new Vector2Int(1, 0));
 
             var ctrlGo = new GameObject("TurnController");
             var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();

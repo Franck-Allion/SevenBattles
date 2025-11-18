@@ -24,4 +24,3 @@ namespace SevenBattles.Tests.Core
         }
     }
 }
-

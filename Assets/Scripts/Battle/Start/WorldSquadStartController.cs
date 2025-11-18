@@ -1,7 +1,7 @@
 using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Core.Players;
-using SevenBattles.Core.Wizards;
+using SevenBattles.Core.Units;
 
 namespace SevenBattles.Battle.Start
 {
@@ -64,11 +64,11 @@ namespace SevenBattles.Battle.Start
                     if (def == null || def.Prefab == null) continue;
                     int tileX = GetTileXForIndex(i);
                     var go = Object.Instantiate(def.Prefab);
-                    SevenBattles.Battle.Wizards.WizardVisualUtil.ApplyScale(go, _scaleMultiplier);
+                    SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                     int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);
-                    SevenBattles.Battle.Wizards.WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
+                    SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
                     _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
-                    SevenBattles.Battle.Wizards.WizardBattleMetadata.Ensure(go, true, def, new Vector2Int(tileX, _rowY));
+                    SevenBattles.Battle.Units.UnitBattleMetadata.Ensure(go, true, def, new Vector2Int(tileX, _rowY));
                 }
             }
             else
@@ -79,9 +79,9 @@ namespace SevenBattles.Battle.Start
                     if (prefab == null) continue;
                     int tileX = GetTileXForIndex(i);
                     var go = Object.Instantiate(prefab);
-                    SevenBattles.Battle.Wizards.WizardVisualUtil.ApplyScale(go, _scaleMultiplier);
+                    SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                     int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);
-                    SevenBattles.Battle.Wizards.WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
+                    SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
                     _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
                 }
             }

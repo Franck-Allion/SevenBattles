@@ -1,10 +1,10 @@
 using UnityEngine;
-using SevenBattles.Core.Wizards;
+using SevenBattles.Core.Units;
 
-namespace SevenBattles.Battle.Wizards
+namespace SevenBattles.Battle.Units
 {
     // Runtime metadata describing a wizard in battle (team, portrait, board tile).
-    public class WizardBattleMetadata : MonoBehaviour
+    public class UnitBattleMetadata : MonoBehaviour
     {
         [SerializeField] private bool _isPlayerControlled = true;
         [SerializeField] private Sprite _portrait;
@@ -35,15 +35,15 @@ namespace SevenBattles.Battle.Wizards
             }
         }
 
-        public WizardDefinition Definition { get; private set; }
+        public UnitDefinition Definition { get; private set; }
 
-        public static WizardBattleMetadata Ensure(GameObject instance, bool isPlayerControlled, WizardDefinition definition, Vector2Int tile)
+        public static UnitBattleMetadata Ensure(GameObject instance, bool isPlayerControlled, UnitDefinition definition, Vector2Int tile)
         {
             if (instance == null) return null;
-            var meta = instance.GetComponent<WizardBattleMetadata>();
+            var meta = instance.GetComponent<UnitBattleMetadata>();
             if (meta == null)
             {
-                meta = instance.AddComponent<WizardBattleMetadata>();
+                meta = instance.AddComponent<UnitBattleMetadata>();
             }
 
             meta._isPlayerControlled = isPlayerControlled;

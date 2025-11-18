@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Board;
-using SevenBattles.Battle.Wizards;
+using SevenBattles.Battle.Units;
 using SevenBattles.Core.Players;
-using SevenBattles.Core.Wizards;
+using SevenBattles.Core.Units;
 
 namespace SevenBattles.Battle.Start
 {
@@ -82,13 +82,13 @@ namespace SevenBattles.Battle.Start
                 var tile = validTiles[i];
 
                 var go = Instantiate(def.Prefab);
-                WizardVisualUtil.ApplyScale(go, _scaleMultiplier);
+                UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                 int sortingOrder = _board.ComputeSortingOrder(tile.x, tile.y, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10);
                 if (sortingOrder < _sortingOrderFloor) sortingOrder = _sortingOrderFloor + (i % 3);
-                WizardVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.down);
+                UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.down);
                 _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
                 ApplyStatsIfAny(go, def);
-                WizardBattleMetadata.Ensure(go, false, def, tile);
+                UnitBattleMetadata.Ensure(go, false, def, tile);
                 if (_ignoreRaycast) TrySetIgnoreRaycast(go);
             }
         }
@@ -118,11 +118,11 @@ namespace SevenBattles.Battle.Start
             }
         }
 
-        private void ApplyStatsIfAny(GameObject go, WizardDefinition def)
+        private void ApplyStatsIfAny(GameObject go, UnitDefinition def)
         {
             if (go == null || def == null) return;
-            var stats = go.GetComponent<WizardStats>();
-            if (stats == null) stats = go.AddComponent<WizardStats>();
+            var stats = go.GetComponent<UnitStats>();
+            if (stats == null) stats = go.AddComponent<UnitStats>();
             stats.ApplyBase(def.BaseStats);
         }
 

@@ -21,7 +21,7 @@ namespace SevenBattles.Tests.Battle
 
             SetPrivate(board, "_highlightMaterial", baseMat);
 
-            // Force creation of the internal highlight renderer using the default material first.
+            // Attack creation of the internal highlight renderer using the default material first.
             board.SetHighlightVisible(true);
 
             var renderer = GetPrivate<MeshRenderer>(board, "_highlightMr");

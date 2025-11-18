@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Tests\Battle\TurnOrderControllerTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\UnitDefinitionControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\TurnOrderHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridQuadTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
@@ -69,7 +70,6 @@
     <Compile Include="Assets\Scripts\Tests\Battle\StartSquadControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\WorldPerspectiveBoardHighlightTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\WizardDefinitionControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SquadPlacementHUDTests.cs" />
   </ItemGroup>

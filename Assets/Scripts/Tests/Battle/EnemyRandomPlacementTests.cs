@@ -3,7 +3,7 @@ using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Start;
 using SevenBattles.Core.Players;
-using SevenBattles.Core.Wizards;
+using SevenBattles.Core.Units;
 using System.Reflection;
 using System.Collections.Generic;
 
@@ -26,12 +26,12 @@ namespace SevenBattles.Tests.Battle
             board.RebuildGrid();
 
             // Enemy squad of 5 simple SpriteRenderer prefabs
-            var defs = new List<WizardDefinition>();
+            var defs = new List<UnitDefinition>();
             for (int i = 0; i < 5; i++)
             {
                 var wizGo = new GameObject($"Enemy{i}");
                 wizGo.AddComponent<SpriteRenderer>();
-                var def = ScriptableObject.CreateInstance<WizardDefinition>();
+                var def = ScriptableObject.CreateInstance<UnitDefinition>();
                 def.Prefab = wizGo;
                 defs.Add(def);
             }

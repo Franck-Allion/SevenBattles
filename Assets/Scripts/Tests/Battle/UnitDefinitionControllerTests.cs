@@ -3,12 +3,12 @@ using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Start;
 using SevenBattles.Core.Players;
-using SevenBattles.Core.Wizards;
-using SevenBattles.Battle.Wizards;
+using SevenBattles.Core.Units;
+using SevenBattles.Battle.Units;
 
 namespace SevenBattles.Tests.Battle
 {
-    public class WizardDefinitionControllerTests
+    public class UnitDefinitionControllerTests
     {
         [Test]
         public void Spawns_From_Definition_And_Applies_Stats()
@@ -29,16 +29,16 @@ namespace SevenBattles.Tests.Battle
             wizPrefab.AddComponent<SpriteRenderer>();
 
             // ScriptableObject definition
-            var def = ScriptableObject.CreateInstance<WizardDefinition>();
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
             def.Id = "wiz_def_test";
             def.Prefab = wizPrefab;
-            def.BaseStats = new WizardStatsData { MaxHP = 42, ActionPoints = 7, Speed = 3, Initiative = 5 };
+            def.BaseStats = new UnitStatsData { MaxHP = 42, ActionPoints = 7, Speed = 3, Initiative = 5 };
 
             var ctrlGo = new GameObject("SquadPlacementCtrl");
             var ctrl = ctrlGo.AddComponent<WorldSquadPlacementController>();
             SetPrivate(ctrl, "_board", board);
             var squad = ScriptableObject.CreateInstance<PlayerSquad>();
-            squad.Wizards = new WizardDefinition[] { def };
+            squad.Wizards = new UnitDefinition[] { def };
             SetPrivate(ctrl, "_playerSquad", squad);
             SetPrivate(ctrl, "_playerRows", 2);
 
@@ -50,7 +50,7 @@ namespace SevenBattles.Tests.Battle
             var spawned = GameObject.Find("WizardFromDef(Clone)");
             Assert.NotNull(spawned, "Spawned instance should exist.");
 
-            var stats = spawned.GetComponent<WizardStats>();
+            var stats = spawned.GetComponent<UnitStats>();
             Assert.NotNull(stats, "WizardStats should be attached.");
             Assert.AreEqual(42, stats.MaxHP);
             Assert.AreEqual(7, stats.ActionPoints);
