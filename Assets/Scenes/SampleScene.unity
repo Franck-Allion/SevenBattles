@@ -3214,8 +3214,13 @@ MonoBehaviour:
   _spawnEnemiesOnAwake: 0
   _startTurnsOnPlacementLocked: 1
   _enemy: {fileID: 532915271}
-  _playerPlacement: {fileID: 1825238186}
-  _turnController: {fileID: 1760860160}
+  _playerPlacementBehaviour: {fileID: 0}
+  _turnControllerBehaviour: {fileID: 0}
+  _fadeCanvasGroup: {fileID: 0}
+  _placementHudRoot: {fileID: 501029658}
+  _battleHudRoot: {fileID: 1813514945}
+  _fadeOutDuration: 2
+  _fadeInDuration: 0.5
 --- !u!1 &994594095
 GameObject:
   m_ObjectHideFlags: 0
@@ -7100,6 +7105,16 @@ MonoBehaviour:
   _protectionText: {fileID: 1183073048}
   _initiativeText: {fileID: 2010846890}
   _moraleText: {fileID: 1613904166}
+  _lifeLabel: {fileID: 0}
+  _attackLabel: {fileID: 0}
+  _shootLabel: {fileID: 0}
+  _spellLabel: {fileID: 0}
+  _speedLabel: {fileID: 0}
+  _luckLabel: {fileID: 0}
+  _defenseLabel: {fileID: 0}
+  _protectionLabel: {fileID: 0}
+  _initiativeLabel: {fileID: 0}
+  _moraleLabel: {fileID: 0}
   _audio: {fileID: 0}
   _endTurnClip: {fileID: 8300000, guid: e2d5abea0e082bf44a92141314208710, type: 3}
   _endTurnLabel:

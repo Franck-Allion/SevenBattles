@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\CharacterSerializer.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\BankHealthBar.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextEventHandler.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Common\Serializer.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Enums\ItemType.cs" />
@@ -79,6 +80,8 @@
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Elements\Equipment.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\CharacterAppearance.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Data\ItemIcon.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\FlickerImage.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\HealthBarLogic.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark02.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Enums\CharacterState.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Data\LocalizedValue.cs" />
@@ -90,14 +93,17 @@
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Helpers\SetupResolver.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\ExampleScripts\ControlsExample.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\AnchorManager.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\ChangeSize.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\InventoryBase.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\Character.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_ExampleScript_01.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMPro_InstructionOverlay.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\LayerManager.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexShakeB.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\MaterialHealhBar.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\Character4D.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\SliderReset.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\RotateGear.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexJitter.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\CharacterSetup.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_UiFrameRateCounter.cs" />
@@ -105,11 +111,13 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexZoom.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Elements\ScrollInventoryFilter.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Common\Screenshot.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\SteamHealthBar.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_TextSelector_B.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\SkewTextExample.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\WarpTextExample.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\WarehouseBase.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Elements\ItemInfo.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\PowerBarMaterial.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\ShaderPropAnimator.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Collections\SpriteCollection.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\SimpleColorPicker\Scripts\ColorMode.cs" />
@@ -149,8 +157,10 @@
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\SpriteMapping.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\Benchmark03.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Enums\ItemMaterial.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\RectHealhBar.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\ExampleScripts\InventoryExample.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Enums\EquipmentTag.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\DemonstrationLogic.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Data\Modifier.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Common\Springs\SpringBase.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Helpers\CharacterInventorySetup.cs" />
@@ -213,6 +223,8 @@
     <None Include="Assets\TextMesh Pro\Sprites\EmojiOne Attribution.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Custom-Atlas.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF.shader" />
+    <None Include="Assets\HealthBar\FMALinzCardio.shader" />
+    <None Include="Assets\HealthBar\FMAHealhtBarUI.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile SSD.shader" />
     <None Include="Assets\TextMesh Pro\Resources\LineBreaking Leading Characters.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMPro_Properties.cginc" />
@@ -221,8 +233,10 @@
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\Multiplicative\EdgeEffect_Electric_Multiplicative.shader" />
     <None Include="Assets\TextMesh Pro\Resources\LineBreaking Following Characters.txt" />
     <None Include="Assets\Art\Fonts\Alata - OFL.txt" />
+    <None Include="Assets\HealthBar\FMAWaveHealhtBarUI.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Masking.shader" />
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\Electric_Additive.shader" />
+    <None Include="Assets\HealthBar\FMACardio.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF Overlay.shader" />
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\Multiplicative\EdgeEffect_Multiplicative.shader" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_Bitmap-Mobile.shader" />
@@ -230,6 +244,7 @@
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\UIEffect.shader" />
     <None Include="Assets\TextMesh Pro\Fonts\LiberationSans - OFL.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile.shader" />
+    <None Include="Assets\HealthBar\FMAAngleWaveHealhtBarUI.shader" />
     <None Include="Assets\Layer Lab\GUI Pro-FantasyRPG\Extensions\UIParticle\UIAdditive.shader" />
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\EdgeEffect_Electric_Additive.shader" />
     <None Include="Assets\Layer Lab\GUI Pro-FantasyRPG\ResourcesData\Fonts\Play - OFL.txt" />

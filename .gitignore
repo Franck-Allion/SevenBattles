@@ -24,6 +24,7 @@
 [Aa]ssets/Layer Lab
 [Aa]ssets/RVFX
 [Aa]ssets/TextMesh Pro
+[Aa]ssets/HealthBar
 
 # Never ignore Asset meta data
 !/[Aa]ssets/**/*.meta
