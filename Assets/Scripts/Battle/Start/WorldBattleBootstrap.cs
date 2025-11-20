@@ -1,5 +1,8 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 using SevenBattles.Battle.Turn;
+using SevenBattles.Core;
 
 namespace SevenBattles.Battle.Start
 {
@@ -15,10 +18,26 @@ namespace SevenBattles.Battle.Start
 
         [Header("Controllers")]
         [SerializeField] private WorldEnemySquadStartController _enemy;
-        [SerializeField, Tooltip("Player placement controller. If not assigned, will be auto-found at runtime.")]
-        private WorldSquadPlacementController _playerPlacement;
+        [SerializeField, Tooltip("Player placement controller (MonoBehaviour implementing ISquadPlacementController). If not assigned, will be auto-found at runtime.")]
+        private MonoBehaviour _playerPlacementBehaviour;
         [SerializeField, Tooltip("Turn order controller. If not assigned, will be auto-found at runtime.")]
-        private SimpleTurnOrderController _turnController;
+        private SimpleTurnOrderController _turnControllerBehaviour;
+
+        [Header("UI Transition")]
+        [SerializeField, Tooltip("Optional full-screen CanvasGroup used for fade-out/fade-in between placement and battle.")]
+        private CanvasGroup _fadeCanvasGroup;
+        [SerializeField, Tooltip("Placement HUD root that is hidden once fade-out completes.")]
+        private GameObject _placementHudRoot;
+        [SerializeField, Tooltip("Battle HUD root that is shown just before fade-in begins.")]
+        private GameObject _battleHudRoot;
+        [SerializeField, Tooltip("Fade-out duration in seconds.")]
+        private float _fadeOutDuration = 0.5f;
+        [SerializeField, Tooltip("Fade-in duration in seconds.")]
+        private float _fadeInDuration = 0.5f;
+
+        private ISquadPlacementController _playerPlacement;
+        private IBattleTurnController _turnController;
+        private Coroutine _transitionRoutine;
 
         private void Awake()
         {
@@ -29,16 +48,8 @@ namespace SevenBattles.Battle.Start
 
             if (_startTurnsOnPlacementLocked)
             {
-                if (_playerPlacement == null)
-                {
-                    _playerPlacement = FindObjectOfType<WorldSquadPlacementController>();
-                }
-                if (_turnController == null)
-                {
-                    _turnController = FindObjectOfType<SimpleTurnOrderController>();
-                }
-
-                if (_playerPlacement != null && _turnController != null)
+                ResolveControllers();
+                if (_playerPlacement != null)
                 {
                     _playerPlacement.PlacementLocked += HandlePlacementLocked;
                 }
@@ -51,14 +62,147 @@ namespace SevenBattles.Battle.Start
             {
                 _playerPlacement.PlacementLocked -= HandlePlacementLocked;
             }
+
+            if (_transitionRoutine != null)
+            {
+                StopCoroutine(_transitionRoutine);
+                _transitionRoutine = null;
+            }
         }
 
         private void HandlePlacementLocked()
         {
+            if (!_startTurnsOnPlacementLocked)
+            {
+                return;
+            }
+
+            ResolveControllers();
+
+            if (_playerPlacement == null || _turnController == null)
+            {
+                return;
+            }
+
+            if (_transitionRoutine != null)
+            {
+                return;
+            }
+
+            _transitionRoutine = StartCoroutine(PlacementToBattleRoutine());
+        }
+
+        private void ResolveControllers()
+        {
+            if (_playerPlacement == null)
+            {
+                if (_playerPlacementBehaviour != null)
+                {
+                    _playerPlacement = _playerPlacementBehaviour as ISquadPlacementController;
+                }
+
+                if (_playerPlacement == null)
+                {
+                    var behaviours = FindObjectsOfType<MonoBehaviour>();
+                    for (int i = 0; i < behaviours.Length; i++)
+                    {
+                        var candidate = behaviours[i] as ISquadPlacementController;
+                        if (candidate != null)
+                        {
+                            _playerPlacement = candidate;
+                            _playerPlacementBehaviour = behaviours[i];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (_turnController == null)
+            {
+                if (_turnControllerBehaviour != null)
+                {
+                    _turnController = _turnControllerBehaviour as IBattleTurnController;
+                }
+
+                if (_turnController == null)
+                {
+                    var controller = FindObjectOfType<SimpleTurnOrderController>();
+                    _turnControllerBehaviour = controller;
+                    _turnController = controller;
+                }
+            }
+        }
+
+        private IEnumerator PlacementToBattleRoutine()
+        {
+            if (_turnController != null)
+            {
+                _turnController.SetInteractionLocked(true);
+            }
+
+            if (_fadeCanvasGroup != null)
+            {
+                _fadeCanvasGroup.gameObject.SetActive(true);
+                _fadeCanvasGroup.blocksRaycasts = true;
+            }
+
+            float fadeOutDuration = Mathf.Max(0.01f, _fadeOutDuration);
+            float t = 0f;
+
+            if (_fadeCanvasGroup != null)
+            {
+                _fadeCanvasGroup.alpha = 0f;
+                while (t < fadeOutDuration)
+                {
+                    t += Time.unscaledDeltaTime;
+                    float p = Mathf.Clamp01(t / fadeOutDuration);
+                    float eased = p * p * (3f - 2f * p);
+                    _fadeCanvasGroup.alpha = eased;
+                    yield return null;
+                }
+                _fadeCanvasGroup.alpha = 1f;
+            }
+
+            if (_placementHudRoot != null)
+            {
+                _placementHudRoot.SetActive(false);
+            }
+
             if (_turnController != null)
             {
                 _turnController.StartBattle();
             }
+
+            if (_battleHudRoot != null)
+            {
+                _battleHudRoot.SetActive(true);
+            }
+
+            float fadeInDuration = Mathf.Max(0.01f, _fadeInDuration);
+            t = 0f;
+
+            if (_fadeCanvasGroup != null)
+            {
+                while (t < fadeInDuration)
+                {
+                    t += Time.unscaledDeltaTime;
+                    float p = Mathf.Clamp01(t / fadeInDuration);
+                    float eased = 1f - p * p * (3f - 2f * p);
+                    _fadeCanvasGroup.alpha = eased;
+                    yield return null;
+                }
+
+                _fadeCanvasGroup.alpha = 0f;
+                _fadeCanvasGroup.blocksRaycasts = false;
+                _fadeCanvasGroup.gameObject.SetActive(false);
+            }
+
+            if (_turnController != null)
+            {
+                _turnController.SetInteractionLocked(false);
+            }
+
+            _transitionRoutine = null;
         }
     }
 }

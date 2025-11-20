@@ -135,7 +135,7 @@ namespace SevenBattles.Tests.UI
             // Wait for fade to complete
             yield return new WaitForSecondsRealtime(0.15f);
             Assert.IsFalse(startGo.activeSelf, "Start button should be hidden after fade completes");
-            Assert.IsTrue(battleHudGo.activeSelf, "Battle HUD should be activated when placement is locked");
+            Assert.IsFalse(battleHudGo.activeSelf, "Battle HUD should remain inactive; world bootstrap controls its activation");
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(battleHudGo);

@@ -10,7 +10,7 @@ namespace SevenBattles.Battle.Turn
     // Basic initiative-based turn controller for wizards.
     // Discovers UnitBattleMetadata instances at battle start, sorts by UnitStats.Initiative,
     // and advances turns for player and AI units.
-    public class SimpleTurnOrderController : MonoBehaviour, ITurnOrderController
+    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController
     {
         [Header("Board Highlight (optional)")]
         [SerializeField] private WorldPerspectiveBoard _board;
@@ -39,10 +39,13 @@ namespace SevenBattles.Battle.Turn
         private float _pendingAiEndTime = -1f;
         private bool _advancing;
         private bool _hasActiveUnit;
+        private bool _interactionLocked;
 
         public bool HasActiveUnit => _hasActiveUnit;
 
         public bool IsActiveUnitPlayerControlled => IsActiveUnitPlayerControlledInternal();
+
+        public bool IsInteractionLocked => _interactionLocked;
 
         public Sprite ActiveUnitPortrait
         {
@@ -100,6 +103,7 @@ namespace SevenBattles.Battle.Turn
 
         private void Update()
         {
+            if (_interactionLocked) return;
             if (!HasActiveUnit) return;
             if (IsActiveUnitPlayerControlled) return;
             if (_pendingAiEndTime < 0f) return;
@@ -121,6 +125,11 @@ namespace SevenBattles.Battle.Turn
             BeginBattle();
         }
 
+        public void SetInteractionLocked(bool locked)
+        {
+            _interactionLocked = locked;
+        }
+
         // Internal rebuild used by StartBattle and tests.
         private void BeginBattle()
         {
@@ -139,6 +148,7 @@ namespace SevenBattles.Battle.Turn
 
         public void RequestEndTurn()
         {
+            if (_interactionLocked) return;
             if (!HasActiveUnit) return;
             if (!IsActiveUnitPlayerControlled)
             {

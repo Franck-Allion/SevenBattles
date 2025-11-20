@@ -188,13 +188,6 @@ namespace SevenBattles.Battle.Start
             _board.SetHighlightVisible(false);
             OnPlacementLocked?.Invoke();
             PlacementLocked?.Invoke();
-
-            // Start battle turns once placement is confirmed.
-            var turnController = FindObjectOfType<SevenBattles.Battle.Turn.SimpleTurnOrderController>();
-            if (turnController != null)
-            {
-                turnController.StartBattle();
-            }
         }
 
         private void Play(AudioClip clip)

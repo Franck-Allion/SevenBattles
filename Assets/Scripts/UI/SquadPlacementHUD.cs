@@ -537,12 +537,6 @@ namespace SevenBattles.UI
                 }
             }
 
-            // Show Battle HUD once placement is confirmed
-            if (_battleHudRoot != null)
-            {
-                _battleHudRoot.SetActive(true);
-            }
-
             // Hide instructional text immediately to reduce UI clutter during transition
             SetInstructionsVisible(false);
         }

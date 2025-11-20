@@ -129,10 +129,77 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(def);
         }
 
+        [Test]
+        public void InteractionLock_BlocksAiTimeout_And_PlayerEndTurn()
+        {
+            var aGo = new GameObject("WizardA");
+            var bGo = new GameObject("WizardB");
+
+            var aStats = aGo.AddComponent<UnitStats>();
+            var bStats = bGo.AddComponent<UnitStats>();
+
+            aStats.ApplyBase(new UnitStatsData { Initiative = 5 });
+            bStats.ApplyBase(new UnitStatsData { Initiative = 10 });
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            UnitBattleMetadata.Ensure(aGo, true, def, new Vector2Int(0, 0));
+            UnitBattleMetadata.Ensure(bGo, false, def, new Vector2Int(1, 0));
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            Assert.IsTrue(ctrl.HasActiveUnit);
+            Assert.IsFalse(ctrl.IsActiveUnitPlayerControlled);
+
+            SetPrivate(ctrl, "_pendingAiEndTime", 0f);
+            CallPrivate(ctrl, "Update");
+
+            Assert.IsTrue(ctrl.HasActiveUnit);
+            Assert.IsTrue(ctrl.IsActiveUnitPlayerControlled);
+
+            CallPrivate(ctrl, "AdvanceToNextUnit");
+
+            Assert.IsTrue(ctrl.HasActiveUnit);
+            Assert.IsFalse(ctrl.IsActiveUnitPlayerControlled);
+
+            ctrl.SetInteractionLocked(true);
+            SetPrivate(ctrl, "_pendingAiEndTime", 0f);
+            CallPrivate(ctrl, "Update");
+
+            Assert.IsTrue(ctrl.HasActiveUnit);
+            Assert.IsFalse(ctrl.IsActiveUnitPlayerControlled);
+
+            CallPrivate(ctrl, "AdvanceToNextUnit");
+
+            Assert.IsTrue(ctrl.HasActiveUnit);
+            Assert.IsTrue(ctrl.IsActiveUnitPlayerControlled);
+
+            ctrl.SetInteractionLocked(true);
+            ctrl.RequestEndTurn();
+
+            Assert.IsTrue(ctrl.HasActiveUnit);
+            Assert.IsTrue(ctrl.IsActiveUnitPlayerControlled);
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(aGo);
+            Object.DestroyImmediate(bGo);
+            Object.DestroyImmediate(def);
+        }
+
         private static void CallPrivate(object obj, string method)
         {
             var mi = obj.GetType().GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             mi.Invoke(obj, null);
+        }
+
+        private static void SetPrivate(object obj, string field, object value)
+        {
+            var fi = obj.GetType().GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            fi.SetValue(obj, value);
         }
     }
 }
