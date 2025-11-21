@@ -27,6 +27,16 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Alpha applied to the End Turn button when it is disabled.")]
         private float _disabledAlpha = 0.4f;
 
+        [Header("Action Points")]
+        [SerializeField, Tooltip("Root RectTransform for the action point bar. Hidden when the active unit has no action points.")]
+        private RectTransform _actionPointBarRoot;
+        [SerializeField, Tooltip("Up to 8 Image slots used to display the active unit's action points from left to right.")]
+        private Image[] _actionPointSlots = new Image[8];
+        [SerializeField, Tooltip("Sprite used for a full (available) action point.")]
+        private Sprite _actionPointFullSprite;
+        [SerializeField, Tooltip("Sprite used for an empty (spent) action point.")]
+        private Sprite _actionPointEmptySprite;
+
         [Header("Stats Panel")]
         [SerializeField, Tooltip("Root RectTransform of the stats panel that slides in when the portrait is clicked.")]
         private RectTransform _statsPanelRoot;
@@ -104,6 +114,7 @@ namespace SevenBattles.UI
             SetupStatsPanel();
             SetupStatsLabelLocalization();
             WirePortraitClick();
+            RefreshActionPoints();
         }
 
         private void OnEnable()
@@ -111,9 +122,11 @@ namespace SevenBattles.UI
             EnsureController();
             if (_controller == null) return;
             _controller.ActiveUnitChanged += HandleActiveUnitChanged;
+            _controller.ActiveUnitActionPointsChanged += HandleActiveUnitActionPointsChanged;
             HandleActiveUnitChanged();
             RefreshEndTurnLabel();
             RefreshStatsLabels();
+            RefreshActionPoints();
         }
 
         private void OnDisable()
@@ -121,6 +134,7 @@ namespace SevenBattles.UI
             if (_controller != null)
             {
                 _controller.ActiveUnitChanged -= HandleActiveUnitChanged;
+                _controller.ActiveUnitActionPointsChanged -= HandleActiveUnitActionPointsChanged;
             }
 
             TeardownEndTurnLocalization();
@@ -611,6 +625,13 @@ namespace SevenBattles.UI
                     }
                 }
             }
+
+            RefreshActionPoints();
+        }
+
+        private void HandleActiveUnitActionPointsChanged()
+        {
+            RefreshActionPoints();
         }
 
         private void HandlePortraitClicked()
@@ -660,6 +681,95 @@ namespace SevenBattles.UI
             if (_protectionText != null) _protectionText.text = stats.Protection.ToString();
             if (_initiativeText != null) _initiativeText.text = stats.Initiative.ToString();
             if (_moraleText != null) _moraleText.text = stats.Morale.ToString();
+        }
+
+        private void RefreshActionPoints()
+        {
+            if (_actionPointSlots == null || _actionPointSlots.Length == 0)
+            {
+                if (_actionPointBarRoot != null)
+                {
+                    _actionPointBarRoot.gameObject.SetActive(false);
+                }
+                return;
+            }
+
+            if (_controller == null || !_controller.HasActiveUnit)
+            {
+                SetActionPointBarVisible(false);
+                return;
+            }
+
+            int current = Mathf.Max(0, _controller.ActiveUnitCurrentActionPoints);
+            int max = Mathf.Max(0, _controller.ActiveUnitMaxActionPoints);
+
+            int slotCount = _actionPointSlots.Length;
+            if (slotCount <= 0)
+            {
+                SetActionPointBarVisible(false);
+                return;
+            }
+
+            max = Mathf.Clamp(max, 0, slotCount);
+            current = Mathf.Clamp(current, 0, max);
+
+            if (max <= 0 || current <= 0)
+            {
+                SetActionPointBarVisible(false);
+                return;
+            }
+
+            SetActionPointBarVisible(true);
+
+            for (int i = 0; i < slotCount; i++)
+            {
+                var img = _actionPointSlots[i];
+                if (img == null)
+                {
+                    continue;
+                }
+
+                // Ensure the slot occupies layout space while the bar is visible.
+                if (!img.gameObject.activeSelf)
+                {
+                    img.gameObject.SetActive(true);
+                }
+
+                if (i < max)
+                {
+                    bool isFull = i < current;
+                    if (_actionPointFullSprite != null && _actionPointEmptySprite != null)
+                    {
+                        img.sprite = isFull ? _actionPointFullSprite : _actionPointEmptySprite;
+                    }
+                    img.enabled = true;
+                }
+                else
+                {
+                    // Hide the icon visually but keep the RectTransform active for spacing.
+                    img.enabled = false;
+                }
+            }
+        }
+
+        private void SetActionPointBarVisible(bool visible)
+        {
+            if (_actionPointBarRoot != null)
+            {
+                _actionPointBarRoot.gameObject.SetActive(visible);
+            }
+
+            if (!visible && _actionPointSlots != null)
+            {
+                for (int i = 0; i < _actionPointSlots.Length; i++)
+                {
+                    var img = _actionPointSlots[i];
+                    if (img != null)
+                    {
+                        img.gameObject.SetActive(false);
+                    }
+                }
+            }
         }
 
         private void ShowStatsPanel()

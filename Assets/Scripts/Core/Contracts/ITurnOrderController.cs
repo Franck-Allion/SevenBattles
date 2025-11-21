@@ -11,6 +11,19 @@ namespace SevenBattles.Core
         Sprite ActiveUnitPortrait { get; }
 
         event Action ActiveUnitChanged;
+        event Action ActiveUnitActionPointsChanged;
+
+        /// <summary>
+        /// Current action points available for the active unit.
+        /// Returns 0 when there is no active unit.
+        /// </summary>
+        int ActiveUnitCurrentActionPoints { get; }
+
+        /// <summary>
+        /// Maximum action points for the active unit at the start of the turn.
+        /// Returns 0 when there is no active unit.
+        /// </summary>
+        int ActiveUnitMaxActionPoints { get; }
 
         /// <summary>
         /// Tries to expose the active unit's stats in a UI-friendly snapshot.

@@ -40,6 +40,8 @@ namespace SevenBattles.Battle.Turn
         private bool _advancing;
         private bool _hasActiveUnit;
         private bool _interactionLocked;
+        private int _activeUnitCurrentActionPoints;
+        private int _activeUnitMaxActionPoints;
 
         public bool HasActiveUnit => _hasActiveUnit;
 
@@ -92,6 +94,10 @@ namespace SevenBattles.Battle.Turn
         }
 
         public event Action ActiveUnitChanged;
+        public event Action ActiveUnitActionPointsChanged;
+
+        public int ActiveUnitCurrentActionPoints => _hasActiveUnit ? _activeUnitCurrentActionPoints : 0;
+        public int ActiveUnitMaxActionPoints => _hasActiveUnit ? _activeUnitMaxActionPoints : 0;
 
         private void Start()
         {
@@ -315,10 +321,18 @@ namespace SevenBattles.Battle.Turn
             {
                 _activeIndex = -1;
                 _hasActiveUnit = false;
+                _activeUnitCurrentActionPoints = 0;
+                _activeUnitMaxActionPoints = 0;
             }
             else
             {
                 _hasActiveUnit = true;
+
+                var u = _units[_activeIndex];
+                int baseAp = u.Stats != null ? u.Stats.ActionPoints : 0;
+                baseAp = Mathf.Max(0, baseAp);
+                _activeUnitMaxActionPoints = baseAp;
+                _activeUnitCurrentActionPoints = baseAp;
             }
 
             UpdateBoardHighlight();
@@ -345,6 +359,7 @@ namespace SevenBattles.Battle.Turn
             }
 
             ActiveUnitChanged?.Invoke();
+            ActiveUnitActionPointsChanged?.Invoke();
         }
 
         private void UpdateBoardHighlight()

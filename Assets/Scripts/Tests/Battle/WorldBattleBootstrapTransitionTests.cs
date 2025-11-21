@@ -42,8 +42,11 @@ namespace SevenBattles.Tests.Battle
             public bool IsActiveUnitPlayerControlled => true;
             public Sprite ActiveUnitPortrait => null;
             public event System.Action ActiveUnitChanged;
+            public event System.Action ActiveUnitActionPointsChanged;
             public bool IsInteractionLocked { get; private set; }
             public bool StartBattleCalled { get; private set; }
+            public int ActiveUnitCurrentActionPoints => 0;
+            public int ActiveUnitMaxActionPoints => 0;
 
             public bool TryGetActiveUnitStats(out UnitStatsViewData stats)
             {

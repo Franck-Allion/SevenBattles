@@ -130,6 +130,33 @@ namespace SevenBattles.Tests.Battle
         }
 
         [Test]
+        public void ActiveUnitActionPoints_AreInitializedFromStats()
+        {
+            var go = new GameObject("Wizard");
+            var stats = go.AddComponent<UnitStats>();
+            var data = new UnitStatsData { Life = 30, Attack = 4, Initiative = 5 };
+            stats.ApplyBase(data);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            UnitBattleMetadata.Ensure(go, true, def, new Vector2Int(0, 0));
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            Assert.IsTrue(ctrl.HasActiveUnit, "Controller should have an active unit after BeginBattle.");
+            Assert.AreEqual(4, ctrl.ActiveUnitMaxActionPoints, "Max AP should be initialized from unit stats ActionPoints.");
+            Assert.AreEqual(4, ctrl.ActiveUnitCurrentActionPoints, "Current AP should start equal to max AP at turn start.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(go);
+            Object.DestroyImmediate(def);
+        }
+
+        [Test]
         public void InteractionLock_BlocksAiTimeout_And_PlayerEndTurn()
         {
             var aGo = new GameObject("WizardA");

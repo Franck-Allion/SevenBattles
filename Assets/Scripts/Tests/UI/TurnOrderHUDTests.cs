@@ -16,9 +16,12 @@ namespace SevenBattles.Tests.UI
             public Sprite ActiveUnitPortrait { get; set; }
 
             public event System.Action ActiveUnitChanged;
+            public event System.Action ActiveUnitActionPointsChanged;
 
             public bool EndTurnRequested { get; private set; }
             public UnitStatsViewData ActiveStats;
+            public int ActiveUnitCurrentActionPoints { get; set; }
+            public int ActiveUnitMaxActionPoints { get; set; }
 
             public void RequestEndTurn()
             {
@@ -28,6 +31,11 @@ namespace SevenBattles.Tests.UI
             public void FireChanged()
             {
                 ActiveUnitChanged?.Invoke();
+            }
+
+            public void FireActionPointsChanged()
+            {
+                ActiveUnitActionPointsChanged?.Invoke();
             }
 
             public bool TryGetActiveUnitStats(out UnitStatsViewData stats)
@@ -119,6 +127,90 @@ namespace SevenBattles.Tests.UI
             Assert.IsFalse(fake.EndTurnRequested);
             btn.onClick.Invoke();
             Assert.IsTrue(fake.EndTurnRequested, "End turn request should be forwarded to controller.");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void ActionPointsBar_Updates_OnActiveUnitChange_AndApChange()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var apRootGo = new GameObject("APRoot");
+            apRootGo.transform.SetParent(hudGo.transform);
+            var apRoot = apRootGo.AddComponent<RectTransform>();
+
+            var slots = new Image[8];
+            for (int i = 0; i < slots.Length; i++)
+            {
+                var slotGo = new GameObject("Slot" + i);
+                slotGo.transform.SetParent(apRootGo.transform);
+                slots[i] = slotGo.AddComponent<Image>();
+            }
+
+            var fullTex = new Texture2D(2, 2);
+            var fullSprite = Sprite.Create(fullTex, new Rect(0, 0, fullTex.width, fullTex.height), new Vector2(0.5f, 0.5f));
+            var emptyTex = new Texture2D(2, 2);
+            var emptySprite = Sprite.Create(emptyTex, new Rect(0, 0, emptyTex.width, emptyTex.height), new Vector2(0.5f, 0.5f));
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_actionPointBarRoot", apRoot);
+            SetPrivate(hud, "_actionPointSlots", slots);
+            SetPrivate(hud, "_actionPointFullSprite", fullSprite);
+            SetPrivate(hud, "_actionPointEmptySprite", emptySprite);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            // No active unit -> bar hidden.
+            Assert.IsFalse(apRootGo.activeSelf, "AP bar should be hidden when there is no active unit.");
+
+            // Active unit with 3/5 AP.
+            fake.HasActiveUnit = true;
+            fake.ActiveUnitMaxActionPoints = 5;
+            fake.ActiveUnitCurrentActionPoints = 3;
+            fake.FireChanged();
+
+            Assert.IsTrue(apRootGo.activeSelf, "AP bar should be visible when the active unit has AP.");
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (i < 5)
+                {
+                    Assert.IsTrue(slots[i].gameObject.activeSelf, $"Slot {i} should be visible within max AP range.");
+                    var expected = i < 3 ? fullSprite : emptySprite;
+                    Assert.AreEqual(expected, slots[i].sprite, $"Slot {i} should use correct sprite for full/empty.");
+                }
+                else
+                {
+                    Assert.IsTrue(slots[i].gameObject.activeSelf, $"Slot {i} GameObject should remain active for layout.");
+                    Assert.IsFalse(slots[i].enabled, $"Slot {i} Image should be disabled beyond max AP.");
+                }
+            }
+
+            // Spend AP: 1/5 left.
+            fake.ActiveUnitCurrentActionPoints = 1;
+            fake.FireActionPointsChanged();
+
+            Assert.IsTrue(apRootGo.activeSelf, "AP bar should remain visible while AP > 0.");
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (i < 5)
+                {
+                    Assert.IsTrue(slots[i].gameObject.activeSelf, $"Slot {i} should remain visible within max AP range.");
+                    var expected = i < 1 ? fullSprite : emptySprite;
+                    Assert.AreEqual(expected, slots[i].sprite, $"Slot {i} should update sprite based on remaining AP.");
+                }
+            }
+
+            // No AP left -> bar hidden.
+            fake.ActiveUnitCurrentActionPoints = 0;
+            fake.FireActionPointsChanged();
+            Assert.IsFalse(apRootGo.activeSelf, "AP bar should be hidden when the active unit has 0 AP.");
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);
