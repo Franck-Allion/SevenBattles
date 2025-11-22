@@ -1,6 +1,8 @@
+using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.TestTools;
 using TMPro;
 using SevenBattles.Core;
 using SevenBattles.UI;
@@ -14,7 +16,7 @@ namespace SevenBattles.Tests.UI
             public float Value { get; set; }
         }
 
-        private class FakeTurnController : MonoBehaviour, ITurnOrderController
+        private class FakeTurnController : MonoBehaviour, IBattleTurnController
         {
             public bool HasActiveUnit { get; set; }
             public bool IsActiveUnitPlayerControlled { get; set; }
@@ -28,6 +30,8 @@ namespace SevenBattles.Tests.UI
             public UnitStatsViewData ActiveStats;
             public int ActiveUnitCurrentActionPoints { get; set; }
             public int ActiveUnitMaxActionPoints { get; set; }
+            public bool IsInteractionLocked { get; private set; }
+            public int TurnIndex { get; set; }
 
             public void RequestEndTurn()
             {
@@ -53,6 +57,15 @@ namespace SevenBattles.Tests.UI
             {
                 stats = ActiveStats;
                 return HasActiveUnit;
+            }
+
+            public void StartBattle()
+            {
+            }
+
+            public void SetInteractionLocked(bool locked)
+            {
+                IsInteractionLocked = locked;
             }
         }
 
@@ -659,6 +672,51 @@ namespace SevenBattles.Tests.UI
         {
             var mi = obj.GetType().GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             mi.Invoke(obj, args);
+        }
+
+        [UnityTest]
+        public IEnumerator TurnStartBanner_LocksAndReleasesInteraction()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var bannerRoot = new GameObject("TurnBanner");
+            bannerRoot.transform.SetParent(hudGo.transform);
+            var bannerCanvasGroup = bannerRoot.AddComponent<CanvasGroup>();
+            var bannerText = bannerRoot.AddComponent<TextMeshProUGUI>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_turnStartCanvasGroup", bannerCanvasGroup);
+            SetPrivate(hud, "_turnStartText", bannerText);
+            SetPrivate(hud, "_turnStartVisibleDuration", 0.05f);
+            SetPrivate(hud, "_turnStartFadeDuration", 0.05f);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            Assert.IsFalse(fake.IsInteractionLocked, "Interaction should start unlocked.");
+
+            fake.FireChanged();
+
+            yield return null;
+
+            Assert.IsTrue(fake.IsInteractionLocked, "Interaction should be locked while the turn banner is visible.");
+            Assert.IsTrue(bannerRoot.activeSelf);
+            Assert.Greater(bannerCanvasGroup.alpha, 0f);
+
+            yield return new WaitForSecondsRealtime(0.2f);
+
+            Assert.IsFalse(fake.IsInteractionLocked, "Interaction lock should be released after the turn banner fades out.");
+            Assert.IsFalse(bannerRoot.activeSelf);
+            Assert.AreEqual(0f, bannerCanvasGroup.alpha, 1e-4f);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
         }
     }
 }

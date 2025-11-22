@@ -48,6 +48,7 @@ namespace SevenBattles.Tests.Battle
             public bool StartBattleCalled { get; private set; }
             public int ActiveUnitCurrentActionPoints => 0;
             public int ActiveUnitMaxActionPoints => 0;
+            public int TurnIndex => 0;
 
             public bool TryGetActiveUnitStats(out UnitStatsViewData stats)
             {

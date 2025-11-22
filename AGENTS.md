@@ -206,6 +206,11 @@ Assets/
 - Whenever a battle system mutates the runtime combat stats of the current active unit (e.g., Life, Force, etc.), it **must** raise `ITurnOrderController.ActiveUnitStatsChanged`.  
 - UI health bars and other stat-driven HUD elements must rely on `ITurnOrderController.TryGetActiveUnitStats` + `ActiveUnitStatsChanged` instead of polling runtime components directly.
 
+### Turn Index & Banners
+- `IBattleTurnController.TurnIndex` is the **only** source of truth for the battle turn number; UI must not maintain its own counters.  
+- Turn-based overlays (e.g., “Turn X” banners) must use `TurnIndex` + `LocalizedString` smart strings, and must acquire/release `SetInteractionLocked` in a balanced way (no permanent locks).  
+- Any CanvasGroup-based overlay that blocks input must clear `blocksRaycasts` and restore related HUD `CanvasGroup.alpha` state when it hides.
+
 ---
 
 # SevenBattles Engineering | Unity 6  

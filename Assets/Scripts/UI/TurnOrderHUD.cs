@@ -93,6 +93,18 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Optional explicit reference to the Button label TMP_Text component. If not set, a child TMP_Text will be auto-found at runtime.")]
         private TMP_Text _endTurnTMP;
 
+        [Header("Turn Start Banner")]
+        [SerializeField, Tooltip("CanvasGroup controlling the Turn Start banner root (alpha and input blocking).")]
+        private CanvasGroup _turnStartCanvasGroup;
+        [SerializeField, Tooltip("TMP text used to display the localized turn start label (e.g., 'Turn {0}').")]
+        private TMP_Text _turnStartText;
+        [SerializeField, Tooltip("Localized smart string for the turn start banner (e.g., Table: UI.Battle, Entry: TurnStart). Should include {0} for the turn index.")]
+        private LocalizedString _turnStartLabel;
+        [SerializeField, Tooltip("Time in seconds the turn start banner stays fully visible before starting to fade out.")]
+        private float _turnStartVisibleDuration = 1.5f;
+        [SerializeField, Tooltip("Fade-out duration in seconds for the turn start banner.")]
+        private float _turnStartFadeDuration = 0.4f;
+
         // Runtime-localized stats label bindings (table: UI.Common).
         private LocalizedString _lifeLabelString;
         private LocalizedString _attackLabelString;
@@ -111,12 +123,20 @@ namespace SevenBattles.UI
         private Vector2 _statsPanelHiddenPosition;
         private System.Collections.IEnumerator _statsPanelRoutine;
 
+        private IBattleTurnController _battleTurnController;
+        private int _lastKnownTurnIndex;
+        private bool _turnStartBannerVisible;
+        private bool _turnStartInteractionLocked;
+        private System.Collections.IEnumerator _turnStartRoutine;
+
         private void Awake()
         {
             EnsureController();
+            EnsureBattleTurnController();
             WireEndTurnButton();
             EnsureEndTurnCanvasGroup();
             SetupEndTurnLocalization();
+            SetupTurnStartBanner();
             SetupStatsPanel();
             SetupStatsLabelLocalization();
             WirePortraitClick();
@@ -127,10 +147,13 @@ namespace SevenBattles.UI
         private void OnEnable()
         {
             EnsureController();
+            EnsureBattleTurnController();
             if (_controller == null) return;
             _controller.ActiveUnitChanged += HandleActiveUnitChanged;
             _controller.ActiveUnitActionPointsChanged += HandleActiveUnitActionPointsChanged;
             _controller.ActiveUnitStatsChanged += HandleActiveUnitStatsChanged;
+            _lastKnownTurnIndex = 0;
+            HideTurnStartImmediate();
             HandleActiveUnitChanged();
             RefreshEndTurnLabel();
             RefreshStatsLabels();
@@ -149,6 +172,7 @@ namespace SevenBattles.UI
 
             TeardownEndTurnLocalization();
             TeardownStatsLabelLocalization();
+            TeardownTurnStartBanner();
             CloseStatsPanelImmediate();
 
             if (_portraitButton != null)
@@ -194,6 +218,17 @@ namespace SevenBattles.UI
                     Debug.LogWarning("TurnOrderHUD: Assigned controller does not implement ITurnOrderController.", this);
                 }
             }
+        }
+
+        private void EnsureBattleTurnController()
+        {
+            if (_controller == null)
+            {
+                _battleTurnController = null;
+                return;
+            }
+
+            _battleTurnController = _controller as IBattleTurnController;
         }
 
         private void WireEndTurnButton()
@@ -572,6 +607,52 @@ namespace SevenBattles.UI
             _statsPanelAnimating = false;
         }
 
+        private void SetupTurnStartBanner()
+        {
+            if (_turnStartCanvasGroup == null)
+            {
+                Debug.LogWarning("TurnOrderHUD: Turn start banner CanvasGroup is not assigned; banner will be disabled.", this);
+                return;
+            }
+
+            if (_turnStartText == null)
+            {
+                _turnStartText = _turnStartCanvasGroup.GetComponentInChildren<TMP_Text>(true);
+                if (_turnStartText == null)
+                {
+                    Debug.LogWarning("TurnOrderHUD: No TMP_Text found under _turnStartCanvasGroup for turn banner.", this);
+                }
+            }
+
+            _turnStartCanvasGroup.gameObject.SetActive(false);
+            _turnStartCanvasGroup.alpha = 0f;
+            _turnStartCanvasGroup.interactable = false;
+            _turnStartCanvasGroup.blocksRaycasts = false;
+
+            if (_turnStartLabel != null)
+            {
+                _turnStartLabel.StringChanged += HandleTurnStartLabelChanged;
+                Debug.Log($"TurnOrderHUD: Subscribed to turn start label (table={_turnStartLabel.TableReference}, entry={_turnStartLabel.TableEntryReference}).", this);
+            }
+            else
+            {
+                Debug.LogWarning("TurnOrderHUD: _turnStartLabel is not assigned; turn banner will not use localization.", this);
+            }
+
+            _lastKnownTurnIndex = 0;
+            _turnStartBannerVisible = false;
+        }
+
+        private void TeardownTurnStartBanner()
+        {
+            if (_turnStartLabel != null)
+            {
+                _turnStartLabel.StringChanged -= HandleTurnStartLabelChanged;
+            }
+
+            HideTurnStartImmediate();
+        }
+
         private void WirePortraitClick()
         {
             // Prefer explicit assignment from inspector.
@@ -603,9 +684,22 @@ namespace SevenBattles.UI
 
             bool wasStatsPanelVisible = _statsPanelVisible;
 
-            if (!_controller.HasActiveUnit)
+            bool hasActiveUnit = _controller.HasActiveUnit;
+
+            if (!hasActiveUnit)
             {
+                _lastKnownTurnIndex = 0;
+                HideTurnStartImmediate();
                 CloseStatsPanelImmediate();
+            }
+            else
+            {
+                int currentTurnIndex = _battleTurnController != null ? _battleTurnController.TurnIndex : 0;
+                if (currentTurnIndex > 0 && currentTurnIndex != _lastKnownTurnIndex)
+                {
+                    _lastKnownTurnIndex = currentTurnIndex;
+                    ShowTurnStartMessage(currentTurnIndex);
+                }
             }
 
             if (_activePortraitImage != null)
@@ -614,17 +708,9 @@ namespace SevenBattles.UI
                 _activePortraitImage.enabled = _controller.ActiveUnitPortrait != null;
             }
 
-            if (_endTurnButton != null)
-            {
-                bool interactable = _controller.HasActiveUnit && _controller.IsActiveUnitPlayerControlled;
-                _endTurnButton.interactable = interactable;
-                if (_endTurnCanvasGroup != null)
-                {
-                    _endTurnCanvasGroup.alpha = interactable ? 1f : Mathf.Clamp01(_disabledAlpha);
-                }
-            }
+            RefreshEndTurnButtonState();
 
-            if (wasStatsPanelVisible && _controller.HasActiveUnit)
+            if (wasStatsPanelVisible && hasActiveUnit)
             {
                 if (_controller.TryGetActiveUnitStats(out var stats))
                 {
@@ -996,6 +1082,189 @@ namespace SevenBattles.UI
             }
             _statsPanelRoutine = null;
             _statsPanelAnimating = false;
+        }
+
+        private void RefreshEndTurnButtonState()
+        {
+            if (_endTurnButton == null)
+            {
+                return;
+            }
+
+            if (_controller == null)
+            {
+                _endTurnButton.interactable = false;
+                if (_endTurnCanvasGroup != null)
+                {
+                    _endTurnCanvasGroup.alpha = Mathf.Clamp01(_disabledAlpha);
+                }
+                return;
+            }
+
+            bool hasActiveUnit = _controller.HasActiveUnit;
+            bool interactable = hasActiveUnit && _controller.IsActiveUnitPlayerControlled && !_turnStartBannerVisible;
+
+            _endTurnButton.interactable = interactable;
+            if (_endTurnCanvasGroup != null)
+            {
+                _endTurnCanvasGroup.alpha = interactable ? 1f : Mathf.Clamp01(_disabledAlpha);
+            }
+        }
+
+        private void ShowTurnStartMessage(int turnIndex)
+        {
+            if (_turnStartCanvasGroup == null)
+            {
+                Debug.LogWarning("TurnOrderHUD: ShowTurnStartMessage called but _turnStartCanvasGroup is null.", this);
+                return;
+            }
+
+            if (_turnStartLabel != null)
+            {
+                _turnStartLabel.Arguments = new object[] { turnIndex };
+                var localized = _turnStartLabel.GetLocalizedString();
+                Debug.Log($"TurnOrderHUD: Turn banner GetLocalizedString (TurnIndex={turnIndex}) -> \"{localized}\".", this);
+                if (_turnStartText != null)
+                {
+                    _turnStartText.text = localized;
+                }
+            }
+            else if (_turnStartText != null)
+            {
+                // Fallback: show a non-localized label so we can still see something.
+                _turnStartText.text = $"Turn {turnIndex}";
+                Debug.LogWarning("TurnOrderHUD: _turnStartLabel is null; using non-localized fallback text for turn banner.", this);
+            }
+
+            _turnStartBannerVisible = true;
+            SetTurnStartInteractionLocked(true);
+
+            if (!Application.isPlaying)
+            {
+                _turnStartCanvasGroup.gameObject.SetActive(true);
+                _turnStartCanvasGroup.alpha = 1f;
+                _turnStartCanvasGroup.interactable = true;
+                _turnStartCanvasGroup.blocksRaycasts = true;
+                return;
+            }
+
+            StopTurnStartRoutine();
+            _turnStartRoutine = TurnStartRoutine();
+            StartCoroutine(_turnStartRoutine);
+        }
+
+        private void HideTurnStartImmediate()
+        {
+            StopTurnStartRoutine();
+
+            if (_turnStartCanvasGroup != null)
+            {
+                _turnStartCanvasGroup.alpha = 0f;
+                _turnStartCanvasGroup.interactable = false;
+                _turnStartCanvasGroup.blocksRaycasts = false;
+                _turnStartCanvasGroup.gameObject.SetActive(false);
+            }
+
+            _turnStartBannerVisible = false;
+            SetTurnStartInteractionLocked(false);
+        }
+
+        private void HandleTurnStartLabelChanged(string value)
+        {
+            if (_turnStartText != null)
+            {
+                _turnStartText.text = value;
+                Debug.Log($"TurnOrderHUD: Turn banner localized text applied: \"{value}\".", this);
+            }
+            else
+            {
+                Debug.LogWarning($"TurnOrderHUD: Received localized turn banner text \"{value}\" but _turnStartText is null.", this);
+            }
+        }
+
+        private System.Collections.IEnumerator TurnStartRoutine()
+        {
+            if (_turnStartCanvasGroup == null)
+            {
+                yield break;
+            }
+
+            _turnStartCanvasGroup.gameObject.SetActive(true);
+            _turnStartCanvasGroup.interactable = false;
+            _turnStartCanvasGroup.blocksRaycasts = true;
+            _turnStartCanvasGroup.alpha = 1f;
+
+            float visibleDuration = Mathf.Max(0.01f, _turnStartVisibleDuration);
+            float fadeDuration = Mathf.Max(0.01f, _turnStartFadeDuration);
+
+            float t = 0f;
+            while (t < visibleDuration)
+            {
+                t += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            t = 0f;
+            while (t < fadeDuration)
+            {
+                t += Time.unscaledDeltaTime;
+                float p = Mathf.Clamp01(t / fadeDuration);
+                float eased = p * p * (3f - 2f * p);
+                _turnStartCanvasGroup.alpha = 1f - eased;
+                yield return null;
+            }
+
+            _turnStartCanvasGroup.alpha = 0f;
+            _turnStartCanvasGroup.blocksRaycasts = false;
+            _turnStartCanvasGroup.gameObject.SetActive(false);
+
+            _turnStartBannerVisible = false;
+            SetTurnStartInteractionLocked(false);
+            RefreshEndTurnButtonState();
+            _turnStartRoutine = null;
+        }
+
+        private void StopTurnStartRoutine()
+        {
+            if (_turnStartRoutine == null) return;
+            try
+            {
+                StopCoroutine(_turnStartRoutine);
+            }
+            catch
+            {
+                // Ignore if coroutine is not running.
+            }
+            _turnStartRoutine = null;
+        }
+
+        private void SetTurnStartInteractionLocked(bool locked)
+        {
+            if (_battleTurnController == null)
+            {
+                return;
+            }
+
+            if (locked)
+            {
+                if (_turnStartInteractionLocked)
+                {
+                    return;
+                }
+
+                _turnStartInteractionLocked = true;
+                _battleTurnController.SetInteractionLocked(true);
+            }
+            else
+            {
+                if (!_turnStartInteractionLocked)
+                {
+                    return;
+                }
+
+                _turnStartInteractionLocked = false;
+                _battleTurnController.SetInteractionLocked(false);
+            }
         }
 
         private void PlayEndTurnSound()

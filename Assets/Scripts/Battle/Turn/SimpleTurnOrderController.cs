@@ -46,6 +46,7 @@ namespace SevenBattles.Battle.Turn
         private float _pendingAiEndTime = -1f;
         private bool _advancing;
         private bool _hasActiveUnit;
+        private int _turnIndex;
         private bool _interactionLocked;
         private int _activeUnitCurrentActionPoints;
         private int _activeUnitMaxActionPoints;
@@ -61,6 +62,8 @@ namespace SevenBattles.Battle.Turn
         public bool IsActiveUnitPlayerControlled => IsActiveUnitPlayerControlledInternal();
 
         public bool IsInteractionLocked => _interactionLocked;
+
+        public int TurnIndex => _turnIndex;
 
         public Sprite ActiveUnitPortrait
         {
@@ -161,6 +164,7 @@ namespace SevenBattles.Battle.Turn
         private void BeginBattle()
         {
             RebuildUnits();
+            _turnIndex = 0;
             if (_board != null)
             {
                 // During combat, disable hover-driven highlight so only the active unit tile is marked.
@@ -227,6 +231,7 @@ namespace SevenBattles.Battle.Turn
         {
             if (_units.Count == 0)
             {
+                _turnIndex = 0;
                 SetActiveIndex(-1);
                 return;
             }
@@ -235,11 +240,13 @@ namespace SevenBattles.Battle.Turn
             {
                 if (IsUnitValid(_units[i]))
                 {
+                    _turnIndex = 1;
                     SetActiveIndex(i);
                     return;
                 }
             }
 
+            _turnIndex = 0;
             SetActiveIndex(-1);
         }
 
@@ -297,6 +304,7 @@ namespace SevenBattles.Battle.Turn
 
             if (_units.Count == 0)
             {
+                _turnIndex = 0;
                 SetActiveIndex(-1);
                 return;
             }
@@ -318,6 +326,10 @@ namespace SevenBattles.Battle.Turn
                     idx = (idx + 1) % count;
                     if (IsUnitValid(_units[idx]))
                     {
+                        if (startIndex >= 0 && idx <= startIndex)
+                        {
+                            _turnIndex = Mathf.Max(1, _turnIndex + 1);
+                        }
                         SetActiveIndex(idx);
                         return;
                     }
@@ -325,6 +337,7 @@ namespace SevenBattles.Battle.Turn
                 }
 
                 // No valid units remain.
+                _turnIndex = 0;
                 SetActiveIndex(-1);
             }
             finally
