@@ -20,6 +20,9 @@ Before implementing anything new, the agent **must scan the repository** for reu
 - Always prefer extending or integrating existing code before creating new files.  
 - If no suitable code exists, explain **why** (e.g., violates SRP, incompatible architecture, different lifetime scope).  
 - Skipping this step invalidates the proposal.
+- For gameplay and UI features, the scan must explicitly look for:
+  - Existing **controllers / services** in the correct domain.  
+  - Existing **prefabs / ScriptableObjects** that already expose extension points.
 
 ---
 
@@ -28,8 +31,10 @@ Before implementing anything new, the agent **must scan the repository** for reu
 After the reuse scan, the agent must propose a **short implementation plan**:
 
 - Describe how existing code will be reused or extended.  
-- If new code is required, justify its creation.  
-- Respect the **Unity 6 architecture** (SceneFlow, LifetimeContentService, asmdefs) and the **SOLID** principles.
+- Justify any new code creation.  
+- Respect SceneFlow, LifetimeContentService, asmdefs, SOLID.
+- Specify which scenes, prefabs, and ScriptableObjects are modified.  
+- Provide a high-level wiring description (details in section 5).
 
 ---
 
@@ -37,72 +42,100 @@ After the reuse scan, the agent must propose a **short implementation plan**:
 
 Every implementation must list:
 
-- **Existing APIs** or systems **called** (e.g., `LifetimeContentService`, `SceneFlowController`, `Addressables`).  
-- **New public APIs** or interfaces **exposed**.
-
-This ensures integration safety and consistent cross-module awareness.
+- **Calls**: existing APIs and systems it depends on.  
+- **Exposes**: new public types, methods, interfaces, or events.
 
 ---
 
 ## 4. 🧪 TESTS — Mandatory for all non-trivial logic
 
-For any functional code (logic, utilities, or services), the agent **must**:
-
-1. Create or update a corresponding test class under `/Tests/`.  
-2. Use **NUnit** conventions (`[Test]`, `[SetUp]`).  
-3. Mock dependencies with **NSubstitute**.  
-4. Reuse existing test helpers or factories — never duplicate logic.  
-5. If the system cannot be unit-tested (e.g., runtime-only behavior), explain why and propose an **integration-test** alternative.
+- Create or update matching test classes under `/Tests/`.  
+- Use NUnit (`[Test]`, `[SetUp]`).  
+- Mock with NSubstitute.  
+- Reuse test helpers.  
+- If untestable via unit tests, propose integration tests.
 
 ---
 
-## 5. 🧾 COMMIT MESSAGE — Follow Conventional Commits
+## 5. 🔌 HOW-TO WIRE IN UNITY — Detailed Setup Steps
 
-Every change must end with a **Conventional Commits**-style message:
+Step-by-step Unity integration guidelines (scenes, prefabs, SOs, Addressables, localization).
 
-<type>(<scope>): <short description>
+**Include:**
 
-**Examples**
-- `feat(ai): add behavior tree for NPC pathfinding`
-- `fix(combat): prevent null ref in skill targeting`
-- `test(services): add LifetimeContentService release tests`
-- `refactor(core): extract object pooling utility`
+### A. Scenes & Domain Ownership  
+### B. Prefab & Component Modifications  
+### C. ScriptableObject Setup  
+### D. Addressables & LifetimeContentService Scopes  
+### E. Localization Setup  
+### F. Input & Events Wiring  
 
-> ✅ Always use lowercase types and concise, meaningful descriptions.
-
----
-
-## 6. ⚙️ UNITY CODE QUALITY RULES
-
-- Respect absolutely the SOLID principles
-- Follow **Unity’s official C# naming conventions**  
-  - `PascalCase` for types and methods  
-  - `_camelCase` for private fields  
-  - `ALL_CAPS` for constants  
-- All comments **must be in English**.  
-- Prioritize **memory and performance** (limit GC pressure, manage Addressables handles, profile allocations).  
-- Respect **project modularization** (one domain per `.asmdef`).  
-- All UI strings must use the **Unity Localization** system — never hardcode text.
+If not applicable, explicitly write:  
+**“Not applicable — pure code utility.”**
 
 ---
 
-## 7 🧭 GAME DOMAINS — Functional Architecture Overview
+## 6. 🧪 AGENTS.md SUGGESTIONS — Improve Governance
+
+Each implementation must propose optional improvements to AGENTS.md based on the feature (unless none).
+
+Example improvements:
+- Suggest a new invariant.  
+- Suggest new reusable utilities.  
+- Suggest documentation additions.
+
+If none:  
+**“AGENTS.md Suggestions: None.”**
+
+---
+
+## 7. 🧾 COMMIT MESSAGE — Follow Conventional Commits
+
+`<type>(<scope>): <short description>`
+
+Types: feat, fix, test, refactor, chore, docs.
+
+---
+
+## 8. 🧱 CODE IMPLEMENTATION
+
+Only after the above sections are complete:
+
+- Runtime C# scripts.  
+- Unit tests.  
+- Optional YAML snippets for ScriptableObjects.
+
+---
+
+## 9. ⚙️ UNITY CODE QUALITY RULES
+
+- Respect SOLID.  
+- Unity naming conventions:
+  - PascalCase → types/methods  
+  - _camelCase → private fields  
+  - ALL_CAPS → constants  
+- All comments in English.  
+- Optimize memory & performance.  
+- Use correct asmdefs.  
+- Never hardcode UI strings (must use Localization).  
+- Avoid complex inspector UnityEvent wiring — prefer C# events.
+
+---
+
+## 10. 🧭 GAME DOMAINS — Functional Architecture
 
 To maintain modularity and enforce clean code organization, all systems in **SevenBattles** must belong to a defined **domain**.  
 Each domain represents a functional area of the game, with its own folder, assembly definition, and test suite.
 
-### Core Domains
-
-| Domain | Purpose | Example Subsystems / Features |
-|---------|----------|-------------------------------|
-| **Core** | Foundational services and cross-domain utilities. | Game lifecycle, SceneFlow, LifetimeContentService, Save/Load, Logging, Input, Localization. |
-| **Menu** | Main menu and meta-navigation logic. | Main Menu, Settings, Language selection, Tournament start flow. |
-| **Preparation** | Player’s pre-battle management phase. | Recruitment, shop, equipment, team setup, upgrades, start battle. |
-| **Battle** | Core combat gameplay systems. | Units, skills, turn logic, AI, VFX, victory/defeat flow. |
-| **UI** | Shared user interface components. | Common widgets, HUD, notifications, popups. |
-| **AI** | Non-player decision systems. | Battle AI, recruitment AI, opponent logic. |
-| **Tests** | Automated validation and testing. | Unit tests, play mode tests, integration tests. |
-
+| Domain | Purpose |
+|--------|---------|
+| Core | Foundational services, SceneFlow, LifetimeContentService |
+| Menu | Main menu, settings |
+| Preparation | Pre-battle shop, recruitment |
+| Battle | Turn order, movement, skills, AI |
+| UI | Common reusable UI |
+| AI | Decision systems |
+| Tests | All test code |
 ---
 
 ### Folder & Assembly Structure
@@ -140,70 +173,36 @@ Assets/
 
 ---
 
-> 💡 **Tip:** Keep domain dependencies explicit and minimal.  
-> A clean architecture simplifies maintenance, testing, and reuse across future SevenBattles projects.
+## 11. 🌐 LOCALIZATION RULES
 
-## 7bis. 🌐 LOCALIZATION — String Management and Translations
+- All displayed text must use `LocalizedString`.  
+- Organize in functional string tables.  
+- Add FR (french) + EN (english) + ES (spanish) entries at minimum.  
+- Use Smart Strings with placeholders.
 
-All player-facing text in **SevenBattle** must be **fully localized** using Unity’s **Localization System**.  
-No hardcoded strings are allowed in scripts, prefabs, or UI elements.
+---
 
-### Localization Rules
+## 12. 🧬 DOMAIN-SPECIFIC BATTLE INVARIANTS
 
-- All UI text, dialogue, tooltips, menu labels, and notifications **must use `LocalizedString`** or a reference to a **String Table entry**.  
-- Text should be organized in **String Tables** by functional domain (e.g., `UI.Common`, `Menu.Main`, `Battle.Combat`, `Preparation.Recruitment`).  
-- When creating new UI or gameplay features, always add corresponding localization keys in the correct table.  
-- Each localized key must have **at least English (en)** and **French (fr)** entries.  
-- Never concatenate raw strings at runtime (use Smart Strings with placeholders instead).  
-- The agent must mention in the plan section when **new string keys** are added.
+### Movement
+- Must go through `SimpleTurnOrderController`.  
+- Must use its BFS logic.  
+- Must use legal tile caching.  
+- Never implement parallel movement systems.
 
-### Example
+### Highlighting
+- Primary highlight: active unit tile only (never cursor-driven).  
+- Secondary highlight: cursor-driven preview only.
 
-```csharp
-// ✅ Correct
-[SerializeField] private LocalizedString startBattleLabel;
+### AP (Action Points)
+- Only from `UnitStatsData.ActionPoints` → HUD.  
+- Never repurpose other stats.
 
-// ❌ Incorrect
-private const string START_BATTLE_TEXT = "Start Battle";
-button.text = "Start Battle";
+### HeroEditor4D
+- Must use `UnitVisualUtil` and controller reflection helpers.  
+- Never reference HeroEditor4D types directly in Battle/UI assemblies.
 
-## 8. 🧱 OUTPUT FORMAT — Mandatory section order
+---
 
-Every AI-generated implementation must follow this structure **before any code is written**:
-
-1. **Reuse Scan** (table)  
-2. **Plan Summary**  
-3. **Contracts List**  
-4. **Unit Test Plan**  
-5. **Commit Message**  
-6. **Code Implementation**
-
-### Example
-```md
-## Reuse Scan
-| File | API/Class | What to Reuse | Gaps |
-|------|------------|---------------|------|
-| Core/Utils/ObjectPool.cs | ObjectPool<T> | Handles pooling | Missing async preload |
-
-## Plan
-Extend `ObjectPool<T>` with async preload support using Addressables.
-
-## Contracts
-- Calls: `Addressables`, `LifetimeContentService`
-- Exposes: `AsyncObjectPool<T>`
-
-## Unit Tests
-Add `AsyncObjectPoolTests.cs` covering preload, reuse, and release.
-
-## Commit Message
-feat(core): extend ObjectPool with async preload support
-9. 🚦 ENFORCEMENT
-Agents must refuse to generate new code until the reuse scan and contracts are completed.
-
-Any PR or commit lacking tests or reuse justification is rejected automatically.
-
-Documentation updates (docs:) are exempt from the testing rule but must still include a valid commit message.
-
-SevenBattles Engineering | Unity 6 LTS
-
-“Reuse first, test always, commit clean.”
+# SevenBattles Engineering | Unity 6  
+**“Reuse first, wire clean, test always, commit clean.”**

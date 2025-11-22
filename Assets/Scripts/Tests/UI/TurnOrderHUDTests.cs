@@ -207,10 +207,18 @@ namespace SevenBattles.Tests.UI
                 }
             }
 
-            // No AP left -> bar hidden.
+            // No AP left -> bar still visible, all slots empty.
             fake.ActiveUnitCurrentActionPoints = 0;
             fake.FireActionPointsChanged();
-            Assert.IsFalse(apRootGo.activeSelf, "AP bar should be hidden when the active unit has 0 AP.");
+            Assert.IsTrue(apRootGo.activeSelf, "AP bar should remain visible even when the active unit has 0 AP.");
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (i < 5)
+                {
+                    Assert.IsTrue(slots[i].gameObject.activeSelf, $"Slot {i} should remain visible within max AP range at 0 AP.");
+                    Assert.AreEqual(emptySprite, slots[i].sprite, $"Slot {i} should use empty sprite when no AP remain.");
+                }
+            }
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);

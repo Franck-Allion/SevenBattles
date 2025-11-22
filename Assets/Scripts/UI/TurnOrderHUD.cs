@@ -713,7 +713,7 @@ namespace SevenBattles.UI
             max = Mathf.Clamp(max, 0, slotCount);
             current = Mathf.Clamp(current, 0, max);
 
-            if (max <= 0 || current <= 0)
+            if (max <= 0)
             {
                 SetActionPointBarVisible(false);
                 return;

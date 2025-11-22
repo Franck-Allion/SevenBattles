@@ -33,6 +33,8 @@ namespace SevenBattles.Battle.Board
         private Mesh _highlightMesh;
         private MeshRenderer _highlightMr;
         private Color _highlightColor = Color.white;
+        private Mesh _secondaryHighlightMesh;
+        private MeshRenderer _secondaryHighlightMr;
 
         private void Awake()
         {
@@ -108,6 +110,10 @@ namespace SevenBattles.Battle.Board
             {
                 _highlightMr.sharedMaterial = material;
             }
+            if (_secondaryHighlightMr != null)
+            {
+                _secondaryHighlightMr.sharedMaterial = material;
+            }
         }
 
         // Enables or disables automatic hover-driven highlight updates.
@@ -181,6 +187,30 @@ namespace SevenBattles.Battle.Board
             UpdateHighlightMesh(Vector2.zero, Vector2.right * 0.1f, new Vector2(0.1f, -0.1f), Vector2.down * 0.1f);
         }
 
+        private void EnsureSecondaryHighlightObjects()
+        {
+            if (_highlightMaterial == null || _secondaryHighlightMr != null) return;
+
+            var go = new GameObject("TileMoveHighlight");
+            go.transform.SetParent(transform, false);
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+
+            var mf = go.AddComponent<MeshFilter>();
+            _secondaryHighlightMr = go.AddComponent<MeshRenderer>();
+            _secondaryHighlightMr.sharedMaterial = _highlightMaterial;
+            _secondaryHighlightMr.sortingLayerName = _highlightSortingLayer;
+            _secondaryHighlightMr.sortingOrder = _highlightSortingOrder + 1;
+
+            _secondaryHighlightMesh = new Mesh { name = "TileMoveHighlightMesh" };
+            _secondaryHighlightMesh.MarkDynamic();
+            mf.sharedMesh = _secondaryHighlightMesh;
+
+            UpdateSecondaryHighlightMesh(Vector2.zero, Vector2.right * 0.1f, new Vector2(0.1f, -0.1f), Vector2.down * 0.1f);
+            _secondaryHighlightMr.gameObject.SetActive(false);
+        }
+
         private void Update()
         {
             if (!_autoHoverUpdate) return;
@@ -220,6 +250,55 @@ namespace SevenBattles.Battle.Board
             _highlightMesh.uv = uv;
             _highlightMesh.triangles = t;
             _highlightMesh.RecalculateBounds();
+        }
+
+        private void UpdateSecondaryHighlightMesh(Vector2 tl, Vector2 tr, Vector2 br, Vector2 bl)
+        {
+            if (_secondaryHighlightMesh == null) return;
+            var v = new Vector3[4]
+            {
+                new Vector3(tl.x, tl.y, 0f),
+                new Vector3(tr.x, tr.y, 0f),
+                new Vector3(br.x, br.y, 0f),
+                new Vector3(bl.x, bl.y, 0f)
+            };
+            var uv = new Vector2[4] { Vector2.up, Vector2.one, Vector2.right, Vector2.zero };
+            var t = new int[6] { 0, 1, 2, 2, 3, 0 };
+            _secondaryHighlightMesh.Clear();
+            _secondaryHighlightMesh.vertices = v;
+            _secondaryHighlightMesh.uv = uv;
+            _secondaryHighlightMesh.triangles = t;
+            _secondaryHighlightMesh.RecalculateBounds();
+        }
+
+        public void MoveSecondaryHighlightToTile(int x, int y)
+        {
+            if (_secondaryHighlightMr == null) EnsureSecondaryHighlightObjects();
+            if (_secondaryHighlightMr == null || !_grid.IsValid) return;
+            _grid.TileQuadLocal(x, y, out var tl, out var tr, out var br, out var bl);
+            UpdateSecondaryHighlightMesh(tl, tr, br, bl);
+        }
+
+        public void SetSecondaryHighlightVisible(bool visible)
+        {
+            if (_secondaryHighlightMr == null) EnsureSecondaryHighlightObjects();
+            if (_secondaryHighlightMr != null && _secondaryHighlightMr.gameObject.activeSelf != visible)
+            {
+                _secondaryHighlightMr.gameObject.SetActive(visible);
+            }
+        }
+
+        public void SetSecondaryHighlightColor(Color color)
+        {
+            if (_secondaryHighlightMr == null) EnsureSecondaryHighlightObjects();
+            if (_secondaryHighlightMr != null)
+            {
+                var mat = _secondaryHighlightMr.sharedMaterial;
+                if (mat != null && mat.HasProperty("_Color"))
+                {
+                    mat.color = color;
+                }
+            }
         }
 
         // Expose grid size for placement logic consumers.

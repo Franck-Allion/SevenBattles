@@ -7671,6 +7671,9 @@ MonoBehaviour:
   _playerHighlightColor: {r: 0.5018867, g: 0.46666667, b: 0, a: 1}
   _enemyHighlightColor: {r: 0.5019608, g: 0.46666667, b: 0, a: 1}
   _activeUnitHighlightMaterial: {fileID: 2100000, guid: a139d9ce8cac5814cb574fd607791878, type: 2}
+  _moveValidColor: {r: 0.3, g: 1, b: 0.3, a: 0.5}
+  _moveInvalidColor: {r: 1, g: 0.3, b: 0.3, a: 0.5}
+  _moveDurationSeconds: 1
   _autoStartOnPlay: 0
   _aiTurnDelaySeconds: 2
   _logTurns: 0

@@ -6,31 +6,39 @@ namespace SevenBattles.Battle.Units
     // Utility for preparing wizard visuals (direction, sorting, scale) consistently.
     public static class UnitVisualUtil
     {
+        public static void SetDirectionIfCharacter4D(GameObject instance, Vector2 direction)
+        {
+            if (instance == null) return;
+
+            try
+            {
+                var components = instance.GetComponents<MonoBehaviour>();
+                for (int i = 0; i < components.Length; i++)
+                {
+                    var comp = components[i];
+                    if (comp == null) continue;
+                    var type = comp.GetType();
+                    if (type.Name != "Character4D" && type.FullName != "Assets.HeroEditor4D.Common.Scripts.CharacterScripts.Character4D") continue;
+                    var method = type.GetMethod("SetDirection", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, new System.Type[] { typeof(Vector2) }, null);
+                    if (method != null)
+                    {
+                        method.Invoke(comp, new object[] { direction });
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
         public static void InitializeHero(GameObject instance, string sortingLayer, int sortingOrder, Vector2? desiredDirection)
         {
             if (instance == null) return;
 
-            // Try Character4D.SetDirection(Vector2)
             if (desiredDirection.HasValue)
             {
-                try
-                {
-                    var components = instance.GetComponents<MonoBehaviour>();
-                    for (int i = 0; i < components.Length; i++)
-                    {
-                        var comp = components[i];
-                        if (comp == null) continue;
-                        var type = comp.GetType();
-                        if (type.Name != "Character4D" && type.FullName != "Assets.HeroEditor4D.Common.Scripts.CharacterScripts.Character4D") continue;
-                        var method = type.GetMethod("SetDirection", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, new System.Type[] { typeof(Vector2) }, null);
-                        if (method != null)
-                        {
-                            method.Invoke(comp, new object[] { desiredDirection.Value });
-                            break;
-                        }
-                    }
-                }
-                catch { /* ignore, still set sorting below */ }
+                SetDirectionIfCharacter4D(instance, desiredDirection.Value);
             }
 
             // Apply sorting to SortingGroup if present, otherwise to all child SpriteRenderers

@@ -134,7 +134,7 @@ namespace SevenBattles.Tests.Battle
         {
             var go = new GameObject("Wizard");
             var stats = go.AddComponent<UnitStats>();
-            var data = new UnitStatsData { Life = 30, Attack = 4, Initiative = 5 };
+            var data = new UnitStatsData { Life = 30, Attack = 4, ActionPoints = 4, Initiative = 5 };
             stats.ApplyBase(data);
 
             var def = ScriptableObject.CreateInstance<UnitDefinition>();

@@ -9,6 +9,7 @@ namespace SevenBattles.Battle.Units
         [Header("Core Stats")]
         [SerializeField] private int _life;
         [SerializeField] private int _attack;
+        [SerializeField] private int _actionPoints;
         [SerializeField] private int _shoot;
         [SerializeField] private int _spell;
         [SerializeField] private int _speed;
@@ -32,14 +33,14 @@ namespace SevenBattles.Battle.Units
 
         // Backwards-compatible aliases for older tests/usages.
         public int MaxHP => _life;
-        public int ActionPoints => _attack;
+        public int ActionPoints => _actionPoints;
 
         public void ApplyBase(UnitStatsData data)
         {
             _life = data.Life;
-            // Prefer the new Attack field when present, but fall back to
-            // ActionPoints for backwards compatibility with existing content.
-            _attack = data.Attack != 0 ? data.Attack : data.ActionPoints;
+            _attack = data.Attack;
+            // Action points are fully independent from Attack.
+            _actionPoints = Mathf.Max(0, data.ActionPoints);
             _shoot = data.Shoot;
             _spell = data.Spell;
             _speed = data.Speed;

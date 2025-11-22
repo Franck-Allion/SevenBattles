@@ -103,7 +103,7 @@ namespace SevenBattles.Battle.Start
 
                 if (_playerPlacement == null)
                 {
-                    var behaviours = FindObjectsOfType<MonoBehaviour>();
+                    var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
                     for (int i = 0; i < behaviours.Length; i++)
                     {
                         var candidate = behaviours[i] as ISquadPlacementController;
@@ -126,7 +126,7 @@ namespace SevenBattles.Battle.Start
 
                 if (_turnController == null)
                 {
-                    var controller = FindObjectOfType<SimpleTurnOrderController>();
+                    var controller = UnityEngine.Object.FindFirstObjectByType<SimpleTurnOrderController>();
                     _turnControllerBehaviour = controller;
                     _turnController = controller;
                 }
