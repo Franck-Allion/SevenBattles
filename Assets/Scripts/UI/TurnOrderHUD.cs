@@ -73,6 +73,12 @@ namespace SevenBattles.UI
         [SerializeField] private TMP_Text _initiativeLabel;
         [SerializeField] private TMP_Text _moraleLabel;
 
+        [Header("Health Bar")]
+        [SerializeField, Tooltip("Optional health bar component driven by the active unit's life percentage (0-1). The assigned component must implement IHealthBarView.")]
+        private MonoBehaviour _healthBarBehaviour;
+
+        private IHealthBarView HealthBar => _healthBarBehaviour as IHealthBarView;
+
         [Header("Audio")]
         [SerializeField, Tooltip("AudioSource used to play the End Turn SFX (optional). If not set, PlayClipAtPoint will be used.")]
         private AudioSource _audio;
@@ -114,6 +120,7 @@ namespace SevenBattles.UI
             SetupStatsPanel();
             SetupStatsLabelLocalization();
             WirePortraitClick();
+            RefreshHealthBar();
             RefreshActionPoints();
         }
 
@@ -123,9 +130,11 @@ namespace SevenBattles.UI
             if (_controller == null) return;
             _controller.ActiveUnitChanged += HandleActiveUnitChanged;
             _controller.ActiveUnitActionPointsChanged += HandleActiveUnitActionPointsChanged;
+            _controller.ActiveUnitStatsChanged += HandleActiveUnitStatsChanged;
             HandleActiveUnitChanged();
             RefreshEndTurnLabel();
             RefreshStatsLabels();
+            RefreshHealthBar();
             RefreshActionPoints();
         }
 
@@ -135,6 +144,7 @@ namespace SevenBattles.UI
             {
                 _controller.ActiveUnitChanged -= HandleActiveUnitChanged;
                 _controller.ActiveUnitActionPointsChanged -= HandleActiveUnitActionPointsChanged;
+                _controller.ActiveUnitStatsChanged -= HandleActiveUnitStatsChanged;
             }
 
             TeardownEndTurnLocalization();
@@ -626,12 +636,18 @@ namespace SevenBattles.UI
                 }
             }
 
+            RefreshHealthBar();
             RefreshActionPoints();
         }
 
         private void HandleActiveUnitActionPointsChanged()
         {
             RefreshActionPoints();
+        }
+
+        private void HandleActiveUnitStatsChanged()
+        {
+            RefreshHealthBar();
         }
 
         private void HandlePortraitClicked()
@@ -681,6 +697,56 @@ namespace SevenBattles.UI
             if (_protectionText != null) _protectionText.text = stats.Protection.ToString();
             if (_initiativeText != null) _initiativeText.text = stats.Initiative.ToString();
             if (_moraleText != null) _moraleText.text = stats.Morale.ToString();
+        }
+
+        private void RefreshHealthBar()
+        {
+            if (_healthBarBehaviour == null)
+            {
+                return;
+            }
+
+            if (_controller == null || !_controller.HasActiveUnit)
+            {
+                if (_healthBarBehaviour.gameObject.activeSelf)
+                {
+                    _healthBarBehaviour.gameObject.SetActive(false);
+                }
+                return;
+            }
+
+            if (!_controller.TryGetActiveUnitStats(out var stats))
+            {
+                if (_healthBarBehaviour.gameObject.activeSelf)
+                {
+                    _healthBarBehaviour.gameObject.SetActive(false);
+                }
+                return;
+            }
+
+            ApplyHealthToBar(stats);
+        }
+
+        private void ApplyHealthToBar(UnitStatsViewData stats)
+        {
+            var bar = HealthBar;
+            if (bar == null)
+            {
+                return;
+            }
+
+            float value = 0f;
+            if (stats.MaxLife > 0)
+            {
+                value = Mathf.Clamp01(stats.Life / (float)stats.MaxLife);
+            }
+
+            bar.Value = value;
+
+            if (!_healthBarBehaviour.gameObject.activeSelf)
+            {
+                _healthBarBehaviour.gameObject.SetActive(true);
+            }
         }
 
         private void RefreshActionPoints()

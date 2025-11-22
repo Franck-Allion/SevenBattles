@@ -12,6 +12,7 @@ namespace SevenBattles.Core
 
         event Action ActiveUnitChanged;
         event Action ActiveUnitActionPointsChanged;
+        event Action ActiveUnitStatsChanged;
 
         /// <summary>
         /// Current action points available for the active unit.

@@ -9,6 +9,11 @@ namespace SevenBattles.Tests.UI
 {
     public class TurnOrderHUDTests
     {
+        private class TestHealthBarLogic : MonoBehaviour, IHealthBarView
+        {
+            public float Value { get; set; }
+        }
+
         private class FakeTurnController : MonoBehaviour, ITurnOrderController
         {
             public bool HasActiveUnit { get; set; }
@@ -17,6 +22,7 @@ namespace SevenBattles.Tests.UI
 
             public event System.Action ActiveUnitChanged;
             public event System.Action ActiveUnitActionPointsChanged;
+            public event System.Action ActiveUnitStatsChanged;
 
             public bool EndTurnRequested { get; private set; }
             public UnitStatsViewData ActiveStats;
@@ -36,6 +42,11 @@ namespace SevenBattles.Tests.UI
             public void FireActionPointsChanged()
             {
                 ActiveUnitActionPointsChanged?.Invoke();
+            }
+
+            public void FireStatsChanged()
+            {
+                ActiveUnitStatsChanged?.Invoke();
             }
 
             public bool TryGetActiveUnitStats(out UnitStatsViewData stats)
@@ -537,6 +548,102 @@ namespace SevenBattles.Tests.UI
             // Panel should remain open and reflect new life value.
             Assert.IsTrue(panelGo.activeSelf, "Stats panel should remain open after stats change.");
             Assert.AreEqual("10 / 25", lifeText.text);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void HealthBar_Updates_WhenStatsChangeAndEventRaised()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 50, MaxLife = 100 };
+
+            var healthBarGo = new GameObject("HealthBar");
+            var healthBar = healthBarGo.AddComponent<TestHealthBarLogic>();
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_healthBarBehaviour", healthBar);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            fake.FireStatsChanged();
+            Assert.IsTrue(healthBarGo.activeSelf, "Health bar should be active when there is an active unit.");
+            Assert.That(healthBar.Value, Is.EqualTo(0.5f).Within(1e-4f), "Health bar value should reflect current life percentage.");
+
+            fake.ActiveStats = new UnitStatsViewData { Life = 25, MaxLife = 100 };
+            fake.FireStatsChanged();
+            Assert.That(healthBar.Value, Is.EqualTo(0.25f).Within(1e-4f), "Health bar value should update when life changes.");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void HealthBar_Hidden_WhenNoActiveUnit()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 10, MaxLife = 10 };
+
+            var healthBarGo = new GameObject("HealthBar");
+            var healthBar = healthBarGo.AddComponent<TestHealthBarLogic>();
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_healthBarBehaviour", healthBar);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            fake.FireStatsChanged();
+            Assert.IsTrue(healthBarGo.activeSelf, "Health bar should be active while there is an active unit.");
+
+            fake.HasActiveUnit = false;
+            fake.FireChanged();
+
+            Assert.IsFalse(healthBarGo.activeSelf, "Health bar should be hidden when there is no active unit.");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void HealthBar_ShowsZero_ForDeadActiveUnit()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 0, MaxLife = 100 };
+
+            var healthBarGo = new GameObject("HealthBar");
+            var healthBar = healthBarGo.AddComponent<TestHealthBarLogic>();
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_healthBarBehaviour", healthBar);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            fake.FireStatsChanged();
+
+            Assert.IsTrue(healthBarGo.activeSelf, "Health bar should be visible for a dead active unit still in turn order.");
+            Assert.That(healthBar.Value, Is.EqualTo(0f).Within(1e-4f), "Health bar value should be 0 for a dead unit.");
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);

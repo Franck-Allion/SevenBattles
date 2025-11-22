@@ -118,6 +118,7 @@
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\WarehouseBase.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Elements\ItemInfo.cs" />
     <Compile Include="Assets\HealthBar\Scripts\PowerBarMaterial.cs" />
+    <Compile Include="Assets\HealthBar\Scripts\HealthBarViewAdapter.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\ShaderPropAnimator.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Collections\SpriteCollection.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\SimpleColorPicker\Scripts\ColorMode.cs" />

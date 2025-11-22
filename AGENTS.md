@@ -202,6 +202,10 @@ Assets/
 - Must use `UnitVisualUtil` and controller reflection helpers.  
 - Never reference HeroEditor4D types directly in Battle/UI assemblies.
 
+### Active Unit Stats / Health
+- Whenever a battle system mutates the runtime combat stats of the current active unit (e.g., Life, Force, etc.), it **must** raise `ITurnOrderController.ActiveUnitStatsChanged`.  
+- UI health bars and other stat-driven HUD elements must rely on `ITurnOrderController.TryGetActiveUnitStats` + `ActiveUnitStatsChanged` instead of polling runtime components directly.
+
 ---
 
 # SevenBattles Engineering | Unity 6  

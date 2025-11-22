@@ -108,6 +108,7 @@ namespace SevenBattles.Battle.Turn
 
         public event Action ActiveUnitChanged;
         public event Action ActiveUnitActionPointsChanged;
+        public event Action ActiveUnitStatsChanged;
 
         public int ActiveUnitCurrentActionPoints => _hasActiveUnit ? _activeUnitCurrentActionPoints : 0;
         public int ActiveUnitMaxActionPoints => _hasActiveUnit ? _activeUnitMaxActionPoints : 0;
@@ -384,6 +385,7 @@ namespace SevenBattles.Battle.Turn
             }
 
             ActiveUnitChanged?.Invoke();
+            ActiveUnitStatsChanged?.Invoke();
             ActiveUnitActionPointsChanged?.Invoke();
         }
 

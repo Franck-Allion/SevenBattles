@@ -43,6 +43,7 @@ namespace SevenBattles.Tests.Battle
             public Sprite ActiveUnitPortrait => null;
             public event System.Action ActiveUnitChanged;
             public event System.Action ActiveUnitActionPointsChanged;
+            public event System.Action ActiveUnitStatsChanged;
             public bool IsInteractionLocked { get; private set; }
             public bool StartBattleCalled { get; private set; }
             public int ActiveUnitCurrentActionPoints => 0;
