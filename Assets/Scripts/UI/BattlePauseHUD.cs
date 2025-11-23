@@ -74,6 +74,10 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Starting scale factor for the menu panel when animating in.")]
         private float _menuScaleFrom = 0.9f;
 
+        [Header("Quit Confirmation")]
+        [SerializeField, Tooltip("Optional reusable confirmation dialog prefab used when the Quit button is pressed.")]
+        private ConfirmationMessageBoxHUD _quitConfirmation;
+
         private IBattleTurnController _battleTurnController;
         private bool _buttonsWired;
         private bool _isOpen;
@@ -117,35 +121,41 @@ namespace SevenBattles.UI
             }
         }
 
-        private void Update()
-        {
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                HandleEscapePressed();
-            }
-        }
+          private void Update()
+          {
+              if (Input.GetKeyDown(KeyCode.Escape))
+              {
+                  HandleEscapePressed();
+              }
+          }
 
-        private void HandleEscapePressed()
-        {
-            if (_isOpen)
-            {
-                ClosePauseMenu();
-            }
-            else
-            {
-                ResolveController();
+          private void HandleEscapePressed()
+          {
+              if (_quitConfirmation != null && _quitConfirmation.IsVisible)
+              {
+                  // Let the confirmation dialog handle ESC (it will map to Cancel).
+                  return;
+              }
 
-                // Block pause only when an AI-controlled unit is actively taking a turn.
-                if (_battleTurnController != null &&
-                    _battleTurnController.HasActiveUnit &&
-                    !_battleTurnController.IsActiveUnitPlayerControlled)
-                {
-                    return;
-                }
+              if (_isOpen)
+              {
+                  ClosePauseMenu();
+              }
+              else
+              {
+                  ResolveController();
 
-                OpenPauseMenu();
-            }
-        }
+                  // Block pause only when an AI-controlled unit is actively taking a turn.
+                  if (_battleTurnController != null &&
+                      _battleTurnController.HasActiveUnit &&
+                      !_battleTurnController.IsActiveUnitPlayerControlled)
+                  {
+                      return;
+                  }
+
+                  OpenPauseMenu();
+              }
+          }
 
         private void ResolveController()
         {
@@ -678,30 +688,64 @@ namespace SevenBattles.UI
             LoadClicked?.Invoke();
         }
 
-        private void OnSettingsClicked()
-        {
-            if (!_isOpen)
-            {
-                return;
-            }
+          private void OnSettingsClicked()
+          {
+              if (!_isOpen)
+              {
+                  return;
+              }
 
             SettingsClicked?.Invoke();
         }
 
-        private void OnQuitClicked()
-        {
-            if (!_isOpen)
-            {
-                return;
-            }
+          private void OnQuitClicked()
+          {
+              if (!_isOpen)
+              {
+                  return;
+              }
 
-            QuitClicked?.Invoke();
-        }
+              if (_quitConfirmation == null)
+              {
+                  QuitClicked?.Invoke();
+                  QuitGame();
+                  return;
+              }
 
-        private void OnCloseClicked()
-        {
-            ClosePauseMenu();
-        }
+              var title = new LocalizedString("UI.Common", "Confirm.QuitTitle");
+              var message = new LocalizedString("UI.Common", "Confirm.QuitMessage");
+              var confirmLabel = new LocalizedString("UI.Common", "Common.Yes");
+              var cancelLabel = new LocalizedString("UI.Common", "Common.No");
+
+              _quitConfirmation.Show(
+                  title,
+                  message,
+                  confirmLabel,
+                  cancelLabel,
+                  () =>
+                  {
+                      QuitClicked?.Invoke();
+                      QuitGame();
+                  },
+                  () =>
+                  {
+                      // Cancel: keep pause menu visible, no-op.
+                  });
+          }
+
+          private void OnCloseClicked()
+          {
+              ClosePauseMenu();
+          }
+
+          private void QuitGame()
+          {
+#if UNITY_EDITOR
+              UnityEditor.EditorApplication.isPlaying = false;
+#else
+              Application.Quit();
+#endif
+          }
 
         private void HandleSaveLabelChanged(string value)
         {

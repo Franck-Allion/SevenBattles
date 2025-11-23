@@ -182,7 +182,17 @@ Assets/
 
 ---
 
-## 12. 🧬 DOMAIN-SPECIFIC BATTLE INVARIANTS
+## 12. 🖼 UI MODAL OVERLAY INVARIANTS
+
+- All blocking overlays (pause menus, confirmation dialogs, turn banners, etc.) must be driven by a `CanvasGroup` that controls both `alpha` and `blocksRaycasts`.  
+- While visible, modal overlays must use `blocksRaycasts = true` to prevent clicks on underlying HUD or world UI; when hidden, they must restore `blocksRaycasts = false` and any related HUD `CanvasGroup.alpha` state.  
+- Modal overlays must animate using unscaled time (`Time.unscaledDeltaTime`) and must not introduce additional turn/interaction state beyond `ITurnOrderController` / `IBattleTurnController.SetInteractionLocked`.  
+- Confirmation-style overlays must expose a single reusable API accepting `LocalizedString` title/message/button labels and per-call callbacks, instead of hardcoded or duplicated UI flows.  
+- For confirmation flows in the UI domain (Quit, Load, delete save, reset settings, etc.), agents must first consider reusing or extending `SevenBattles.UI.ConfirmationMessageBoxHUD` before introducing any new confirmation UI component.
+
+---
+
+## 13. 🧬 DOMAIN-SPECIFIC BATTLE INVARIANTS
 
 ### Movement
 - Must go through `SimpleTurnOrderController`.  

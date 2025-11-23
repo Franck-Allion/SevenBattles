@@ -159,11 +159,11 @@ namespace SevenBattles.Tests.UI
             Assert.IsFalse(menuRootGo.activeSelf, "Pause menu should close when Escape is pressed again.");
 
             UnityEngine.Object.DestroyImmediate(hudGo);
-            UnityEngine.Object.DestroyImmediate(ctrlGo);
-        }
-
-        [Test]
-        public void Buttons_EmitEvents_WhenMenuOpen()
+              UnityEngine.Object.DestroyImmediate(ctrlGo);
+          }
+  
+          [Test]
+          public void Buttons_EmitEvents_WhenMenuOpen()
         {
             var hudGo = new GameObject("PauseHUD");
             var hud = hudGo.AddComponent<BattlePauseHUD>();
@@ -189,23 +189,46 @@ namespace SevenBattles.Tests.UI
             settingsBtnGo.transform.SetParent(menuRootGo.transform);
             var settingsBtn = settingsBtnGo.AddComponent<Button>();
 
-            var quitBtnGo = new GameObject("QuitButton");
-            quitBtnGo.transform.SetParent(menuRootGo.transform);
-            var quitBtn = quitBtnGo.AddComponent<Button>();
+              var quitBtnGo = new GameObject("QuitButton");
+              quitBtnGo.transform.SetParent(menuRootGo.transform);
+              var quitBtn = quitBtnGo.AddComponent<Button>();
 
-            SetPrivate(hud, "_menuCanvasGroup", menuCg);
-            SetPrivate(hud, "_menuRoot", menuRoot);
-            SetPrivate(hud, "_blurCanvasGroup", blurCg);
-            SetPrivate(hud, "_saveButton", saveBtn);
-            SetPrivate(hud, "_loadButton", loadBtn);
-            SetPrivate(hud, "_settingsButton", settingsBtn);
-            SetPrivate(hud, "_quitButton", quitBtn);
-            SetPrivate(hud, "_fadeDuration", 0f);
+              var confirmRootGo = new GameObject("QuitConfirmRoot");
+              confirmRootGo.transform.SetParent(hudGo.transform);
+              var confirmRect = confirmRootGo.AddComponent<RectTransform>();
+              var confirmCg = confirmRootGo.AddComponent<CanvasGroup>();
 
-            bool saveCalled = false;
-            bool loadCalled = false;
-            bool settingsCalled = false;
-            bool quitCalled = false;
+              var confirmBtnGo = new GameObject("ConfirmButton");
+              confirmBtnGo.transform.SetParent(confirmRootGo.transform);
+              var confirmBtn = confirmBtnGo.AddComponent<Button>();
+
+              var cancelBtnGo = new GameObject("CancelButton");
+              cancelBtnGo.transform.SetParent(confirmRootGo.transform);
+              var cancelBtn = cancelBtnGo.AddComponent<Button>();
+
+              var confirmHud = confirmRootGo.AddComponent<ConfirmationMessageBoxHUD>();
+  
+              SetPrivate(hud, "_menuCanvasGroup", menuCg);
+              SetPrivate(hud, "_menuRoot", menuRoot);
+              SetPrivate(hud, "_blurCanvasGroup", blurCg);
+              SetPrivate(hud, "_saveButton", saveBtn);
+              SetPrivate(hud, "_loadButton", loadBtn);
+              SetPrivate(hud, "_settingsButton", settingsBtn);
+              SetPrivate(hud, "_quitButton", quitBtn);
+              SetPrivate(hud, "_fadeDuration", 0f);
+
+              SetPrivate(confirmHud, "_rootCanvasGroup", confirmCg);
+              SetPrivate(confirmHud, "_dialogRoot", confirmRect);
+              SetPrivate(confirmHud, "_confirmButton", confirmBtn);
+              SetPrivate(confirmHud, "_cancelButton", cancelBtn);
+              SetPrivate(confirmHud, "_fadeDuration", 0f);
+
+              SetPrivate(hud, "_quitConfirmation", confirmHud);
+
+              bool saveCalled = false;
+              bool loadCalled = false;
+              bool settingsCalled = false;
+              bool quitCalled = false;
 
             hud.SaveClicked += () => saveCalled = true;
             hud.LoadClicked += () => loadCalled = true;
@@ -215,20 +238,32 @@ namespace SevenBattles.Tests.UI
             CallPrivate(hud, "Awake");
             CallPrivate(hud, "OnEnable");
 
-            CallPrivate(hud, "OpenPauseMenu");
+              CallPrivate(hud, "OpenPauseMenu");
+  
+              saveBtn.onClick.Invoke();
+              loadBtn.onClick.Invoke();
+              settingsBtn.onClick.Invoke();
+              quitBtn.onClick.Invoke();
 
-            saveBtn.onClick.Invoke();
-            loadBtn.onClick.Invoke();
-            settingsBtn.onClick.Invoke();
-            quitBtn.onClick.Invoke();
+              // Quit now requires confirmation: event should not fire until Confirm is pressed.
+              Assert.IsFalse(quitCalled, "QuitClicked should not be raised until confirmation is accepted.");
 
-            Assert.IsTrue(saveCalled, "SaveClicked event should be raised when Save button is pressed.");
-            Assert.IsTrue(loadCalled, "LoadClicked event should be raised when Load button is pressed.");
-            Assert.IsTrue(settingsCalled, "SettingsClicked event should be raised when Settings button is pressed.");
-            Assert.IsTrue(quitCalled, "QuitClicked event should be raised when Quit button is pressed.");
+              confirmBtn.onClick.Invoke();
+  
+              Assert.IsTrue(saveCalled, "SaveClicked event should be raised when Save button is pressed.");
+              Assert.IsTrue(loadCalled, "LoadClicked event should be raised when Load button is pressed.");
+              Assert.IsTrue(settingsCalled, "SettingsClicked event should be raised when Settings button is pressed.");
+              Assert.IsTrue(quitCalled, "QuitClicked event should be raised when Quit is confirmed.");
 
-            UnityEngine.Object.DestroyImmediate(hudGo);
-        }
-    }
-}
+              // Second attempt: cancel should not raise the QuitClicked event.
+              quitCalled = false;
+              CallPrivate(hud, "OpenPauseMenu");
+              quitBtn.onClick.Invoke();
+              cancelBtn.onClick.Invoke();
 
+              Assert.IsFalse(quitCalled, "QuitClicked should not be raised when Quit is cancelled.");
+  
+              UnityEngine.Object.DestroyImmediate(hudGo);
+          }
+      }
+  }
