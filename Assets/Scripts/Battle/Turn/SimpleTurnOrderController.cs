@@ -46,6 +46,7 @@ namespace SevenBattles.Battle.Turn
         private float _pendingAiEndTime = -1f;
         private bool _advancing;
         private bool _hasActiveUnit;
+        private int _interactionLockCount;
         private int _turnIndex;
         private bool _interactionLocked;
         private int _activeUnitCurrentActionPoints;
@@ -157,7 +158,16 @@ namespace SevenBattles.Battle.Turn
 
         public void SetInteractionLocked(bool locked)
         {
-            _interactionLocked = locked;
+            if (locked)
+            {
+                _interactionLockCount++;
+            }
+            else
+            {
+                _interactionLockCount = Mathf.Max(0, _interactionLockCount - 1);
+            }
+
+            _interactionLocked = _interactionLockCount > 0;
         }
 
         // Internal rebuild used by StartBattle and tests.

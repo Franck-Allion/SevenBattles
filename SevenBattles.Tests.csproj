@@ -72,6 +72,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\StartSquadControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\WorldPerspectiveBoardHighlightTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\UI\BattlePauseHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SquadPlacementHUDTests.cs" />
   </ItemGroup>
