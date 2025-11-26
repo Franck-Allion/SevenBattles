@@ -66,6 +66,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\UnitDefinitionControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\TurnOrderHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitMovementTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\UI\SaveLoadHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridQuadTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\ConfirmationMessageBoxHUDTests.cs" />
@@ -73,6 +74,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\StartSquadControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\WorldPerspectiveBoardHighlightTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattlePauseHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SquadPlacementHUDTests.cs" />

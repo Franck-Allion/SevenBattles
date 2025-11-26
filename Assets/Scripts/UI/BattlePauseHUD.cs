@@ -78,6 +78,10 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Optional reusable confirmation dialog prefab used when the Quit button is pressed.")]
         private ConfirmationMessageBoxHUD _quitConfirmation;
 
+        [Header("Save/Load")]
+        [SerializeField, Tooltip("Optional Save/Load HUD overlay to open when the Save button is pressed.")]
+        private SaveLoadHUD _saveLoadHud;
+
         private IBattleTurnController _battleTurnController;
         private bool _buttonsWired;
         private bool _isOpen;
@@ -676,6 +680,11 @@ namespace SevenBattles.UI
             }
 
             SaveClicked?.Invoke();
+
+            if (_saveLoadHud != null)
+            {
+                _saveLoadHud.ShowSave();
+            }
         }
 
         private void OnLoadClicked()

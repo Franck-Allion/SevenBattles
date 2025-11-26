@@ -62,6 +62,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleTurnController.cs" />
+    <Compile Include="Assets\Scripts\Core\Save\SaveGameService.cs" />
+    <Compile Include="Assets\Scripts\Core\Save\PlayerSquadGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Players\PlayerSquad.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IHealthBarView.cs" />
@@ -71,6 +73,7 @@
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitStatsData.cs" />
+    <Compile Include="Assets\Scripts\Core\Save\SaveGameServiceComponent.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\Core\Core.asmdef" />

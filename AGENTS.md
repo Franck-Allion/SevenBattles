@@ -182,7 +182,51 @@ Assets/
 
 ---
 
-## 12. 🖼 UI MODAL OVERLAY INVARIANTS
+## 12. 💾 GAME STATE PERSISTENCE INVARIANTS
+
+Whenever gameplay code introduces, removes, or changes any **game state** that must survive across sessions (e.g., current squad, campaign progress, difficulty, unlocked content, options that affect gameplay), the agent must:
+
+- Identify where that state is owned (ScriptableObject, MonoBehaviour, service, model, etc.).  
+- Ensure the state is **captured into the save model** (`SaveGameData` or equivalent DTO) via a dedicated `IGameStateSaveProvider`.  
+- Ensure the state is **restored from the save model** (once load is implemented) via a dedicated load path (not yet implemented for this project, but changes must be forward-compatible).  
+- Add or update tests under `Assets/Scripts/Tests/` that verify:
+  - The new/changed property is present in the serialized save JSON.  
+  - Corrupt or missing data for that property does not crash the game and falls back to a safe default.
+
+### Required Questions for the Agent
+
+For every new or modified game state property, explicitly answer:
+
+- **Is this state transient or persistent?**  
+  - If persistent, explain where it should live in `SaveGameData` (e.g., `PlayerSquad`, `Campaign`, `Options`, `Progression`).  
+- **Where is the single source of truth?**  
+  - Point to the owning type and field (e.g., `WorldSquadPlacementController._playerSquad`, `SimpleTurnOrderController.TurnIndex`).  
+- **How will this state be serialized?**  
+  - Which simple, JSON-safe representation will be used (ids, indices, flags, numeric values), and how it can be evolved safely.  
+- **What is the default if it is missing or corrupt?**  
+  - Describe a safe default behavior when old saves do not contain the new field or contain invalid data.
+
+### Guidance for Save-Related Changes
+
+When adding game state that must be saved:
+
+- Prefer extending `SaveGameData` with **small, explicit DTOs** (e.g., `PlayerSquadSaveData`, `CampaignStateSaveData`) rather than dumping raw components or ScriptableObjects.  
+- Implement or extend an `IGameStateSaveProvider` that:
+  - Reads from the runtime owner(s) of the state (e.g., `PlayerSquad`, controllers, services).  
+  - Populates the corresponding section of `SaveGameData` using simple serializable fields.  
+- Keep the **UI and Battle domains free of file IO**; only Core-domain services (e.g., `SaveGameService`) perform disk access.  
+- When removing a property from the game state:
+  - Keep deserialization robust by treating the old field as optional when reading existing JSON.  
+  - Document the migration behavior if old saves are expected to be loaded.
+
+When in doubt, the agent should:
+
+- Search for existing save-related types (`SaveGameService`, `SaveGameData`, `IGameStateSaveProvider`) and **extend** them rather than creating parallel persistence systems.  
+- Propose new DTOs and provider methods in the Core domain, and keep them decoupled from presentation/UI concerns.
+
+---
+
+## 13. 🖼 UI MODAL OVERLAY INVARIANTS
 
 - All blocking overlays (pause menus, confirmation dialogs, turn banners, etc.) must be driven by a `CanvasGroup` that controls both `alpha` and `blocksRaycasts`.  
 - While visible, modal overlays must use `blocksRaycasts = true` to prevent clicks on underlying HUD or world UI; when hidden, they must restore `blocksRaycasts = false` and any related HUD `CanvasGroup.alpha` state.  

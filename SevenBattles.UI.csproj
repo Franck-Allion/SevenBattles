@@ -64,6 +64,7 @@
     <Compile Include="Assets\Scripts\UI\SquadPlacementHUD.cs" />
     <Compile Include="Assets\Scripts\UI\WorldSpaceCanvasFitter.cs" />
     <Compile Include="Assets\Scripts\UI\ConfirmationMessageBoxHUD.cs" />
+    <Compile Include="Assets\Scripts\UI\SaveLoadHUD.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePauseHUD.cs" />
     <Compile Include="Assets\Scripts\UI\TurnOrderHUD.cs" />
   </ItemGroup>
