@@ -16,7 +16,7 @@ namespace SevenBattles.Battle.Start
         [Tooltip("Optional: legacy prefabs list. If PlayerSquad is assigned, it is used instead.")]
         [SerializeField] private GameObject[] _wizardPrefabs = new GameObject[3];
         [Tooltip("Preferred: data-driven squad.")]
-        [SerializeField] private PlayerSquad _playerSquad;
+        [SerializeField] private PlayerContext _playerContext;
 
         [Header("Placement")]
         [Tooltip("Tile X indices for each wizard on row 0. If empty or shorter than prefabs, defaults to 0,1,2.")]
@@ -49,7 +49,8 @@ namespace SevenBattles.Battle.Start
                 return;
             }
 
-            var defs = _playerSquad != null ? _playerSquad.Wizards : null;
+            var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
+            var defs = playerSquad != null ? playerSquad.Wizards : null;
             if ((defs == null || defs.Length == 0) && (_wizardPrefabs == null || _wizardPrefabs.Length == 0))
             {
                 Debug.LogWarning("WorldSquadStartController: No wizard prefabs configured.");

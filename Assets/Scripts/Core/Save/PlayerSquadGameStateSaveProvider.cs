@@ -10,8 +10,8 @@ namespace SevenBattles.Core.Save
     /// </summary>
     public class PlayerSquadGameStateSaveProvider : MonoBehaviour, IGameStateSaveProvider
     {
-        [SerializeField, Tooltip("Player squad asset representing the current player's squad.")]
-        private PlayerSquad _playerSquad;
+        [SerializeField, Tooltip("Player context containing the current player's squad.")]
+        private PlayerContext _playerContext;
 
         public void PopulateGameState(SaveGameData data)
         {
@@ -20,7 +20,9 @@ namespace SevenBattles.Core.Save
                 throw new ArgumentNullException(nameof(data));
             }
 
-            if (_playerSquad == null || _playerSquad.Wizards == null || _playerSquad.Wizards.Length == 0)
+            var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
+
+            if (playerSquad == null || playerSquad.Wizards == null || playerSquad.Wizards.Length == 0)
             {
                 data.PlayerSquad = new PlayerSquadSaveData
                 {
@@ -29,7 +31,7 @@ namespace SevenBattles.Core.Save
                 return;
             }
 
-            var wizards = _playerSquad.Wizards;
+            var wizards = playerSquad.Wizards;
             var ids = new string[wizards.Length];
 
             for (int i = 0; i < wizards.Length; i++)
