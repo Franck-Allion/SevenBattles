@@ -98,5 +98,31 @@ namespace SevenBattles.Tests.Core
             Assert.AreEqual(service.MaxSlots, all.Length);
             Assert.IsFalse(all[2].HasSave, "Invalid JSON should be treated as empty slot.");
         }
+
+        [Test]
+        public async Task Save_IncludesUnitPlacements_FromProvider()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "WizA" }
+            };
+
+            var service = new SaveGameService(provider, dir);
+            await service.SaveSlotAsync(1);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            Assert.IsTrue(File.Exists(path), "Save file should exist after saving.");
+
+            string json = File.ReadAllText(path);
+            var data = JsonUtility.FromJson<SaveGameData>(json);
+            Assert.IsNotNull(data, "Deserialized SaveGameData should not be null.");
+            Assert.IsNotNull(data.PlayerSquad, "PlayerSquad should be populated by provider.");
+            Assert.IsNotNull(data.UnitPlacements, "UnitPlacements should be initialized even if provider left it null.");
+            Assert.IsNotNull(data.BattleTurn, "BattleTurn should be initialized even if provider left it null.");
+        }
     }
 }

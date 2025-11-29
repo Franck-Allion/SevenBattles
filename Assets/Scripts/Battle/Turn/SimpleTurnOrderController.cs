@@ -117,6 +117,19 @@ namespace SevenBattles.Battle.Turn
         public int ActiveUnitCurrentActionPoints => _hasActiveUnit ? _activeUnitCurrentActionPoints : 0;
         public int ActiveUnitMaxActionPoints => _hasActiveUnit ? _activeUnitMaxActionPoints : 0;
 
+        public UnitBattleMetadata ActiveUnitMetadata
+        {
+            get
+            {
+                if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
+                {
+                    return null;
+                }
+
+                return _units[_activeIndex].Metadata;
+            }
+        }
+
         private void Start()
         {
             if (_autoStartOnPlay)

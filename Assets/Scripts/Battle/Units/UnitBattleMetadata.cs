@@ -10,6 +10,7 @@ namespace SevenBattles.Battle.Units
         [SerializeField] private Sprite _portrait;
         [SerializeField] private Vector2Int _tile;
         [SerializeField] private bool _hasTile;
+        [SerializeField] private Vector2 _facing = Vector2.up;
 
         public bool IsPlayerControlled
         {
@@ -36,6 +37,12 @@ namespace SevenBattles.Battle.Units
         }
 
         public UnitDefinition Definition { get; private set; }
+
+        public Vector2 Facing
+        {
+            get => _facing;
+            set => _facing = value;
+        }
 
         public static UnitBattleMetadata Ensure(GameObject instance, bool isPlayerControlled, UnitDefinition definition, Vector2Int tile)
         {

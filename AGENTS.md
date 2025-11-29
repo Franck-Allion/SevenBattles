@@ -224,6 +224,9 @@ When in doubt, the agent should:
 - Search for existing save-related types (`SaveGameService`, `SaveGameData`, `IGameStateSaveProvider`) and **extend** them rather than creating parallel persistence systems.  
 - Propose new DTOs and provider methods in the Core domain, and keep them decoupled from presentation/UI concerns.
 
+For more details on the current save/load architecture and JSON format, see:  
+`Docs/SaveSystem.md`
+
 ---
 
 ## 13. 🖼 UI MODAL OVERLAY INVARIANTS

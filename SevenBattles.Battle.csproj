@@ -64,6 +64,8 @@
     <Compile Include="Assets\Scripts\Battle\Start\WorldEnemySquadStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\Units\UnitStats.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\FullscreenSpriteFitter.cs" />
+    <Compile Include="Assets\Scripts\Battle\Save\BattleTurnGameStateSaveProvider.cs" />
+    <Compile Include="Assets\Scripts\Battle\Save\BattleBoardGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiTileHighlightGraphic.cs" />
     <Compile Include="Assets\Scripts\Battle\Turn\SimpleTurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Battle\Units\UnitBattleMetadata.cs" />

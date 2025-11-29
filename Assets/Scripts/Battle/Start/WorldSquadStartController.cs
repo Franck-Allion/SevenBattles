@@ -67,9 +67,9 @@ namespace SevenBattles.Battle.Start
                     var go = Object.Instantiate(def.Prefab);
                     SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                     int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);
+                    SevenBattles.Battle.Units.UnitBattleMetadata.Ensure(go, true, def, new Vector2Int(tileX, _rowY));
                     SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
                     _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
-                    SevenBattles.Battle.Units.UnitBattleMetadata.Ensure(go, true, def, new Vector2Int(tileX, _rowY));
                 }
             }
             else

@@ -151,10 +151,10 @@ namespace SevenBattles.Battle.Start
             var go = Instantiate(prefab);
             SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
             int sortingOrder = _board != null ? _board.ComputeSortingOrder(tile.x, tile.y, _baseSortingOrder, rowStride: 10, intraRowOffset: index % 10) : (_baseSortingOrder + index);
+            ApplyMetadataIfAny(go, index, tile);
             SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
             _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
             ApplyStatsIfAny(go, index);
-            ApplyMetadataIfAny(go, index, tile);
             _instances[index] = go;
             Play(_placeClip);
             OnWizardPlaced?.Invoke(index);

@@ -30,6 +30,12 @@ namespace SevenBattles.Battle.Units
             catch
             {
             }
+
+            var meta = instance.GetComponent<UnitBattleMetadata>();
+            if (meta != null)
+            {
+                meta.Facing = direction;
+            }
         }
 
         public static void InitializeHero(GameObject instance, string sortingLayer, int sortingOrder, Vector2? desiredDirection)

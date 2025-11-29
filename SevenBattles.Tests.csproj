@@ -62,11 +62,13 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Tests\Battle\WorldBattleBootstrapTransitionTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\BattleBoardGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\TurnOrderControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitDefinitionControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\TurnOrderHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitMovementTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SaveLoadHUDTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\BattleTurnGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridQuadTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\ConfirmationMessageBoxHUDTests.cs" />

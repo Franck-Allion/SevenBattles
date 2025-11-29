@@ -44,11 +44,52 @@ namespace SevenBattles.Core.Save
     }
 
     [Serializable]
+    public sealed class UnitStatsSaveData
+    {
+        public int Life;
+        public int MaxLife;
+        public int Attack;
+        public int Shoot;
+        public int Spell;
+        public int Speed;
+        public int Luck;
+        public int Defense;
+        public int Protection;
+        public int Initiative;
+        public int Morale;
+    }
+
+    [Serializable]
+    public sealed class UnitPlacementSaveData
+    {
+        public string UnitId;
+        public string Team;
+        public int X;
+        public int Y;
+        public string Facing;
+        public bool Dead;
+        public UnitStatsSaveData Stats;
+    }
+
+    [Serializable]
+    public sealed class BattleTurnSaveData
+    {
+        public string Phase;
+        public int TurnIndex;
+        public string ActiveUnitId;
+        public string ActiveUnitTeam;
+        public int ActiveUnitCurrentActionPoints;
+        public int ActiveUnitMaxActionPoints;
+    }
+
+    [Serializable]
     public sealed class SaveGameData
     {
         public string Timestamp;
         public int RunNumber;
         public PlayerSquadSaveData PlayerSquad;
+        public UnitPlacementSaveData[] UnitPlacements;
+        public BattleTurnSaveData BattleTurn;
     }
 
     public sealed class SaveGameService : ISaveGameService
@@ -141,50 +182,50 @@ namespace SevenBattles.Core.Save
                 throw new ArgumentOutOfRangeException(nameof(slotIndex), $"Slot index must be between 1 and {MaxSlots}.");
             }
 
-            return Task.Run(() =>
-            {
-                string directory = GetSaveDirectory();
+            string directory = GetSaveDirectory();
 
+            try
+            {
+                Directory.CreateDirectory(directory);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"SaveGameService: Failed to create save directory '{directory}' for saving. {ex}");
+            }
+
+            string path = GetSlotFilePath(directory, slotIndex);
+            string tempPath = path + ".tmp";
+            string backupPath = path + ".bak";
+
+            int nextRunNumber = 1;
+
+            if (File.Exists(path))
+            {
                 try
                 {
-                    Directory.CreateDirectory(directory);
+                    string existingJson = File.ReadAllText(path);
+                    var existingData = JsonUtility.FromJson<SaveGameData>(existingJson);
+                    if (existingData != null && existingData.RunNumber > 0)
+                    {
+                        nextRunNumber = existingData.RunNumber + 1;
+                    }
+                    else
+                    {
+                        nextRunNumber = 2;
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"SaveGameService: Failed to create save directory '{directory}' for saving. {ex}");
+                    Debug.LogWarning($"SaveGameService: Failed to read existing save for slot {slotIndex} at '{path}' to compute run number. {ex}");
                 }
+            }
 
-                string path = GetSlotFilePath(directory, slotIndex);
-                string tempPath = path + ".tmp";
-                string backupPath = path + ".bak";
+            string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            var data = BuildSaveGameData(_gameStateProvider, timestamp, nextRunNumber);
+            string json = JsonUtility.ToJson(data, true);
 
-                int nextRunNumber = 1;
-
-                if (File.Exists(path))
-                {
-                    try
-                    {
-                        string existingJson = File.ReadAllText(path);
-                        var existingData = JsonUtility.FromJson<SaveGameData>(existingJson);
-                        if (existingData != null && existingData.RunNumber > 0)
-                        {
-                            nextRunNumber = existingData.RunNumber + 1;
-                        }
-                        else
-                        {
-                            nextRunNumber = 2;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogWarning($"SaveGameService: Failed to read existing save for slot {slotIndex} at '{path}' to compute run number. {ex}");
-                    }
-                }
-
-                string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
-                var data = BuildSaveGameData(_gameStateProvider, timestamp, nextRunNumber);
-                string json = JsonUtility.ToJson(data, true);
-
+            return Task.Run(() =>
+            {
                 try
                 {
                     File.WriteAllText(tempPath, json);
@@ -279,6 +320,24 @@ namespace SevenBattles.Core.Save
                 data.PlayerSquad = new PlayerSquadSaveData
                 {
                     WizardIds = Array.Empty<string>()
+                };
+            }
+
+            if (data.UnitPlacements == null)
+            {
+                data.UnitPlacements = Array.Empty<UnitPlacementSaveData>();
+            }
+
+            if (data.BattleTurn == null)
+            {
+                data.BattleTurn = new BattleTurnSaveData
+                {
+                    Phase = "unknown",
+                    TurnIndex = 0,
+                    ActiveUnitId = null,
+                    ActiveUnitTeam = null,
+                    ActiveUnitCurrentActionPoints = 0,
+                    ActiveUnitMaxActionPoints = 0
                 };
             }
 
