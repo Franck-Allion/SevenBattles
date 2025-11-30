@@ -57,21 +57,120 @@ Every implementation must list:
 
 ---
 
-## 5. 🔌 HOW-TO WIRE IN UNITY — Detailed Setup Steps
+## 5. 🔌 UNITY WIRING CHECKLIST — How to Wire in Unity
 
-Step-by-step Unity integration guidelines (scenes, prefabs, SOs, Addressables, localization).
+Every feature that touches Unity **Scenes, Prefabs, ScriptableObjects, Addressables, or Localization**  
+must include a `Unity Wiring` section in its design document and/or PR description.
 
-**Include:**
+### 5.1 Unity Wiring Template (copy into PRs)
 
-### A. Scenes & Domain Ownership  
-### B. Prefab & Component Modifications  
-### C. ScriptableObject Setup  
-### D. Addressables & LifetimeContentService Scopes  
-### E. Localization Setup  
-### F. Input & Events Wiring  
+For each change, fill in **all sections that apply**.  
+Use exact project paths (`Assets/...`) and concrete component names as they appear in the Inspector.
 
-If not applicable, explicitly write:  
-**“Not applicable — pure code utility.”**
+```md
+#### A. Scenes & Domain Ownership
+- Scene(s) edited:
+  - `Assets/Scenes/...` (Domain: Core/Menu/Preparation/Battle/UI/AI)
+- Scene(s) added/removed:
+  - Added/Removed `Assets/Scenes/...` (Domain: ...)
+
+#### B. Prefab & Component Modifications
+- Prefabs modified:
+  - `Assets/Prefabs/.../SomeHUD.prefab`
+    - Add components:
+      - `<ComponentName>` (e.g., `TurnOrderHUD`)
+    - Inspector references:
+      - `<ComponentName>._someField` → `<SceneOrPrefabHierarchyPath>`
+- Prefabs created:
+  - `Assets/Prefabs/.../NewPrefabName.prefab`
+    - Root components:
+      - `Canvas`, `CanvasGroup`, `GraphicRaycaster`, `<MainBehaviour>`
+    - Child objects:
+      - `ChildName` → `ComponentType` (purpose)
+
+#### C. ScriptableObject Setup
+- ScriptableObjects modified:
+  - `Assets/Data/.../ExistingConfig.asset`
+    - Fields changed:
+      - `<FieldName>` = `<Value>` (reason)
+- ScriptableObjects created:
+  - `Assets/Data/.../NewConfig.asset`
+    - Fields:
+      - `<FieldName>` = `<Value>`
+
+#### D. Addressables & LifetimeContentService Scopes
+- Addressables:
+  - Labels/keys added or changed:
+    - `Assets/Prefabs/.../SomeHUD.prefab` → label(s): `...`
+- LifetimeContentService:
+  - Scope registrations:
+    - `<ScopeName>` loads `Assets/.../SomeAsset.prefab` from Addressables key `"some_key"`
+
+#### E. Localization Setup
+- String tables touched:
+  - `Localization/UI/.../*.asset`
+- New or updated entries:
+  - Table: `UI/...`
+    - Key: `<KeyName>`
+      - EN: `"English text"`
+      - FR: `"Texte français"`
+      - ES: `"Texto en español"`
+- Scripts using localization:
+  - `<TypeName>` field/property `LocalizedString <FieldName>` uses key `<KeyName>`
+
+#### F. Input & Events Wiring
+- Input actions:
+  - Uses `InputActions.<ActionMap>.<Action>` bound to `<Key/Button>`
+- Events & services:
+  - Subscribes to `<InterfaceOrService>.<EventName>` in `OnEnable` / unsubscribes in `OnDisable`.
+  - No new UnityEvents wired in Inspector unless explicitly justified (prefer C# events).
+```
+
+If a change does **not** touch any Unity assets (pure code / tests), explicitly write in the PR:  
+**Unity Wiring:** Not applicable — pure code utility.
+
+### 5.2 Example — New Battle HUD Element (Turn Order)
+
+Unity Wiring (example only):
+
+- Scenes:
+  - `Assets/Scenes/Battle/BattleScene.unity` — no direct scene modification (HUD is prefab-based).
+- Prefabs:
+  - `Assets/Prefabs/UI/Battle/TurnOrderHUD.prefab`
+    - Root components:
+      - `Canvas`, `CanvasGroup`, `GraphicRaycaster`, `TurnOrderHUD`
+    - `TurnOrderHUD` Inspector references:
+      - `_controllerBehaviour` → `BattleSystemsRoot/SimpleTurnOrderController` (object implementing `IBattleTurnController`)
+      - `_endTurnButton` → child `EndTurnButton` (`Button`)
+      - `_actionPointBarRoot` → child `ActionPointBarRoot` (`RectTransform`)
+      - `_actionPointSlots` → images under `ActionPointBarRoot`
+- ScriptableObjects:
+  - Not applicable — HUD uses runtime controller data only.
+- Addressables & LifetimeContentService:
+  - `TurnOrderHUD.prefab` marked Addressable with label `battle-hud`.
+  - `BattleHUDScope` in `LifetimeContentService` loads `TurnOrderHUD.prefab` by key `"ui_battle_turn_order_hud"`.
+- Localization:
+  - String table `Localization/Battle/BattleUI_en.asset` / `_fr.asset` / `_es.asset`:
+    - Key `TurnLabel` = `"Turn {TurnIndex}"` (Smart String).
+  - `TurnOrderHUD` exposes a `LocalizedString` field `turnLabel` using key `TurnLabel`.
+- Input & Events:
+  - `TurnOrderHUD` subscribes to `IBattleTurnController.ActiveUnitChanged` and `ActiveUnitActionPointsChanged` in `OnEnable` and unsubscribes in `OnDisable`.
+
+Review rule: any PR that changes Scenes, Prefabs, ScriptableObjects, Addressables, or Localization  
+**must not be approved** unless the `Unity Wiring` section is present and accurate.
+
+### 5.3 Scene Documentation Links
+
+Each Unity scene with gameplay significance must have a short structure document under `Docs/Scenes/`.
+
+- Example: `Assets/Scenes/BattleScene.unity` → `Docs/Scenes/BattleScene.md`.
+- Before adding or modifying GameObjects/components in a scene:
+  - Read the corresponding `Docs/Scenes/<SceneName>.md` to understand existing roots and extension points.
+  - Prefer attaching new controllers/services/HUDs to documented roots (e.g., `BattleSystemsRoot`, `HUDRoot`) instead of creating new top-level objects.
+- When a change introduces or removes important roots/controllers/HUD entry points:
+  - Update both:
+    - The PR `Unity Wiring` section (what you wired for this change).
+    - The relevant `Docs/Scenes/<SceneName>.md` to keep the documented structure in sync.
 
 ---
 
