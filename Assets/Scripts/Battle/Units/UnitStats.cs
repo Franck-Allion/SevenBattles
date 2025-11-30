@@ -50,5 +50,24 @@ namespace SevenBattles.Battle.Units
             _initiative = data.Initiative;
             _morale = data.Morale;
         }
+
+        public void ApplySaved(SevenBattles.Core.Save.UnitStatsSaveData data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            _life = data.Life;
+            _attack = data.Attack;
+            _shoot = data.Shoot;
+            _spell = data.Spell;
+            _speed = data.Speed;
+            _luck = data.Luck;
+            _defense = data.Defense;
+            _protection = data.Protection;
+            _initiative = data.Initiative;
+            _morale = data.Morale;
+        }
     }
 }

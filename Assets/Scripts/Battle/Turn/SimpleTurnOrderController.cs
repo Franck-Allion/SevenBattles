@@ -4,6 +4,7 @@ using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core;
+using SevenBattles.Core.Save;
 
 namespace SevenBattles.Battle.Turn
 {
@@ -116,6 +117,7 @@ namespace SevenBattles.Battle.Turn
 
         public int ActiveUnitCurrentActionPoints => _hasActiveUnit ? _activeUnitCurrentActionPoints : 0;
         public int ActiveUnitMaxActionPoints => _hasActiveUnit ? _activeUnitMaxActionPoints : 0;
+        public bool ActiveUnitHasMoved => _hasActiveUnit && _activeUnitHasMoved;
 
         public UnitBattleMetadata ActiveUnitMetadata
         {
@@ -188,15 +190,7 @@ namespace SevenBattles.Battle.Turn
         {
             RebuildUnits();
             _turnIndex = 0;
-            if (_board != null)
-            {
-                // During combat, disable hover-driven highlight so only the active unit tile is marked.
-                _board.SetHoverEnabled(false);
-                if (_activeUnitHighlightMaterial != null)
-                {
-                    _board.SetHighlightMaterial(_activeUnitHighlightMaterial);
-                }
-            }
+            ConfigureBoardForBattle();
             SelectFirstUnit();
         }
 
@@ -215,6 +209,22 @@ namespace SevenBattles.Battle.Turn
                 return;
             }
             AdvanceToNextUnit();
+        }
+
+        private void ConfigureBoardForBattle()
+        {
+            if (_board == null)
+            {
+                return;
+            }
+
+            // During combat, disable hover-driven highlight so only the active unit tile is marked,
+            // and optionally switch to the dedicated active-unit highlight material.
+            _board.SetHoverEnabled(false);
+            if (_activeUnitHighlightMaterial != null)
+            {
+                _board.SetHighlightMaterial(_activeUnitHighlightMaterial);
+            }
         }
 
         private void RebuildUnits()
@@ -240,10 +250,14 @@ namespace SevenBattles.Battle.Turn
                 // Higher initiative acts first.
                 int cmp = ib.CompareTo(ia);
                 if (cmp != 0) return cmp;
-                // Stable tie-breaker based on instance id to avoid jitter.
-                int ida = a.Metadata != null ? a.Metadata.GetInstanceID() : 0;
-                int idb = b.Metadata != null ? b.Metadata.GetInstanceID() : 0;
-                return ida.CompareTo(idb);
+                // Stable tie-breaker based on persisted SaveInstanceId so ordering
+                // is deterministic across save/load and between runs.
+                string ida = a.Metadata != null ? a.Metadata.SaveInstanceId : null;
+                string idb = b.Metadata != null ? b.Metadata.SaveInstanceId : null;
+                if (ida == null && idb == null) return 0;
+                if (ida == null) return -1;
+                if (idb == null) return 1;
+                return string.CompareOrdinal(ida, idb);
             });
 
             if (_logTurns)
@@ -369,6 +383,84 @@ namespace SevenBattles.Battle.Turn
             {
                 _advancing = false;
             }
+        }
+
+        public void RestoreFromSave(BattleTurnSaveData battleTurn)
+        {
+            if (battleTurn == null)
+            {
+                return;
+            }
+
+            RebuildUnits();
+            _turnIndex = Mathf.Max(0, battleTurn.TurnIndex);
+
+            if (_units.Count == 0)
+            {
+                SetActiveIndex(-1);
+                return;
+            }
+
+            int targetIndex = -1;
+
+            if (!string.IsNullOrEmpty(battleTurn.ActiveUnitInstanceId))
+            {
+                for (int i = 0; i < _units.Count; i++)
+                {
+                    var meta = _units[i].Metadata;
+                    if (meta != null && string.Equals(meta.SaveInstanceId, battleTurn.ActiveUnitInstanceId, StringComparison.Ordinal))
+                    {
+                        targetIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (targetIndex < 0 && !string.IsNullOrEmpty(battleTurn.ActiveUnitId))
+            {
+                for (int i = 0; i < _units.Count; i++)
+                {
+                    var meta = _units[i].Metadata;
+                    if (meta == null) continue;
+                    var def = meta.Definition;
+                    string id = def != null ? def.Id : null;
+                    bool isPlayer = meta.IsPlayerControlled;
+                    string team = isPlayer ? "player" : "enemy";
+
+                    if (string.Equals(id, battleTurn.ActiveUnitId, StringComparison.Ordinal) &&
+                        (string.IsNullOrEmpty(battleTurn.ActiveUnitTeam) ||
+                         string.Equals(battleTurn.ActiveUnitTeam, team, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        targetIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            if (targetIndex < 0)
+            {
+                _turnIndex = 0;
+                SetActiveIndex(-1);
+                return;
+            }
+
+            ConfigureBoardForBattle();
+            SetActiveIndex(targetIndex);
+
+            if (_hasActiveUnit)
+            {
+                _activeUnitMaxActionPoints = Mathf.Max(0, battleTurn.ActiveUnitMaxActionPoints);
+                _activeUnitCurrentActionPoints = Mathf.Clamp(battleTurn.ActiveUnitCurrentActionPoints, 0, _activeUnitMaxActionPoints);
+                _activeUnitHasMoved = battleTurn.ActiveUnitHasMoved;
+
+                // Rebuild movement grid now that AP and movement flags have been restored,
+                // so legal move tiles match the loaded state instead of the initial stats.
+                RebuildLegalMoveTilesForActiveUnit();
+            }
+
+            ActiveUnitChanged?.Invoke();
+            ActiveUnitStatsChanged?.Invoke();
+            ActiveUnitActionPointsChanged?.Invoke();
         }
 
         private void SetActiveIndex(int index)

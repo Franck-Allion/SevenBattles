@@ -2,7 +2,7 @@
 
 This document describes how the SevenBattles save system works, how the JSON file is structured, and how to extend it safely when adding new game‑state features.
 
-It reflects the current **Save (no Load yet)** implementation.
+It reflects the current **Save + Load** implementation.
 
 ---
 
@@ -19,7 +19,7 @@ It reflects the current **Save (no Load yet)** implementation.
 
 - **Battle domain**
   - `BattleBoardGameStateSaveProvider`: captures unit placements (player + enemy) and per‑unit stats.
-  - `BattleTurnGameStateSaveProvider`: captures phase (placement/battle), turn index, active unit identity, and AP.
+  - `BattleTurnGameStateSaveProvider`: captures phase (placement/battle), turn index, active unit identity, AP, and whether the active unit has already moved this turn.
 
 - **Players domain**
   - `PlayerSquadGameStateSaveProvider`: captures the player squad composition (which wizards are in the squad).

@@ -14,11 +14,29 @@ namespace SevenBattles.Core.Save
         Task<SaveSlotMetadata[]> LoadAllSlotMetadataAsync();
 
         Task<SaveSlotMetadata> SaveSlotAsync(int slotIndex);
+
+        /// <summary>
+        /// Loads the full SaveGameData payload for the given slot index.
+        /// Returns null if the slot does not exist, the JSON is invalid, or
+        /// deserialization fails. Callers must treat a null result as a
+        /// failed load and avoid applying partial state.
+        /// </summary>
+        Task<SaveGameData> LoadSlotDataAsync(int slotIndex);
     }
 
     public interface IGameStateSaveProvider
     {
         void PopulateGameState(SaveGameData data);
+    }
+
+    /// <summary>
+    /// Abstraction for applying a loaded SaveGameData snapshot to the current game.
+    /// Implementations live in gameplay domains (e.g., Battle) and are responsible
+    /// for reconstructing units, controllers, and other state from the DTO.
+    /// </summary>
+    public interface IGameStateLoadHandler
+    {
+        void ApplyLoadedGame(SaveGameData data);
     }
 
     public sealed class SaveSlotMetadata
@@ -82,6 +100,7 @@ namespace SevenBattles.Core.Save
         public string ActiveUnitTeam;
         public int ActiveUnitCurrentActionPoints;
         public int ActiveUnitMaxActionPoints;
+        public bool ActiveUnitHasMoved;
     }
 
     [Serializable]
@@ -174,6 +193,83 @@ namespace SevenBattles.Core.Save
                 }
 
                 return result;
+            });
+        }
+
+        public Task<SaveGameData> LoadSlotDataAsync(int slotIndex)
+        {
+            if (slotIndex < 1 || slotIndex > MaxSlots)
+            {
+                throw new ArgumentOutOfRangeException(nameof(slotIndex), $"Slot index must be between 1 and {MaxSlots}.");
+            }
+
+            string directory = GetSaveDirectory();
+
+            return Task.Run(() =>
+            {
+                try
+                {
+                    Directory.CreateDirectory(directory);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"SaveGameService: Failed to create save directory '{directory}' for loading. {ex}");
+                }
+
+                string path = GetSlotFilePath(directory, slotIndex);
+                if (!File.Exists(path))
+                {
+                    return null;
+                }
+
+                try
+                {
+                    string json = File.ReadAllText(path);
+                    if (string.IsNullOrEmpty(json))
+                    {
+                        return null;
+                    }
+
+                    var data = JsonUtility.FromJson<SaveGameData>(json);
+                    if (data == null)
+                    {
+                        return null;
+                    }
+
+                    if (data.PlayerSquad == null)
+                    {
+                        data.PlayerSquad = new PlayerSquadSaveData
+                        {
+                            WizardIds = Array.Empty<string>()
+                        };
+                    }
+
+                    if (data.UnitPlacements == null)
+                    {
+                        data.UnitPlacements = Array.Empty<UnitPlacementSaveData>();
+                    }
+
+                    if (data.BattleTurn == null)
+                    {
+                        data.BattleTurn = new BattleTurnSaveData
+                        {
+                            Phase = "unknown",
+                            TurnIndex = 0,
+                            ActiveUnitId = null,
+                            ActiveUnitTeam = null,
+                            ActiveUnitCurrentActionPoints = 0,
+                            ActiveUnitMaxActionPoints = 0,
+                            ActiveUnitHasMoved = false
+                        };
+                    }
+
+                    return data;
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogError($"SaveGameService: Failed to load save slot {slotIndex} at '{path}'. {ex}");
+                    return null;
+                }
             });
         }
 
@@ -339,7 +435,8 @@ namespace SevenBattles.Core.Save
                     ActiveUnitId = null,
                     ActiveUnitTeam = null,
                     ActiveUnitCurrentActionPoints = 0,
-                    ActiveUnitMaxActionPoints = 0
+                    ActiveUnitMaxActionPoints = 0,
+                    ActiveUnitHasMoved = false
                 };
             }
 

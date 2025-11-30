@@ -103,6 +103,11 @@ namespace SevenBattles.UI
             WireButtonsIfNeeded();
             SetupTitleLocalization();
             SetupButtonLocalization();
+
+            if (_saveLoadHud != null)
+            {
+                _saveLoadHud.LoadCompleted += HandleLoadCompleted;
+            }
         }
 
         private void OnEnable()
@@ -119,9 +124,14 @@ namespace SevenBattles.UI
             TeardownTitleLocalization();
             TeardownButtonLocalization();
 
-            if (_isOpen)
+              if (_isOpen)
+              {
+                  CloseImmediate();
+              }
+
+            if (_saveLoadHud != null)
             {
-                CloseImmediate();
+                _saveLoadHud.LoadCompleted -= HandleLoadCompleted;
             }
         }
 
@@ -695,6 +705,11 @@ namespace SevenBattles.UI
             }
 
             LoadClicked?.Invoke();
+
+            if (_saveLoadHud != null)
+            {
+                _saveLoadHud.ShowLoad();
+            }
         }
 
           private void OnSettingsClicked()
@@ -755,6 +770,26 @@ namespace SevenBattles.UI
               Application.Quit();
 #endif
           }
+
+        private void HandleLoadCompleted()
+        {
+            if (_isOpen)
+            {
+                ClosePauseMenu();
+            }
+
+            ResolveController();
+
+            if (_battleTurnController != null &&
+                _battleTurnController.TurnIndex > 0)
+            {
+                var placementHud = UnityEngine.Object.FindFirstObjectByType<SquadPlacementHUD>();
+                if (placementHud != null)
+                {
+                    placementHud.EnterBattleModeFromLoad();
+                }
+            }
+        }
 
         private void HandleSaveLabelChanged(string value)
         {

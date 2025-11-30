@@ -541,6 +541,44 @@ namespace SevenBattles.UI
             SetInstructionsVisible(false);
         }
 
+        public void EnterBattleModeFromLoad()
+        {
+            // Hide Start button immediately
+            if (_startBattleButton != null)
+            {
+                if (_startButtonCanvasGroup == null)
+                {
+                    _startButtonCanvasGroup = _startBattleButton.GetComponent<CanvasGroup>();
+                    if (_startButtonCanvasGroup == null)
+                    {
+                        _startButtonCanvasGroup = _startBattleButton.gameObject.AddComponent<CanvasGroup>();
+                    }
+                }
+
+                _startButtonCanvasGroup.alpha = 0f;
+                _startButtonCanvasGroup.interactable = false;
+                _startButtonCanvasGroup.blocksRaycasts = false;
+                _startBattleButton.interactable = false;
+                _startBattleButton.gameObject.SetActive(false);
+            }
+
+            // Hide instructional text
+            SetInstructionsVisible(false);
+
+            // Hide placement HUD root
+            var root = _hudRoot != null ? _hudRoot : this.gameObject;
+            if (root != null)
+            {
+                root.SetActive(false);
+            }
+
+            // Show battle HUD root if assigned
+            if (_battleHudRoot != null)
+            {
+                _battleHudRoot.SetActive(true);
+            }
+        }
+
         private System.Collections.IEnumerator FadeOutStartButtonRoutine()
         {
             if (_startBattleButton == null) yield break;

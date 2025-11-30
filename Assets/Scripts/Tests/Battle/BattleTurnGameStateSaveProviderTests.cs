@@ -72,6 +72,7 @@ namespace SevenBattles.Tests.Battle
             Assert.AreEqual("player", data.BattleTurn.ActiveUnitTeam);
             Assert.AreEqual(ctrl.ActiveUnitCurrentActionPoints, data.BattleTurn.ActiveUnitCurrentActionPoints);
             Assert.AreEqual(ctrl.ActiveUnitMaxActionPoints, data.BattleTurn.ActiveUnitMaxActionPoints);
+            Assert.AreEqual(ctrl.ActiveUnitHasMoved, data.BattleTurn.ActiveUnitHasMoved);
 
             Object.DestroyImmediate(providerGo);
             Object.DestroyImmediate(ctrlGo);

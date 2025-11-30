@@ -28,6 +28,24 @@ namespace SevenBattles.Tests.UI
             {
                 return System.Threading.Tasks.Task.FromResult(new SaveSlotMetadata(slotIndex, true, "2025-01-01 12:00:00", 1));
             }
+
+            public System.Threading.Tasks.Task<SaveGameData> LoadSlotDataAsync(int slotIndex)
+            {
+                var data = new SaveGameData
+                {
+                    PlayerSquad = new PlayerSquadSaveData
+                    {
+                        WizardIds = new[] { "WizA" }
+                    },
+                    UnitPlacements = new UnitPlacementSaveData[0],
+                    BattleTurn = new BattleTurnSaveData
+                    {
+                        Phase = "unknown"
+                    }
+                };
+
+                return System.Threading.Tasks.Task.FromResult(data);
+            }
         }
 
         private static void SetPrivate(object target, string fieldName, object value)

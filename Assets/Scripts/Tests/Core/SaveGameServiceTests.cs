@@ -124,5 +124,61 @@ namespace SevenBattles.Tests.Core
             Assert.IsNotNull(data.UnitPlacements, "UnitPlacements should be initialized even if provider left it null.");
             Assert.IsNotNull(data.BattleTurn, "BattleTurn should be initialized even if provider left it null.");
         }
+
+        [Test]
+        public async Task LoadSlotDataAsync_MissingFile_ReturnsNull()
+        {
+            string dir = CreateTestDirectory();
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "WizA" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNull(data, "LoadSlotDataAsync should return null when no save file exists.");
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_InvalidJson_ReturnsNull()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            File.WriteAllText(path, "{ this is not valid json");
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "Any" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNull(data, "LoadSlotDataAsync should return null when JSON is invalid.");
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_ValidJson_PopulatesDefaults()
+        {
+            string dir = CreateTestDirectory();
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "WizA" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            await service.SaveSlotAsync(1);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNotNull(data, "LoadSlotDataAsync should return a SaveGameData instance for a valid save.");
+            Assert.IsNotNull(data.PlayerSquad, "PlayerSquad should be non-null after load.");
+            Assert.IsNotNull(data.UnitPlacements, "UnitPlacements should be non-null after load.");
+            Assert.IsNotNull(data.BattleTurn, "BattleTurn should be non-null after load.");
+        }
     }
 }

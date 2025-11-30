@@ -88,5 +88,20 @@ namespace SevenBattles.Core.Save
 
             return _service.SaveSlotAsync(slotIndex);
         }
+
+        public Task<SaveGameData> LoadSlotDataAsync(int slotIndex)
+        {
+            if (_service == null)
+            {
+                ResolveProviderAndService();
+                if (_service == null)
+                {
+                    Debug.LogWarning("SaveGameServiceComponent: Cannot load because underlying service is not initialized.", this);
+                    return Task.FromResult<SaveGameData>(null);
+                }
+            }
+
+            return _service.LoadSlotDataAsync(slotIndex);
+        }
     }
 }

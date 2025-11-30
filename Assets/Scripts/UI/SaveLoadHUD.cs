@@ -38,6 +38,10 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Reference to a MonoBehaviour that implements ISaveGameService (e.g., SaveGameServiceComponent).")]
         private MonoBehaviour _saveGameServiceBehaviour;
 
+        [Header("Load Handler")]
+        [SerializeField, Tooltip("Optional MonoBehaviour that implements IGameStateLoadHandler and applies loaded SaveGameData to the scene.")]
+        private MonoBehaviour _gameStateLoadHandlerBehaviour;
+
         [Header("Title & Back")]
         [SerializeField, Tooltip("Optional Text component for the title. If not set, a child Text will be auto-found.")]
         private Text _titleText;
@@ -66,6 +70,18 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Optional TMP_Text component for the Back button label.")]
         private TMP_Text _backTMP;
 
+        [Header("Load Error Localization")]
+        [SerializeField, Tooltip("Localized title used when a load operation fails.")]
+        private LocalizedString _loadErrorTitle;
+        [SerializeField, Tooltip("Localized message used when a load operation fails.")]
+        private LocalizedString _loadErrorMessage;
+        [SerializeField, Tooltip("Localized label for the OK button on load error dialog.")]
+        private LocalizedString _loadErrorOkLabel;
+
+        [Header("Load Error Dialog")]
+        [SerializeField, Tooltip("Optional confirmation dialog used when a load operation fails.")]
+        private ConfirmationMessageBoxHUD _loadErrorMessageBox;
+
         [Header("Animation")]
         [SerializeField, Tooltip("Fade duration in seconds for opening/closing the panel. Uses unscaled time.")]
         private float _fadeDuration = 0.15f;
@@ -73,6 +89,7 @@ namespace SevenBattles.UI
         private float _scaleFrom = 0.95f;
 
         private ISaveGameService _saveGameService;
+        private IGameStateLoadHandler _gameStateLoadHandler;
         private SaveSlotMetadata[] _slots = Array.Empty<SaveSlotMetadata>();
         private bool _buttonsWired;
         private bool _isVisible;
@@ -80,6 +97,7 @@ namespace SevenBattles.UI
         private Mode _mode = Mode.Save;
 
         public bool IsVisible => _isVisible;
+        public event Action LoadCompleted;
 
         public void SetSaveGameService(ISaveGameService service)
         {
@@ -102,6 +120,25 @@ namespace SevenBattles.UI
             if (_saveGameService == null)
             {
                 Debug.LogWarning("SaveLoadHUD: Assigned save service does not implement ISaveGameService.", this);
+            }
+        }
+
+        private void ResolveLoadHandler()
+        {
+            if (_gameStateLoadHandler != null)
+            {
+                return;
+            }
+
+            if (_gameStateLoadHandlerBehaviour == null)
+            {
+                return;
+            }
+
+            _gameStateLoadHandler = _gameStateLoadHandlerBehaviour as IGameStateLoadHandler;
+            if (_gameStateLoadHandler == null)
+            {
+                Debug.LogWarning("SaveLoadHUD: Assigned load handler does not implement IGameStateLoadHandler.", this);
             }
         }
 
@@ -361,6 +398,21 @@ namespace SevenBattles.UI
             {
                 _backLabel = new LocalizedString("UI.Common", "Common.Back");
             }
+
+            if (_loadErrorTitle == null)
+            {
+                _loadErrorTitle = new LocalizedString("UI.Common", "SaveLoad.LoadErrorTitle");
+            }
+
+            if (_loadErrorMessage == null)
+            {
+                _loadErrorMessage = new LocalizedString("UI.Common", "SaveLoad.LoadErrorMessage");
+            }
+
+            if (_loadErrorOkLabel == null)
+            {
+                _loadErrorOkLabel = new LocalizedString("UI.Common", "Common.Ok");
+            }
         }
 
         private void SetupTitleAndBackLocalization()
@@ -488,6 +540,33 @@ namespace SevenBattles.UI
             label.text = text;
         }
 
+        private void HandleLoadSlotClicked(int index)
+        {
+            if (_saveGameService == null)
+            {
+                ResolveSaveService();
+            }
+
+            if (_gameStateLoadHandler == null)
+            {
+                ResolveLoadHandler();
+            }
+
+            if (_saveGameService == null || _gameStateLoadHandler == null)
+            {
+                Debug.LogWarning("SaveLoadHUD: Cannot load slot because save service or load handler is not configured.", this);
+                return;
+            }
+
+            if (_slots == null || index < 0 || index >= _slots.Length || !_slots[index].HasSave)
+            {
+                // Ignore clicks on empty slots in Load mode.
+                return;
+            }
+
+            StartCoroutine(LoadFromSlotRoutine(index));
+        }
+
         private void OnSlotButtonClicked(int index)
         {
             if (!_isVisible)
@@ -497,7 +576,7 @@ namespace SevenBattles.UI
 
             if (_mode == Mode.Load)
             {
-                Debug.LogWarning("SaveLoadHUD: Slot clicks are ignored in Load mode (not implemented yet).", this);
+                HandleLoadSlotClicked(index);
                 return;
             }
 
@@ -537,6 +616,56 @@ namespace SevenBattles.UI
                 cancelLabel,
                 () => { StartCoroutine(SaveToSlotRoutine(index)); },
                 () => { });
+        }
+
+        private IEnumerator LoadFromSlotRoutine(int index)
+        {
+            if (_saveGameService == null || _gameStateLoadHandler == null)
+            {
+                Debug.Log("SaveLoadHUD: LoadFromSlotRoutine aborted because save service or load handler is null.", this);
+                yield break;
+            }
+
+            int slotIndex = index + 1;
+
+            var task = _saveGameService.LoadSlotDataAsync(slotIndex);
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            if (task.Exception != null)
+            {
+                Debug.LogError($"SaveLoadHUD: Failed to load slot {slotIndex}. {task.Exception}");
+                ShowLoadErrorDialog();
+                yield break;
+            }
+
+            var data = task.Result;
+            if (data == null)
+            {
+                Debug.LogWarning($"SaveLoadHUD: LoadSlotDataAsync returned null for slot {slotIndex}.", this);
+                ShowLoadErrorDialog();
+                yield break;
+            }
+
+            int placementCount = data.UnitPlacements != null ? data.UnitPlacements.Length : -1;
+            string phase = data.BattleTurn != null ? data.BattleTurn.Phase : "null";
+            Debug.Log($"SaveLoadHUD: Loaded slot {slotIndex} -> placements={placementCount}, phase='{phase}'.", this);
+
+            try
+            {
+                _gameStateLoadHandler.ApplyLoadedGame(data);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"SaveLoadHUD: Load handler threw while applying loaded game for slot {slotIndex}. {ex}", this);
+                ShowLoadErrorDialog();
+                yield break;
+            }
+
+            LoadCompleted?.Invoke();
+            Hide();
         }
 
         private IEnumerator SaveToSlotRoutine(int index)
@@ -660,6 +789,41 @@ namespace SevenBattles.UI
             }
 
             _transitionRoutine = null;
+        }
+
+        private void ShowLoadErrorDialog()
+        {
+            if (_loadErrorMessageBox == null)
+            {
+                return;
+            }
+
+            var title = _loadErrorTitle;
+            var message = _loadErrorMessage;
+            var okLabel = _loadErrorOkLabel;
+
+            if (title == null)
+            {
+                title = new LocalizedString("UI.Common", "SaveLoad.LoadErrorTitle");
+            }
+
+            if (message == null)
+            {
+                message = new LocalizedString("UI.Common", "SaveLoad.LoadErrorMessage");
+            }
+
+            if (okLabel == null)
+            {
+                okLabel = new LocalizedString("UI.Common", "Common.Ok");
+            }
+
+            _loadErrorMessageBox.Show(
+                title,
+                message,
+                okLabel,
+                okLabel,
+                () => { },
+                () => { });
         }
 
         private void HideImmediate()

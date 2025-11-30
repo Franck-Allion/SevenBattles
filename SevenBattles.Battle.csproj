@@ -72,6 +72,7 @@
     <Compile Include="Assets\Scripts\Battle\Start\WorldBattleStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\SquadPlacementModel.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldSquadStartController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Save\BattleGameStateLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Battle\Units\UnitVisualUtil.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\WorldPerspectiveBoard.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiPerspectiveBoard.cs" />

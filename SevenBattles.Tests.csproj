@@ -75,6 +75,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\EnemyRandomPlacementTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\StartSquadControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\WorldPerspectiveBoardHighlightTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\BattleGameStateLoadHandlerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattlePauseHUDTests.cs" />

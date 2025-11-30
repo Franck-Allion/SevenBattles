@@ -29,6 +29,7 @@ namespace SevenBattles.Battle.Save
                 battleTurn.TurnIndex = turnController.TurnIndex;
                 battleTurn.ActiveUnitCurrentActionPoints = turnController.ActiveUnitCurrentActionPoints;
                 battleTurn.ActiveUnitMaxActionPoints = turnController.ActiveUnitMaxActionPoints;
+                battleTurn.ActiveUnitHasMoved = turnController.ActiveUnitHasMoved;
 
                 var activeMeta = turnController.ActiveUnitMetadata;
                 if (activeMeta != null)
@@ -64,6 +65,7 @@ namespace SevenBattles.Battle.Save
                 battleTurn.ActiveUnitTeam = null;
                 battleTurn.ActiveUnitCurrentActionPoints = 0;
                 battleTurn.ActiveUnitMaxActionPoints = 0;
+                battleTurn.ActiveUnitHasMoved = false;
             }
 
             data.BattleTurn = battleTurn;

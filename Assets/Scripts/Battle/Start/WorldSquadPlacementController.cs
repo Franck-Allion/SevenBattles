@@ -240,6 +240,44 @@ namespace SevenBattles.Battle.Start
             return Mathf.Clamp(defCount, 0, 8);
         }
 
+        public void ResetPlacementState()
+        {
+            _locked = false;
+            _selected = -1;
+
+            foreach (var kv in _instances)
+            {
+                var go = kv.Value;
+                if (go != null)
+                {
+                    Destroy(go);
+                }
+            }
+
+            _instances.Clear();
+            _model = null;
+
+            OnReadyChanged?.Invoke(false);
+            ReadyChanged?.Invoke(false);
+
+            if (_board != null)
+            {
+                _board.SetHighlightVisible(true);
+                _board.SetHighlightColor(_invalidColor);
+            }
+        }
+
+        public void LockFromLoad()
+        {
+            _locked = true;
+            _selected = -1;
+
+            if (_board != null)
+            {
+                _board.SetHighlightVisible(false);
+            }
+        }
+
         private GameObject ResolvePrefab(int index)
         {
             if (_playerSquad == null || _playerSquad.Wizards == null) return null;
