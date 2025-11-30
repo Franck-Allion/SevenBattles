@@ -35,6 +35,7 @@ namespace SevenBattles.Battle.Save
 
                 var def = meta.Definition;
                 string unitId = def != null ? def.Id : null;
+                string instanceId = meta.SaveInstanceId;
 
                 // Derive team from IsPlayerControlled.
                 string team = meta.IsPlayerControlled ? "player" : "enemy";
@@ -84,6 +85,7 @@ namespace SevenBattles.Battle.Save
                 var placement = new UnitPlacementSaveData
                 {
                     UnitId = unitId,
+                    InstanceId = instanceId,
                     Team = team,
                     X = x,
                     Y = y,

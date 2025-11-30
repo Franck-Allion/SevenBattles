@@ -213,7 +213,8 @@ File: `Assets/Scripts/Battle/Save/BattleTurnGameStateSaveProvider.cs`
     ```
 
   - Uses `SimpleTurnOrderController.ActiveUnitMetadata` to get the current unit’s metadata:
-    - `Definition?.Id` → `ActiveUnitId`.
+    - `Definition?.Id` → `ActiveUnitId` (not necessarily unique across all units).
+    - `GetInstanceID()` → `ActiveUnitInstanceId` (unique within the scene and within the snapshot).
     - `IsPlayerControlled` → `ActiveUnitTeam` (`"player"` / `"enemy"`).
 
 - Else (no active battle turn):
@@ -236,10 +237,11 @@ The DTO:
 
 ```csharp
 public sealed class BattleTurnSaveData {
-    public string Phase;  // "placement", "battle", "unknown"
-    public int TurnIndex; // 0 if not in battle
-    public string ActiveUnitId;
-    public string ActiveUnitTeam; // "player" / "enemy"
+    public string Phase;                 // "placement", "battle", "unknown"
+    public int TurnIndex;                // 0 if not in battle
+    public string ActiveUnitId;          // definition id (may repeat)
+    public string ActiveUnitInstanceId;  // stable battle-local id from UnitBattleMetadata.SaveInstanceId
+    public string ActiveUnitTeam;        // "player" / "enemy"
     public int ActiveUnitCurrentActionPoints;
     public int ActiveUnitMaxActionPoints;
 }
@@ -380,4 +382,3 @@ When you add a new persistent game‑state feature, answer these questions (see 
      - Ensures bad JSON does not crash and falls back to a safe state.
 
 Keeping these invariants in mind will ensure the save format remains robust, debuggable, and easy to extend as SevenBattles grows.
-

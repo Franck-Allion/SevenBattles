@@ -48,6 +48,9 @@ namespace SevenBattles.Tests.Battle
                 ? data.UnitPlacements[0]
                 : data.UnitPlacements[1];
 
+            Assert.IsFalse(string.IsNullOrEmpty(playerPlacement.InstanceId), "Player placement should have a non-empty InstanceId.");
+            Assert.IsFalse(string.IsNullOrEmpty(enemyPlacement.InstanceId), "Enemy placement should have a non-empty InstanceId.");
+
             Assert.AreEqual("UnitA", playerPlacement.UnitId);
             Assert.AreEqual("player", playerPlacement.Team);
             Assert.AreEqual(1, playerPlacement.X);

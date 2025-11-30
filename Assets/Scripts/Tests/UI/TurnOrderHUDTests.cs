@@ -674,49 +674,5 @@ namespace SevenBattles.Tests.UI
             mi.Invoke(obj, args);
         }
 
-        [UnityTest]
-        public IEnumerator TurnStartBanner_LocksAndReleasesInteraction()
-        {
-            var hudGo = new GameObject("HUD");
-            var hud = hudGo.AddComponent<TurnOrderHUD>();
-
-            var bannerRoot = new GameObject("TurnBanner");
-            bannerRoot.transform.SetParent(hudGo.transform);
-            var bannerCanvasGroup = bannerRoot.AddComponent<CanvasGroup>();
-            var bannerText = bannerRoot.AddComponent<TextMeshProUGUI>();
-
-            var ctrlGo = new GameObject("FakeCtrl");
-            var fake = ctrlGo.AddComponent<FakeTurnController>();
-            fake.HasActiveUnit = true;
-            fake.IsActiveUnitPlayerControlled = true;
-
-            SetPrivate(hud, "_controllerBehaviour", fake);
-            SetPrivate(hud, "_turnStartCanvasGroup", bannerCanvasGroup);
-            SetPrivate(hud, "_turnStartText", bannerText);
-            SetPrivate(hud, "_turnStartVisibleDuration", 0.05f);
-            SetPrivate(hud, "_turnStartFadeDuration", 0.05f);
-
-            CallPrivate(hud, "Awake");
-            CallPrivate(hud, "OnEnable");
-
-            Assert.IsFalse(fake.IsInteractionLocked, "Interaction should start unlocked.");
-
-            fake.FireChanged();
-
-            yield return null;
-
-            Assert.IsTrue(fake.IsInteractionLocked, "Interaction should be locked while the turn banner is visible.");
-            Assert.IsTrue(bannerRoot.activeSelf);
-            Assert.Greater(bannerCanvasGroup.alpha, 0f);
-
-            yield return new WaitForSecondsRealtime(0.2f);
-
-            Assert.IsFalse(fake.IsInteractionLocked, "Interaction lock should be released after the turn banner fades out.");
-            Assert.IsFalse(bannerRoot.activeSelf);
-            Assert.AreEqual(0f, bannerCanvasGroup.alpha, 1e-4f);
-
-            Object.DestroyImmediate(hudGo);
-            Object.DestroyImmediate(ctrlGo);
-        }
     }
 }

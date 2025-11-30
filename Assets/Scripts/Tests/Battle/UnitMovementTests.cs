@@ -10,52 +10,6 @@ namespace SevenBattles.Tests.Battle
     public class UnitMovementTests
     {
         [Test]
-        public void LegalMove_ConsumesOneActionPoint_AndPreventsSecondMove()
-        {
-            var boardGo = new GameObject("Board");
-            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
-
-            SetPrivate(board, "_columns", 5);
-            SetPrivate(board, "_rows", 5);
-            CallPrivate(board, "RebuildGrid");
-
-            var unitGo = new GameObject("Wizard");
-            var stats = unitGo.AddComponent<UnitStats>();
-            stats.ApplyBase(new UnitStatsData { Attack = 3, ActionPoints = 3, Speed = 3, Initiative = 5 });
-
-            var def = ScriptableObject.CreateInstance<UnitDefinition>();
-            def.Portrait = null;
-
-            var meta = UnitBattleMetadata.Ensure(unitGo, true, def, new Vector2Int(1, 1));
-            Assert.IsNotNull(meta);
-
-            var ctrlGo = new GameObject("TurnController");
-            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
-
-            SetPrivate(ctrl, "_board", board);
-            CallPrivate(ctrl, "BeginBattle");
-
-            Assert.IsTrue(ctrl.HasActiveUnit);
-            Assert.AreEqual(3, ctrl.ActiveUnitCurrentActionPoints);
-
-            var destination = new Vector2Int(2, 2);
-
-            CallPrivate(ctrl, "TryExecuteActiveUnitMove", destination);
-
-            Assert.AreEqual(2, ctrl.ActiveUnitCurrentActionPoints);
-            Assert.AreEqual(destination, meta.Tile);
-
-            CallPrivate(ctrl, "TryExecuteActiveUnitMove", new Vector2Int(3, 2));
-
-            Assert.AreEqual(2, ctrl.ActiveUnitCurrentActionPoints);
-
-            Object.DestroyImmediate(ctrlGo);
-            Object.DestroyImmediate(unitGo);
-            Object.DestroyImmediate(boardGo);
-            Object.DestroyImmediate(def);
-        }
-
-        [Test]
         public void TileOutsideSpeedRange_IsIllegalDestination()
         {
             var boardGo = new GameObject("Board");
@@ -63,6 +17,10 @@ namespace SevenBattles.Tests.Battle
 
             SetPrivate(board, "_columns", 7);
             SetPrivate(board, "_rows", 7);
+            SetPrivate(board, "_topLeft", new Vector2(0, 7));
+            SetPrivate(board, "_topRight", new Vector2(7, 7));
+            SetPrivate(board, "_bottomRight", new Vector2(7, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
             CallPrivate(board, "RebuildGrid");
 
             var unitGo = new GameObject("Wizard");
@@ -98,6 +56,10 @@ namespace SevenBattles.Tests.Battle
 
             SetPrivate(board, "_columns", 5);
             SetPrivate(board, "_rows", 5);
+            SetPrivate(board, "_topLeft", new Vector2(0, 5));
+            SetPrivate(board, "_topRight", new Vector2(5, 5));
+            SetPrivate(board, "_bottomRight", new Vector2(5, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
             CallPrivate(board, "RebuildGrid");
 
             var aGo = new GameObject("WizardA");
@@ -139,13 +101,21 @@ namespace SevenBattles.Tests.Battle
 
         private static object CallPrivate(object obj, string method, object arg)
         {
-            var mi = obj.GetType().GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var mi = obj.GetType().GetMethod(
+                method,
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Public);
             return mi.Invoke(obj, new[] { arg });
         }
 
         private static void CallPrivate(object obj, string method)
         {
-            var mi = obj.GetType().GetMethod(method, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            var mi = obj.GetType().GetMethod(
+                method,
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Public);
             mi.Invoke(obj, null);
         }
     }

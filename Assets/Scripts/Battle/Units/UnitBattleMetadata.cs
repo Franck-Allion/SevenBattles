@@ -11,6 +11,7 @@ namespace SevenBattles.Battle.Units
         [SerializeField] private Vector2Int _tile;
         [SerializeField] private bool _hasTile;
         [SerializeField] private Vector2 _facing = Vector2.up;
+        [SerializeField] private string _saveInstanceId;
 
         public bool IsPlayerControlled
         {
@@ -44,6 +45,26 @@ namespace SevenBattles.Battle.Units
             set => _facing = value;
         }
 
+        /// <summary>
+        /// Stable identifier for this unit within a single battle save.
+        /// This value is generated once and persisted to the save file so that
+        /// load logic can match the active unit and placements reliably, without
+        /// relying on Unity's transient GetInstanceID values.
+        /// </summary>
+        public string SaveInstanceId
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_saveInstanceId))
+                {
+                    _saveInstanceId = System.Guid.NewGuid().ToString("N");
+                }
+
+                return _saveInstanceId;
+            }
+            set => _saveInstanceId = value;
+        }
+
         public static UnitBattleMetadata Ensure(GameObject instance, bool isPlayerControlled, UnitDefinition definition, Vector2Int tile)
         {
             if (instance == null) return null;
@@ -57,6 +78,10 @@ namespace SevenBattles.Battle.Units
             meta.Definition = definition;
             meta._portrait = definition != null ? definition.Portrait : null;
             meta.Tile = tile;
+            if (string.IsNullOrEmpty(meta._saveInstanceId))
+            {
+                meta._saveInstanceId = System.Guid.NewGuid().ToString("N");
+            }
             return meta;
         }
     }

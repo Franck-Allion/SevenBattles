@@ -202,7 +202,9 @@ namespace SevenBattles.Battle.Turn
 
         public void RequestEndTurn()
         {
-            if (_interactionLocked) return;
+            // Treat any positive lock count as authoritative for blocking interaction,
+            // even if the cached bool is temporarily out of sync.
+            if (_interactionLockCount > 0 || _interactionLocked) return;
             if (!HasActiveUnit) return;
             if (!IsActiveUnitPlayerControlled)
             {

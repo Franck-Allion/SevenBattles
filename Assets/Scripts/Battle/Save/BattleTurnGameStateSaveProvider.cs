@@ -35,11 +35,13 @@ namespace SevenBattles.Battle.Save
                 {
                     var def = activeMeta.Definition;
                     battleTurn.ActiveUnitId = def != null ? def.Id : null;
+                    battleTurn.ActiveUnitInstanceId = activeMeta.SaveInstanceId;
                     battleTurn.ActiveUnitTeam = activeMeta.IsPlayerControlled ? "player" : "enemy";
                 }
                 else
                 {
                     battleTurn.ActiveUnitId = null;
+                    battleTurn.ActiveUnitInstanceId = null;
                     battleTurn.ActiveUnitTeam = null;
                 }
             }
@@ -58,6 +60,7 @@ namespace SevenBattles.Battle.Save
 
                 battleTurn.TurnIndex = 0;
                 battleTurn.ActiveUnitId = null;
+                battleTurn.ActiveUnitInstanceId = null;
                 battleTurn.ActiveUnitTeam = null;
                 battleTurn.ActiveUnitCurrentActionPoints = 0;
                 battleTurn.ActiveUnitMaxActionPoints = 0;
@@ -67,4 +70,3 @@ namespace SevenBattles.Battle.Save
         }
     }
 }
-

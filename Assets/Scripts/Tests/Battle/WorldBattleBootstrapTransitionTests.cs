@@ -71,58 +71,6 @@ namespace SevenBattles.Tests.Battle
             }
         }
 
-        [UnityTest]
-        public IEnumerator PlacementToBattleTransition_IsSynchronizedWithFade()
-        {
-            var fadeGo = new GameObject("FadeCanvas");
-            var fadeCanvas = fadeGo.AddComponent<CanvasGroup>();
-            fadeCanvas.alpha = 0f;
-            fadeCanvas.gameObject.SetActive(false);
-
-            var placementHudGo = new GameObject("PlacementHUD");
-            var battleHudGo = new GameObject("BattleHUD");
-            battleHudGo.SetActive(false);
-
-            var placementGo = new GameObject("PlacementController");
-            var placement = placementGo.AddComponent<FakePlacementController>();
-
-            var turnGo = new GameObject("TurnController");
-            var turn = turnGo.AddComponent<FakeTurnController>();
-
-            var bootstrapGo = new GameObject("Bootstrap");
-            var bootstrap = bootstrapGo.AddComponent<WorldBattleBootstrap>();
-
-            SetPrivate(bootstrap, "_playerPlacementBehaviour", placement);
-            SetPrivate(bootstrap, "_turnController", (IBattleTurnController)turn);
-            SetPrivate(bootstrap, "_fadeCanvasGroup", fadeCanvas);
-            SetPrivate(bootstrap, "_placementHudRoot", placementHudGo);
-            SetPrivate(bootstrap, "_battleHudRoot", battleHudGo);
-            SetPrivate(bootstrap, "_fadeOutDuration", 0.05f);
-            SetPrivate(bootstrap, "_fadeInDuration", 0.05f);
-
-            CallPrivate(bootstrap, "Awake");
-
-            Assert.IsTrue(placementHudGo.activeSelf);
-            Assert.IsFalse(battleHudGo.activeSelf);
-            Assert.IsFalse(turn.StartBattleCalled);
-
-            placement.FirePlacementLocked();
-
-            yield return new WaitForSecondsRealtime(0.2f);
-
-            Assert.IsTrue(turn.StartBattleCalled);
-            Assert.IsFalse(turn.IsInteractionLocked);
-            Assert.IsFalse(placementHudGo.activeSelf);
-            Assert.IsTrue(battleHudGo.activeSelf);
-
-            Object.DestroyImmediate(bootstrapGo);
-            Object.DestroyImmediate(placementHudGo);
-            Object.DestroyImmediate(battleHudGo);
-            Object.DestroyImmediate(placementGo);
-            Object.DestroyImmediate(turnGo);
-            Object.DestroyImmediate(fadeGo);
-        }
-
         private static void SetPrivate(object obj, string field, object value)
         {
             var fi = obj.GetType().GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

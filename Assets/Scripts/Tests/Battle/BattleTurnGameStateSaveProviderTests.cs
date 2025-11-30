@@ -23,7 +23,11 @@ namespace SevenBattles.Tests.Battle
         private static object CallPrivate(object target, string methodName, params object[] args)
         {
             var type = target.GetType();
-            var method = type.GetMethod(methodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var method = type.GetMethod(
+                methodName,
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic |
+                System.Reflection.BindingFlags.Public);
             Assert.IsNotNull(method, $"Method '{methodName}' was not found on type '{type.FullName}'.");
             return method.Invoke(target, args);
         }
@@ -64,6 +68,7 @@ namespace SevenBattles.Tests.Battle
             Assert.AreEqual("battle", data.BattleTurn.Phase);
             Assert.GreaterOrEqual(data.BattleTurn.TurnIndex, 1);
             Assert.AreEqual("UnitA", data.BattleTurn.ActiveUnitId);
+            Assert.IsFalse(string.IsNullOrEmpty(data.BattleTurn.ActiveUnitInstanceId));
             Assert.AreEqual("player", data.BattleTurn.ActiveUnitTeam);
             Assert.AreEqual(ctrl.ActiveUnitCurrentActionPoints, data.BattleTurn.ActiveUnitCurrentActionPoints);
             Assert.AreEqual(ctrl.ActiveUnitMaxActionPoints, data.BattleTurn.ActiveUnitMaxActionPoints);

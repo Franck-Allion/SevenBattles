@@ -63,6 +63,7 @@ namespace SevenBattles.Core.Save
     public sealed class UnitPlacementSaveData
     {
         public string UnitId;
+        public string InstanceId;
         public string Team;
         public int X;
         public int Y;
@@ -77,6 +78,7 @@ namespace SevenBattles.Core.Save
         public string Phase;
         public int TurnIndex;
         public string ActiveUnitId;
+        public string ActiveUnitInstanceId;
         public string ActiveUnitTeam;
         public int ActiveUnitCurrentActionPoints;
         public int ActiveUnitMaxActionPoints;
