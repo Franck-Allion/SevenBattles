@@ -212,7 +212,7 @@ File: `Assets/Scripts/Battle/Save/BattleTurnGameStateSaveProvider.cs`
     BattleTurn.ActiveUnitMaxActionPoints = turnController.ActiveUnitMaxActionPoints;
     ```
 
-  - Uses `SimpleTurnOrderController.ActiveUnitMetadata` to get the current unit’s metadata:
+  - Uses `SimpleTurnOrderController.ActiveUnitMetadata` to get the current unit's metadata:
     - `Definition?.Id` → `ActiveUnitId` (not necessarily unique across all units).
     - `GetInstanceID()` → `ActiveUnitInstanceId` (unique within the scene and within the snapshot).
     - `IsPlayerControlled` → `ActiveUnitTeam` (`"player"` / `"enemy"`).
@@ -247,6 +247,37 @@ public sealed class BattleTurnSaveData {
 }
 ```
 
+### 3.6 Battle Session Provider (Original Configuration)
+
+File: `Assets/Scripts/Battle/Save/BattleSessionSaveProvider.cs`
+
+- Captures the original battle configuration from `IBattleSessionService`:
+
+  ```csharp
+  var sessionService = Object.FindFirstObjectByType<BattleSessionService>();
+  ```
+
+- Populates `BattleSessionSaveData`:
+  - `PlayerSquadIds`: Array of unit definition IDs from `CurrentSession.PlayerSquad`
+  - `EnemySquadIds`: Array of unit definition IDs from `CurrentSession.EnemySquad`
+  - `BattleType`: Battle type identifier (e.g., "campaign", "arena")
+  - `Difficulty`: Difficulty level
+  - `CampaignMissionId`: Optional campaign mission identifier
+
+The DTO:
+
+```csharp
+public sealed class BattleSessionSaveData {
+    public string[] PlayerSquadIds;
+    public string[] EnemySquadIds;
+    public string BattleType;
+    public int Difficulty;
+    public string CampaignMissionId;
+}
+```
+
+**Purpose**: This captures the original battle configuration, not just the current unit placements. This allows complete battle reconstruction when loading a save, including the ability to restart the battle with the same squads.
+
 ---
 
 ## 4. JSON File Format
@@ -260,7 +291,7 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
   "Timestamp": "2025-11-29 21:30:12",
   "RunNumber": 3,
   "PlayerSquad": {
-    "WizardIds": ["WizardA", "WizardB", "WizardC"]
+    "WizardIds": ["WizardA", "WizardB", "WizardC"]  // DEPRECATED - use BattleSession
   },
   "UnitPlacements": [
     {
@@ -302,6 +333,13 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
     "ActiveUnitTeam": "player",
     "ActiveUnitCurrentActionPoints": 1,
     "ActiveUnitMaxActionPoints": 2
+  },
+  "BattleSession": {
+    "PlayerSquadIds": ["WizardA", "WizardB", "WizardC"],
+    "EnemySquadIds": ["WizardEnemy1", "WizardEnemy2"],
+    "BattleType": "campaign",
+    "Difficulty": 1,
+    "CampaignMissionId": "mission_01"
   }
 }
 ```

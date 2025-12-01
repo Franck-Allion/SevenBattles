@@ -3,6 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 using SevenBattles.Battle.Turn;
 using SevenBattles.Core;
+using SevenBattles.Core.Battle;
+using SevenBattles.Core.Players;
+using SevenBattles.Core.Units;
 
 namespace SevenBattles.Battle.Start
 {
@@ -41,6 +44,9 @@ namespace SevenBattles.Battle.Start
 
         private void Awake()
         {
+            // Ensure battle session is initialized before spawning enemies
+            EnsureBattleSessionInitialized();
+
             if (_spawnEnemiesOnAwake && _enemy != null)
             {
                 _enemy.StartEnemySquad();
@@ -54,6 +60,94 @@ namespace SevenBattles.Battle.Start
                     _playerPlacement.PlacementLocked += HandlePlacementLocked;
                 }
             }
+        }
+
+        /// <summary>
+        /// Ensures the battle session is initialized before any controllers attempt to use it.
+        /// If no session exists, creates one from legacy ScriptableObject references as a fallback.
+        /// </summary>
+        private void EnsureBattleSessionInitialized()
+        {
+            var sessionService = UnityEngine.Object.FindFirstObjectByType<BattleSessionService>();
+            if (sessionService == null)
+            {
+                Debug.LogWarning("WorldBattleBootstrap: No BattleSessionService found in scene. Battle session will not be available.");
+                return;
+            }
+
+            if (sessionService.CurrentSession != null)
+            {
+                // Session already initialized (e.g., from SceneFlow or load system)
+                return;
+            }
+
+            // Fallback: create session from legacy ScriptableObject references
+            var config = BuildLegacyBattleSessionConfig();
+            if (config != null)
+            {
+                sessionService.InitializeSession(config);
+                Debug.Log("WorldBattleBootstrap: Initialized battle session from legacy ScriptableObject references.");
+            }
+        }
+
+        /// <summary>
+        /// Builds a BattleSessionConfig from legacy ScriptableObject references.
+        /// This is a migration path to support existing scenes.
+        /// </summary>
+        private BattleSessionConfig BuildLegacyBattleSessionConfig()
+        {
+            // Try to find player and enemy squad controllers to extract their legacy references
+            var placementController = _playerPlacementBehaviour as WorldSquadPlacementController;
+            if (placementController == null)
+            {
+                placementController = UnityEngine.Object.FindFirstObjectByType<WorldSquadPlacementController>();
+            }
+
+            UnitDefinition[] playerSquad = null;
+            UnitDefinition[] enemySquad = null;
+
+            // Extract player squad from placement controller's legacy field
+            if (placementController != null)
+            {
+                var playerSquadField = typeof(WorldSquadPlacementController).GetField("_playerSquad", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (playerSquadField != null)
+                {
+                    var playerSquadSO = playerSquadField.GetValue(placementController) as PlayerSquad;
+                    if (playerSquadSO != null && playerSquadSO.Wizards != null)
+                    {
+                        playerSquad = playerSquadSO.Wizards;
+                    }
+                }
+            }
+
+            // Extract enemy squad from enemy controller's legacy field
+            if (_enemy != null)
+            {
+                var enemySquadField = typeof(WorldEnemySquadStartController).GetField("_enemySquad",
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                if (enemySquadField != null)
+                {
+                    var enemySquadSO = enemySquadField.GetValue(_enemy) as PlayerSquad;
+                    if (enemySquadSO != null && enemySquadSO.Wizards != null)
+                    {
+                        enemySquad = enemySquadSO.Wizards;
+                    }
+                }
+            }
+
+            if (playerSquad == null && enemySquad == null)
+            {
+                Debug.LogWarning("WorldBattleBootstrap: Could not build legacy battle session config - no squads found.");
+                return null;
+            }
+
+            return new BattleSessionConfig(
+                playerSquad ?? System.Array.Empty<UnitDefinition>(),
+                enemySquad ?? System.Array.Empty<UnitDefinition>(),
+                "legacy",
+                0
+            );
         }
 
         private void OnDestroy()

@@ -358,14 +358,53 @@ For more details on the current save/load architecture and JSON format, see:
 - Must use `UnitVisualUtil` and controller reflection helpers.  
 - Never reference HeroEditor4D types directly in Battle/UI assemblies.
 
+
+- All blocking overlays (pause menus, confirmation dialogs, turn banners, etc.) must be driven by a `CanvasGroup` that controls both `alpha` and `blocksRaycasts`.  
+- While visible, modal overlays must use `blocksRaycasts = true` to prevent clicks on underlying HUD or world UI; when hidden, they must restore `blocksRaycasts = false` and any related HUD `CanvasGroup.alpha` state.  
+- Modal overlays must animate using unscaled time (`Time.unscaledDeltaTime`) and must not introduce additional turn/interaction state beyond `ITurnOrderController` / `IBattleTurnController.SetInteractionLocked`.  
+- Confirmation-style overlays must expose a single reusable API accepting `LocalizedString` title/message/button labels and per-call callbacks, instead of hardcoded or duplicated UI flows.  
+- For confirmation flows in the UI domain (Quit, Load, delete save, reset settings, etc.), agents must first consider reusing or extending `SevenBattles.UI.ConfirmationMessageBoxHUD` before introducing any new confirmation UI component.
+
+---
+
+## 13. 🧬 DOMAIN-SPECIFIC BATTLE INVARIANTS
+
+### Movement
+- Must go through `SimpleTurnOrderController`.  
+- Must use its BFS logic.  
+- Must use legal tile caching.  
+- Never implement parallel movement systems.
+
+### Highlighting
+- Primary highlight: active unit tile only (never cursor-driven).  
+- Secondary highlight: cursor-driven preview only.
+
+### AP (Action Points)
+- Only from `UnitStatsData.ActionPoints` → HUD.  
+- Never repurpose other stats.
+
+### HeroEditor4D
+- Must use `UnitVisualUtil` and controller reflection helpers.  
+- Never reference HeroEditor4D types directly in Battle/UI assemblies.
+
 ### Active Unit Stats / Health
 - Whenever a battle system mutates the runtime combat stats of the current active unit (e.g., Life, Force, etc.), it **must** raise `ITurnOrderController.ActiveUnitStatsChanged`.  
 - UI health bars and other stat-driven HUD elements must rely on `ITurnOrderController.TryGetActiveUnitStats` + `ActiveUnitStatsChanged` instead of polling runtime components directly.
 
 ### Turn Index & Banners
 - `IBattleTurnController.TurnIndex` is the **only** source of truth for the battle turn number; UI must not maintain its own counters.  
-- Turn-based overlays (e.g., “Turn X” banners) must use `TurnIndex` + `LocalizedString` smart strings, and must acquire/release `SetInteractionLocked` in a balanced way (no permanent locks).  
+- Turn-based overlays (e.g., "Turn X" banners) must use `TurnIndex` + `LocalizedString` smart strings, and must acquire/release `SetInteractionLocked` in a balanced way (no permanent locks).  
 - Any CanvasGroup-based overlay that blocks input must clear `blocksRaycasts` and restore related HUD `CanvasGroup.alpha` state when it hides.
+
+### Battle Session Configuration
+- All battle initialization data (player squad, enemy squad, difficulty, etc.) must be encapsulated in a `BattleSessionConfig` and injected via `IBattleSessionService`.
+- Controllers in the Battle domain must never hold direct references to ScriptableObject squad data; they must query `IBattleSessionService.CurrentSession`.
+- The session must be initialized before any controllers attempt to spawn units (`WorldBattleBootstrap.Awake` ensures this).
+- Save providers must capture the original `BattleSessionConfig` (via `BattleSessionSaveData`), not just current unit placements, to support full battle reconstruction.
+- **Legacy ScriptableObject fallback**: Controllers retain deprecated `_playerSquad` / `_enemySquad` fields that serve as fallback when no session is injected. This is **intentional** for two purposes:
+  - **Development/Debugging**: Allows pressing Play directly in BattleScene without a previous scene. `WorldBattleBootstrap` auto-generates a session from inspector references.
+  - **Backward Compatibility**: Existing scenes continue to work during migration.
+- **Production workflow**: External systems (campaign, menu, SceneFlow) must create `BattleSessionConfig` programmatically and inject it before loading BattleScene.
 
 ---
 

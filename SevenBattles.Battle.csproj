@@ -67,10 +67,13 @@
     <Compile Include="Assets\Scripts\Battle\Save\BattleTurnGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleBoardGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiTileHighlightGraphic.cs" />
+    <Compile Include="Assets\Scripts\Battle\Save\BattleSessionSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Turn\SimpleTurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Battle\Units\UnitBattleMetadata.cs" />
+    <Compile Include="Assets\Scripts\Battle\BattleSessionService.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldBattleStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\SquadPlacementModel.cs" />
+    <Compile Include="Assets\Scripts\Battle\Save\BattleSessionLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldSquadStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleGameStateLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Battle\Units\UnitVisualUtil.cs" />

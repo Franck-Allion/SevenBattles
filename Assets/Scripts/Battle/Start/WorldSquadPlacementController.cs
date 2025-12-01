@@ -18,8 +18,12 @@ namespace SevenBattles.Battle.Start
         [SerializeField, Tooltip("Optional material used for tile highlight during squad placement (e.g., filled tile). If null, the board's default material is used.")]
         private Material _placementHighlightMaterial;
 
-        [Header("Squad Data")]
-        [Tooltip("Player squad asset (1..8 wizard definitions).")]
+        [Header("Battle Session")]
+        [SerializeField, Tooltip("Battle session service (implements IBattleSessionService). If null, will auto-find at runtime.")]
+        private MonoBehaviour _sessionServiceBehaviour;
+
+        [Header("Legacy Squad Data (DEPRECATED)")]
+        [Tooltip("DEPRECATED: Player squad asset (1..8 wizard definitions). Only used as fallback if session service is not available.")]
         [SerializeField] private PlayerSquad _playerSquad;
 
         [Header("Placement Rules")]
@@ -53,10 +57,35 @@ namespace SevenBattles.Battle.Start
         public event System.Action<bool> ReadyChanged;
         public event System.Action PlacementLocked;
 
+        private IBattleSessionService _sessionService;
         private readonly Dictionary<int, GameObject> _instances = new Dictionary<int, GameObject>();
         private SquadPlacementModel _model;
         private int _selected = -1;
         private bool _locked;
+
+        private void Awake()
+        {
+            // Resolve session service
+            if (_sessionServiceBehaviour != null)
+            {
+                _sessionService = _sessionServiceBehaviour as IBattleSessionService;
+            }
+
+            if (_sessionService == null)
+            {
+                // Auto-find if not assigned
+                var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var behaviour in behaviours)
+                {
+                    if (behaviour is IBattleSessionService service)
+                    {
+                        _sessionService = service;
+                        _sessionServiceBehaviour = behaviour;
+                        break;
+                    }
+                }
+            }
+        }
 
         private void Start()
         {
@@ -215,8 +244,9 @@ namespace SevenBattles.Battle.Start
 
         public Sprite GetPortrait(int index)
         {
-            if (_playerSquad != null && _playerSquad.Wizards != null && index >= 0 && index < _playerSquad.Wizards.Length)
-                return _playerSquad.Wizards[index] != null ? _playerSquad.Wizards[index].Portrait : null;
+            var squad = GetPlayerSquad();
+            if (squad != null && index >= 0 && index < squad.Length)
+                return squad[index] != null ? squad[index].Portrait : null;
             return null;
         }
 
@@ -236,8 +266,29 @@ namespace SevenBattles.Battle.Start
 
         private int GetSquadSizeInternal()
         {
-            int defCount = _playerSquad != null && _playerSquad.Wizards != null ? _playerSquad.Wizards.Length : 0;
+            var squad = GetPlayerSquad();
+            int defCount = squad != null ? squad.Length : 0;
             return Mathf.Clamp(defCount, 0, 8);
+        }
+
+        /// <summary>
+        /// Resolves the player squad from the session service, or falls back to the legacy ScriptableObject reference.
+        /// </summary>
+        private UnitDefinition[] GetPlayerSquad()
+        {
+            // Prefer session service
+            if (_sessionService?.CurrentSession?.PlayerSquad != null)
+            {
+                return _sessionService.CurrentSession.PlayerSquad;
+            }
+
+            // Fallback to legacy ScriptableObject reference
+            if (_playerSquad != null && _playerSquad.Wizards != null)
+            {
+                return _playerSquad.Wizards;
+            }
+
+            return null;
         }
 
         public void ResetPlacementState()
@@ -280,17 +331,19 @@ namespace SevenBattles.Battle.Start
 
         private GameObject ResolvePrefab(int index)
         {
-            if (_playerSquad == null || _playerSquad.Wizards == null) return null;
-            if (index < 0 || index >= _playerSquad.Wizards.Length) return null;
-            var def = _playerSquad.Wizards[index];
+            var squad = GetPlayerSquad();
+            if (squad == null) return null;
+            if (index < 0 || index >= squad.Length) return null;
+            var def = squad[index];
             return def != null ? def.Prefab : null;
         }
 
         private void ApplyStatsIfAny(GameObject go, int index)
         {
-            if (_playerSquad == null || _playerSquad.Wizards == null) return;
-            if (index < 0 || index >= _playerSquad.Wizards.Length) return;
-            var def = _playerSquad.Wizards[index];
+            var squad = GetPlayerSquad();
+            if (squad == null) return;
+            if (index < 0 || index >= squad.Length) return;
+            var def = squad[index];
             if (def == null) return;
             var stats = go.GetComponent<UnitStats>();
             if (stats == null) stats = go.AddComponent<UnitStats>();
@@ -299,9 +352,10 @@ namespace SevenBattles.Battle.Start
 
         private void ApplyMetadataIfAny(GameObject go, int index, Vector2Int tile)
         {
-            if (_playerSquad == null || _playerSquad.Wizards == null) return;
-            if (index < 0 || index >= _playerSquad.Wizards.Length) return;
-            var def = _playerSquad.Wizards[index];
+            var squad = GetPlayerSquad();
+            if (squad == null) return;
+            if (index < 0 || index >= squad.Length) return;
+            var def = squad[index];
             if (def == null) return;
             UnitBattleMetadata.Ensure(go, true, def, tile);
         }
@@ -309,13 +363,14 @@ namespace SevenBattles.Battle.Start
         private void OnValidate()
         {
             if (_playerRows < 1) _playerRows = 1;
-            if (_playerSquad != null && _playerSquad.Wizards != null && _playerSquad.Wizards.Length > 8)
+            var squad = GetPlayerSquad();
+            if (squad != null && squad.Length > 8)
             {
                 Debug.LogWarning("WorldSquadPlacementController: Only first 8 WizardDefinitions will be used.", this);
             }
-            if (_playerSquad == null || _playerSquad.Wizards == null || _playerSquad.Wizards.Length == 0)
+            if (squad == null || squad.Length == 0)
             {
-                Debug.LogWarning("WorldSquadPlacementController: Assign a PlayerSquad with 1..8 WizardDefinitions.", this);
+                Debug.LogWarning("WorldSquadPlacementController: Assign a PlayerSquad with 1..8 WizardDefinitions or ensure BattleSessionService is configured.", this);
             }
         }
     }

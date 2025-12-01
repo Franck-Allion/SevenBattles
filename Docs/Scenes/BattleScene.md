@@ -18,13 +18,15 @@
 - `BattleScene` (scene root)
   - `_System`
     - `WorldBattleBootstrap` (`WorldBattleBootstrap`) - Entry point for battle initialization.
+    - `BattleSessionService` (`BattleSessionService`) - Holds current battle session configuration (player/enemy squads, difficulty).
     - `SimpleTurnOrderController` (`SimpleTurnOrderController`) - Manages turn order and unit activation.
     - `WorldSquadPlacementController` (`WorldSquadPlacementController`) - Handles pre-battle squad placement.
     - `WorldEnemySquadStartController` (`WorldEnemySquadStartController`) - Spawns enemy units at start.
     - `Save-Load System` (Container)
       - `SaveGameService` (`SaveGameServiceComponent`) - Core save/load service.
       - `BattleBoardGameStateSaveProvider` (`BattleBoardGameStateSaveProvider`) - Saves board state.
-      - `PlayerGameStateProvider` (`PlayerSquadGameStateSaveProvider`) - Saves player squad state.
+      - `BattleSessionSaveProvider` (`BattleSessionSaveProvider`) - Saves battle session configuration.
+      - `PlayerGameStateProvider` (`PlayerSquadGameStateSaveProvider`) - Saves player squad state (DEPRECATED).
       - `CompositeGameStateProvider` (`CompositeGameStateSaveProvider`) - Aggregates save providers.
   - `World`
     - World/board representation (`WorldPerspectiveBoard`, tiles, highlights, etc.)
@@ -68,6 +70,20 @@
     - Coordinate with `SquadPlacementHUD` for placement interactions.
   - **Actual location:** child of `_System` root GameObject.
 
+- `BattleSessionService` (`Assets/Scripts/Battle/BattleSessionService.cs`)
+  - Responsibilities:
+    - Hold the current battle session configuration (player squad, enemy squad, battle type, difficulty).
+    - Provide `IBattleSessionService` interface for controllers to query battle configuration.
+    - Initialize session from SceneFlow, load system, or legacy ScriptableObject references.
+  - **Actual location:** child of `_System` root GameObject.
+  - Extension point:
+    - Any system needing battle configuration should depend on `IBattleSessionService`, not ScriptableObject references.
+    - Session must be initialized before any controllers spawn units (`WorldBattleBootstrap.Awake` ensures this).
+  - **Debugging workflow**:
+    - When pressing Play directly in BattleScene (no previous scene), `WorldBattleBootstrap` auto-generates a session from inspector-assigned ScriptableObject references.
+    - This allows rapid iteration without setting up a full scene flow.
+    - Legacy `_playerSquad` / `_enemySquad` fields in controllers serve as "debug parameters" for this workflow.
+
 - Battle HUD controllers (`Assets/Scripts/UI/`)
   - `TurnOrderHUD` (under `BattleHUD` root)
     - Shows active unit portrait, stats, health, and action points.
@@ -98,6 +114,7 @@ When adding new functionality, prefer extending these areas instead of inventing
 
 - Save/load related extensions
   - For new battle state that must be persisted, extend `SaveGameData` and an appropriate `IGameStateSaveProvider` (see `Docs/SaveSystem.md`).
+  - Battle session configuration is captured via `BattleSessionSaveProvider` into `BattleSessionSaveData`.
   - Do not add file IO in this scene; keep it in the `Core` save system.
 
 ## Wiring Notes (Unity)

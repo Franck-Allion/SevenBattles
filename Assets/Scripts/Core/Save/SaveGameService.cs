@@ -104,13 +104,24 @@ namespace SevenBattles.Core.Save
     }
 
     [Serializable]
+    public sealed class BattleSessionSaveData
+    {
+        public string[] PlayerSquadIds;
+        public string[] EnemySquadIds;
+        public string BattleType;
+        public int Difficulty;
+        public string CampaignMissionId;
+    }
+
+    [Serializable]
     public sealed class SaveGameData
     {
         public string Timestamp;
         public int RunNumber;
-        public PlayerSquadSaveData PlayerSquad;
+        public PlayerSquadSaveData PlayerSquad; // DEPRECATED - use BattleSession.PlayerSquadIds
         public UnitPlacementSaveData[] UnitPlacements;
         public BattleTurnSaveData BattleTurn;
+        public BattleSessionSaveData BattleSession; // NEW: Original battle configuration
     }
 
     public sealed class SaveGameService : ISaveGameService

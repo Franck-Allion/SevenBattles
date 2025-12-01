@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Units;
+using SevenBattles.Core;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
 
@@ -16,8 +17,12 @@ namespace SevenBattles.Battle.Start
         [Header("References")]
         [SerializeField] private WorldPerspectiveBoard _board;
 
-        [Header("Squad Data")]
-        [Tooltip("Enemy squad (reuses PlayerSquad as a list of WizardDefinitions).")]
+        [Header("Battle Session")]
+        [SerializeField, Tooltip("Battle session service (implements IBattleSessionService). If null, will auto-find at runtime.")]
+        private MonoBehaviour _sessionServiceBehaviour;
+
+        [Header("Legacy Squad Data (DEPRECATED)")]
+        [Tooltip("DEPRECATED: Enemy squad (reuses PlayerSquad as a list of WizardDefinitions). Only used as fallback if session service is not available.")]
         [SerializeField] private PlayerSquad _enemySquad;
 
         [Header("Placement Rules")]
@@ -38,6 +43,32 @@ namespace SevenBattles.Battle.Start
         [SerializeField, Tooltip("When enabled, assigns enemies to the 'Ignore Raycast' layer to prevent interaction.")]
         private bool _ignoreRaycast = true;
 
+        private IBattleSessionService _sessionService;
+
+        private void Awake()
+        {
+            // Resolve session service
+            if (_sessionServiceBehaviour != null)
+            {
+                _sessionService = _sessionServiceBehaviour as IBattleSessionService;
+            }
+
+            if (_sessionService == null)
+            {
+                // Auto-find if not assigned
+                var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                foreach (var behaviour in behaviours)
+                {
+                    if (behaviour is IBattleSessionService service)
+                    {
+                        _sessionService = service;
+                        _sessionServiceBehaviour = behaviour;
+                        break;
+                    }
+                }
+            }
+        }
+
         private void Start()
         {
             if (_autoStartOnPlay)
@@ -55,7 +86,7 @@ namespace SevenBattles.Battle.Start
                 return;
             }
 
-            var defs = _enemySquad != null ? _enemySquad.Wizards : null;
+            var defs = GetEnemySquad();
             if (defs == null || defs.Length == 0)
             {
                 Debug.LogWarning("WorldEnemySquadStartController: No enemy wizard definitions configured.");
@@ -142,14 +173,35 @@ namespace SevenBattles.Battle.Start
             }
         }
 
+        /// <summary>
+        /// Resolves the enemy squad from the session service, or falls back to the legacy ScriptableObject reference.
+        /// </summary>
+        private UnitDefinition[] GetEnemySquad()
+        {
+            // Prefer session service
+            if (_sessionService?.CurrentSession?.EnemySquad != null)
+            {
+                return _sessionService.CurrentSession.EnemySquad;
+            }
+
+            // Fallback to legacy ScriptableObject reference
+            if (_enemySquad != null && _enemySquad.Wizards != null)
+            {
+                return _enemySquad.Wizards;
+            }
+
+            return null;
+        }
+
         private void OnValidate()
         {
             if (_enemyRowsFromBack < 1) _enemyRowsFromBack = 1;
             if (_scaleMultiplier <= 0f) _scaleMultiplier = 1f;
             if (_sortingOrderFloor < 0) _sortingOrderFloor = 0;
-            if (_enemySquad == null || _enemySquad.Wizards == null || _enemySquad.Wizards.Length == 0)
+            var squad = GetEnemySquad();
+            if (squad == null || squad.Length == 0)
             {
-                Debug.LogWarning("WorldEnemySquadStartController: Assign an enemy squad with 1..8 WizardDefinitions.", this);
+                Debug.LogWarning("WorldEnemySquadStartController: Assign an enemy squad with 1..8 WizardDefinitions or ensure BattleSessionService is configured.", this);
             }
         }
     }
