@@ -112,5 +112,56 @@ namespace SevenBattles.Tests.UI
             UnityEngine.Object.DestroyImmediate(hudGo);
             UnityEngine.Object.DestroyImmediate(ctrlGo);
         }
-      }
-  }
+
+        [Test]
+        public void CancelButton_ClosesPauseMenu_AndRestoresState()
+        {
+            var hudGo = new GameObject("PauseHUD");
+            var hud = hudGo.AddComponent<BattlePauseHUD>();
+
+            var menuRootGo = new GameObject("MenuRoot");
+            menuRootGo.transform.SetParent(hudGo.transform);
+            var menuRoot = menuRootGo.AddComponent<RectTransform>();
+            var menuCg = menuRootGo.AddComponent<CanvasGroup>();
+
+            var blurGo = new GameObject("Blur");
+            blurGo.transform.SetParent(hudGo.transform);
+            var blurCg = blurGo.AddComponent<CanvasGroup>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+
+            var cancelButtonGo = new GameObject("CancelButton");
+            cancelButtonGo.transform.SetParent(hudGo.transform);
+            var cancelButton = cancelButtonGo.AddComponent<Button>();
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_menuCanvasGroup", menuCg);
+            SetPrivate(hud, "_menuRoot", menuRoot);
+            SetPrivate(hud, "_blurCanvasGroup", blurCg);
+            SetPrivate(hud, "_fadeDuration", 0f);
+            SetPrivate(hud, "_cancelButton", cancelButton);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            Time.timeScale = 1f;
+            CallPrivate(hud, "OpenPauseMenu");
+
+            Assert.IsTrue(menuRootGo.activeSelf, "Menu should be active after opening.");
+            Assert.AreEqual(0f, Time.timeScale, 1e-4f, "Time scale should be zero while paused.");
+            Assert.IsTrue(fake.IsInteractionLocked, "Interaction should be locked while pause menu is open.");
+
+            cancelButton.onClick.Invoke();
+
+            Assert.IsFalse(menuRootGo.activeSelf, "Menu should be inactive after clicking Cancel.");
+            Assert.AreEqual(1f, Time.timeScale, 1e-4f, "Time scale should be restored after clicking Cancel.");
+            Assert.IsFalse(fake.IsInteractionLocked, "Interaction lock should be released after clicking Cancel.");
+
+            UnityEngine.Object.DestroyImmediate(hudGo);
+            UnityEngine.Object.DestroyImmediate(ctrlGo);
+        }
+    }
+}

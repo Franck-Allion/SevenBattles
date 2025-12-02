@@ -30,6 +30,8 @@ namespace SevenBattles.UI
         [SerializeField] private Button _loadButton;
         [SerializeField] private Button _settingsButton;
         [SerializeField] private Button _quitButton;
+        [SerializeField, Tooltip("Optional Cancel/Back button that closes the pause menu without quitting.")]
+        private Button _cancelButton;
         [SerializeField, Tooltip("Optional explicit close button (e.g., X). If null, ESC will still close the menu.")]
         private Button _closeButton;
 
@@ -50,6 +52,8 @@ namespace SevenBattles.UI
         private LocalizedString _settingsLabel;
         [SerializeField, Tooltip("Localized label for the Quit button (Table: UI.Common, Entry: Pause.Quit).")]
         private LocalizedString _quitLabel;
+        [SerializeField, Tooltip("Localized label for the Cancel button (Table: UI.Common, Entry: Common.Cancel).")]
+        private LocalizedString _cancelLabel;
 
         [SerializeField, Tooltip("Optional explicit reference to the Save button label Text component. If not set, a child Text will be auto-found at runtime.")]
         private Text _saveText;
@@ -67,6 +71,10 @@ namespace SevenBattles.UI
         private Text _quitText;
         [SerializeField, Tooltip("Optional explicit reference to the Quit button label TMP_Text component. If not set, a child TMP_Text will be auto-found at runtime.")]
         private TMP_Text _quitTMP;
+        [SerializeField, Tooltip("Optional explicit reference to the Cancel button label Text component. If not set, a child Text will be auto-found at runtime.")]
+        private Text _cancelText;
+        [SerializeField, Tooltip("Optional explicit reference to the Cancel button label TMP_Text component. If not set, a child TMP_Text will be auto-found at runtime.")]
+        private TMP_Text _cancelTMP;
 
         [Header("Animation")]
         [SerializeField, Tooltip("Fade duration in seconds for opening/closing the pause menu. Uses unscaled time so it works when the game is paused.")]
@@ -300,6 +308,11 @@ namespace SevenBattles.UI
                 _quitButton.onClick.AddListener(OnQuitClicked);
             }
 
+            if (_cancelButton != null)
+            {
+                _cancelButton.onClick.AddListener(OnCancelClicked);
+            }
+
             if (_closeButton != null)
             {
                 _closeButton.onClick.AddListener(OnCloseClicked);
@@ -348,6 +361,16 @@ namespace SevenBattles.UI
                 _quitLabel.StringChanged += HandleQuitLabelChanged;
             }
 
+            if (_cancelButton != null)
+            {
+                if (_cancelLabel == null)
+                {
+                    _cancelLabel = new LocalizedString("UI.Common", "Common.Cancel");
+                }
+
+                _cancelLabel.StringChanged += HandleCancelLabelChanged;
+            }
+
             RefreshButtonLabels();
         }
 
@@ -377,6 +400,11 @@ namespace SevenBattles.UI
             {
                 _quitLabel.StringChanged -= HandleQuitLabelChanged;
             }
+
+            if (_cancelLabel != null)
+            {
+                _cancelLabel.StringChanged -= HandleCancelLabelChanged;
+            }
         }
 
         private void RefreshButtonLabels()
@@ -385,6 +413,7 @@ namespace SevenBattles.UI
             _loadLabel?.RefreshString();
             _settingsLabel?.RefreshString();
             _quitLabel?.RefreshString();
+            _cancelLabel?.RefreshString();
         }
 
         private void AutoDiscoverButtonLabelTargets()
@@ -436,6 +465,19 @@ namespace SevenBattles.UI
                 if (_quitText == null)
                 {
                     _quitText = _quitButton.GetComponentInChildren<Text>(true);
+                }
+            }
+
+            if (_cancelButton != null)
+            {
+                if (_cancelTMP == null)
+                {
+                    _cancelTMP = _cancelButton.GetComponentInChildren<TMP_Text>(true);
+                }
+
+                if (_cancelText == null)
+                {
+                    _cancelText = _cancelButton.GetComponentInChildren<Text>(true);
                 }
             }
         }
@@ -757,6 +799,16 @@ namespace SevenBattles.UI
                   });
           }
 
+          private void OnCancelClicked()
+          {
+              if (!_isOpen)
+              {
+                  return;
+              }
+
+              ClosePauseMenu();
+          }
+
           private void OnCloseClicked()
           {
               ClosePauseMenu();
@@ -836,6 +888,18 @@ namespace SevenBattles.UI
             else if (_quitText != null)
             {
                 _quitText.text = value;
+            }
+        }
+
+        private void HandleCancelLabelChanged(string value)
+        {
+            if (_cancelTMP != null)
+            {
+                _cancelTMP.text = value;
+            }
+            else if (_cancelText != null)
+            {
+                _cancelText.text = value;
             }
         }
 
