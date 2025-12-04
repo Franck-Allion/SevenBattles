@@ -27,6 +27,16 @@ namespace SevenBattles.Battle.Turn
         [SerializeField, Tooltip("Duration in seconds for the active unit movement animation between tiles.")]
         private float _moveDurationSeconds = 0.35f;
 
+        [Header("Attack")]
+        [SerializeField, Tooltip("Cursor texture displayed when hovering over an attackable enemy.")]
+        private Texture2D _attackCursorTexture;
+        [SerializeField, Tooltip("Hotspot offset for the attack cursor (typically center of the texture).")]
+        private Vector2 _attackCursorHotspot = new Vector2(16f, 16f);
+        [SerializeField, Tooltip("Audio clip played when an attack hits (one-shot).")]
+        private AudioClip _attackHitClip;
+        [SerializeField, Tooltip("Color for secondary highlight when hovering an attackable enemy.")]
+        private Color _attackCursorColor = new Color(1f, 0.3f, 0.3f, 0.6f);
+
         [Header("Flow")]
         [SerializeField, Tooltip("If true, BeginBattle is called automatically on Start. Typically disabled when using placement flow.")]
         private bool _autoStartOnPlay = false;
@@ -58,6 +68,8 @@ namespace SevenBattles.Battle.Turn
         private Vector2Int _selectedMoveTile;
         private readonly HashSet<Vector2Int> _legalMoveTiles = new HashSet<Vector2Int>();
         private readonly Dictionary<Vector2Int, Vector2Int> _movePrevTile = new Dictionary<Vector2Int, Vector2Int>();
+        private readonly HashSet<Vector2Int> _attackableEnemyTiles = new HashSet<Vector2Int>();
+        private bool _isAttackCursorActive;
 
         public bool HasActiveUnit => _hasActiveUnit;
 
@@ -492,6 +504,7 @@ namespace SevenBattles.Battle.Turn
 
             UpdateBoardHighlight();
             RebuildLegalMoveTilesForActiveUnit();
+            RebuildAttackableEnemyTiles();
 
             if (_hasActiveUnit && !IsActiveUnitPlayerControlledInternal())
             {
@@ -521,13 +534,18 @@ namespace SevenBattles.Battle.Turn
 
         private void UpdatePlayerTurnInput()
         {
-            if (!CanActiveUnitMove())
+            // First check if we can do anything at all
+            bool canMove = CanActiveUnitMove();
+            bool canAttack = CanActiveUnitAttack();
+
+            if (!canMove && !canAttack)
             {
                 if (_board != null)
                 {
                     _board.SetSecondaryHighlightVisible(false);
                 }
                 _hasSelectedMoveTile = false;
+                SetAttackCursor(false);
                 UpdateBoardHighlight();
                 return;
             }
@@ -540,10 +558,43 @@ namespace SevenBattles.Battle.Turn
                 {
                     UpdateBoardHighlight();
                 }
+                SetAttackCursor(false);
                 return;
             }
 
             var hoveredTile = new Vector2Int(x, y);
+
+            // PRIORITY 1: Attack input handling (takes priority over movement)
+            if (canAttack && IsAttackableEnemyTile(hoveredTile))
+            {
+                // Show attack cursor and highlight
+                SetAttackCursor(true);
+                _board.SetSecondaryHighlightVisible(true);
+                _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
+                _board.SetSecondaryHighlightColor(_attackCursorColor);
+
+                if (Input.GetMouseButtonDown(0))
+                {
+                    TryExecuteAttack(hoveredTile);
+                }
+
+                return;
+            }
+
+            // Reset attack cursor if not hovering attackable enemy
+            SetAttackCursor(false);
+
+            // PRIORITY 2: Movement input handling (fallback if not attacking)
+            if (!canMove)
+            {
+                if (_board != null)
+                {
+                    _board.SetSecondaryHighlightVisible(false);
+                }
+                _hasSelectedMoveTile = false;
+                UpdateBoardHighlight();
+                return;
+            }
 
             if (_hasSelectedMoveTile)
             {
@@ -710,6 +761,9 @@ namespace SevenBattles.Battle.Turn
             UpdateBoardHighlight();
             _legalMoveTiles.Clear();
             _movePrevTile.Clear();
+            
+            // Rebuild attackable enemies based on new position after movement
+            RebuildAttackableEnemyTiles();
         }
 
         private void RebuildLegalMoveTilesForActiveUnit()
@@ -925,6 +979,163 @@ namespace SevenBattles.Battle.Turn
             if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
             var u = _units[_activeIndex];
             return u.Metadata != null && u.Metadata.IsPlayerControlled;
+        }
+
+        // ===== ATTACK SYSTEM =====
+
+        private bool CanActiveUnitAttack()
+        {
+            if (!_hasActiveUnit) return false;
+            if (!IsActiveUnitPlayerControlledInternal()) return false;
+            if (_activeUnitCurrentActionPoints < 1) return false;
+            if (_movementAnimating) return false;
+            if (_board == null) return false;
+
+            var u = _units[_activeIndex];
+            if (u.Stats == null) return false;
+            if (u.Stats.Attack <= 0) return false;
+
+            return true;
+        }
+
+        private bool IsAttackableEnemyTile(Vector2Int tile)
+        {
+            if (!CanActiveUnitAttack()) return false;
+            return _attackableEnemyTiles.Contains(tile);
+        }
+
+        private void RebuildAttackableEnemyTiles()
+        {
+            _attackableEnemyTiles.Clear();
+
+            if (!CanActiveUnitAttack()) return;
+
+            var u = _units[_activeIndex];
+            var meta = u.Metadata;
+            if (meta == null || !meta.HasTile) return;
+
+            var activeTile = meta.Tile;
+
+            // Check all four cardinal directions (N, S, E, W)
+            Vector2Int[] adjacentOffsets = new Vector2Int[]
+            {
+                new Vector2Int(0, 1),   // North
+                new Vector2Int(0, -1),  // South
+                new Vector2Int(1, 0),   // East
+                new Vector2Int(-1, 0)   // West
+            };
+
+            foreach (var offset in adjacentOffsets)
+            {
+                var checkTile = activeTile + offset;
+
+                // Find if there's an enemy unit on this tile
+                for (int i = 0; i < _units.Count; i++)
+                {
+                    var targetMeta = _units[i].Metadata;
+                    if (targetMeta == null || !targetMeta.HasTile) continue;
+                    if (targetMeta.Tile != checkTile) continue;
+
+                    // Check if it's an enemy (different team)
+                    if (targetMeta.IsPlayerControlled != meta.IsPlayerControlled)
+                    {
+                        _attackableEnemyTiles.Add(checkTile);
+                        break; // Only one unit per tile
+                    }
+                }
+            }
+        }
+
+        private void TryExecuteAttack(Vector2Int targetTile)
+        {
+            if (!IsAttackableEnemyTile(targetTile)) return;
+
+            var attacker = _units[_activeIndex];
+            var attackerMeta = attacker.Metadata;
+            var attackerStats = attacker.Stats;
+
+            if (attackerMeta == null || attackerStats == null) return;
+
+            // Find the target unit on the target tile
+            TurnUnit? targetUnit = null;
+            for (int i = 0; i < _units.Count; i++)
+            {
+                var targetMeta = _units[i].Metadata;
+                if (targetMeta == null || !targetMeta.HasTile) continue;
+                if (targetMeta.Tile == targetTile)
+                {
+                    targetUnit = _units[i];
+                    break;
+                }
+            }
+
+            if (!targetUnit.HasValue) return;
+
+            var target = targetUnit.Value;
+            var targetStats = target.Stats;
+            if (targetStats == null) return;
+
+            // Calculate damage
+            int damage = CalculateDamage(attackerStats.Attack, targetStats.Defense);
+
+            // Apply damage
+            targetStats.TakeDamage(damage);
+
+            // Consume AP
+            if (_activeUnitCurrentActionPoints > 0)
+            {
+                _activeUnitCurrentActionPoints--;
+            }
+
+            // Play hit sound
+            if (_attackHitClip != null)
+            {
+                AudioSource.PlayClipAtPoint(_attackHitClip, Vector3.zero, 1f);
+            }
+
+            // Raise events
+            ActiveUnitActionPointsChanged?.Invoke();
+            ActiveUnitStatsChanged?.Invoke();
+
+            // Debug log
+            string attackerName = attackerMeta.Definition != null ? attackerMeta.Definition.Id : attackerMeta.gameObject.name;
+            string targetName = target.Metadata.Definition != null ? target.Metadata.Definition.Id : target.Metadata.gameObject.name;
+            Debug.Log($"[Combat] {attackerName} hit {targetName} for {damage} damage.");
+
+            // Rebuild attack tiles (AP changed, may no longer be able to attack)
+            RebuildAttackableEnemyTiles();
+        }
+
+        private int CalculateDamage(int attack, int defense)
+        {
+            // Apply random variance (0.95 to 1.05)
+            float variance = UnityEngine.Random.Range(0.95f, 1.05f);
+            float rawDamage = attack * variance;
+
+            // Calculate mitigation
+            float mitigation = (float)attack / (attack + defense);
+
+            // Final damage
+            float finalDamage = rawDamage * mitigation;
+
+            // Round down to integer
+            return Mathf.FloorToInt(finalDamage);
+        }
+
+        private void SetAttackCursor(bool active)
+        {
+            if (_isAttackCursorActive == active) return;
+
+            _isAttackCursorActive = active;
+
+            if (active && _attackCursorTexture != null)
+            {
+                Cursor.SetCursor(_attackCursorTexture, _attackCursorHotspot, CursorMode.Auto);
+            }
+            else
+            {
+                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using SevenBattles.Core.Save;
 
 namespace SevenBattles.Tests.Core
@@ -155,6 +156,9 @@ namespace SevenBattles.Tests.Core
                 WizardIds = new[] { "Any" }
             };
             var service = new SaveGameService(provider, dir);
+
+            // Expect the error log from invalid JSON parsing
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("SaveGameService: Failed to load save slot 1.*"));
 
             var data = await service.LoadSlotDataAsync(1);
 

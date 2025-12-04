@@ -69,5 +69,21 @@ namespace SevenBattles.Battle.Units
             _initiative = data.Initiative;
             _morale = data.Morale;
         }
+
+        /// <summary>
+        /// Reduces the unit's current life by the specified damage amount.
+        /// Life is clamped to a minimum of 0.
+        /// </summary>
+        /// <param name="damage">Amount of damage to apply (must be >= 0).</param>
+        public void TakeDamage(int damage)
+        {
+            if (damage < 0)
+            {
+                Debug.LogWarning($"[UnitStats] TakeDamage called with negative damage: {damage}. Ignoring.");
+                return;
+            }
+
+            _life = Mathf.Max(0, _life - damage);
+        }
     }
 }
