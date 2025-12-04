@@ -743,6 +743,34 @@ namespace SevenBattles.Battle.Turn
 
             meta.Tile = currentTile;
 
+            // Update sorting order based on new tile position to ensure correct visual layering
+            if (_board != null)
+            {
+                int newSortingOrder = _board.ComputeSortingOrder(
+                    currentTile.x, 
+                    currentTile.y, 
+                    meta.BaseSortingOrder, 
+                    rowStride: 10, 
+                    intraRowOffset: 0);
+                
+                // Apply the new sorting order to the unit's renderers
+                var sortingGroup = transform.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
+                if (sortingGroup != null)
+                {
+                    sortingGroup.sortingLayerName = meta.SortingLayer;
+                    sortingGroup.sortingOrder = newSortingOrder;
+                }
+                else
+                {
+                    var renderers = transform.GetComponentsInChildren<SpriteRenderer>(true);
+                    for (int i = 0; i < renderers.Length; i++)
+                    {
+                        renderers[i].sortingLayerName = meta.SortingLayer;
+                        renderers[i].sortingOrder = newSortingOrder;
+                    }
+                }
+            }
+
             if (animationManager != null && characterStateType != null)
             {
                 TryInvokeCharacterState(animationManager, characterStateType, "Idle");

@@ -12,6 +12,8 @@ namespace SevenBattles.Battle.Units
         [SerializeField] private bool _hasTile;
         [SerializeField] private Vector2 _facing = Vector2.up;
         [SerializeField] private string _saveInstanceId;
+        [SerializeField] private string _sortingLayer = "Characters";
+        [SerializeField] private int _baseSortingOrder = 0;
 
         public bool IsPlayerControlled
         {
@@ -63,6 +65,18 @@ namespace SevenBattles.Battle.Units
                 return _saveInstanceId;
             }
             set => _saveInstanceId = value;
+        }
+
+        public string SortingLayer
+        {
+            get => _sortingLayer;
+            set => _sortingLayer = value;
+        }
+
+        public int BaseSortingOrder
+        {
+            get => _baseSortingOrder;
+            set => _baseSortingOrder = value;
         }
 
         public static UnitBattleMetadata Ensure(GameObject instance, bool isPlayerControlled, UnitDefinition definition, Vector2Int tile)

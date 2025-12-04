@@ -3152,8 +3152,8 @@ MonoBehaviour:
   _enemySquad: {fileID: 11400000, guid: 71ab11fda003b5c4c924391cbbf94e7a, type: 2}
   _enemyRowsFromBack: 2
   _sortingLayer: Characters
-  _baseSortingOrder: 10
-  _sortingOrderFloor: 50
+  _baseSortingOrder: 0
+  _sortingOrderFloor: 0
   _scaleMultiplier: 9
   _autoStartOnPlay: 1
   _ignoreRaycast: 1

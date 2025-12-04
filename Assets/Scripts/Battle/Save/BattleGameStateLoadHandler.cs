@@ -36,7 +36,7 @@ namespace SevenBattles.Battle.Save
         [SerializeField, Tooltip("Sorting layer used for spawned unit visuals.")]
         private string _sortingLayer = "Characters";
         [SerializeField, Tooltip("Base sorting order used when computing per-tile rendering order.")]
-        private int _baseSortingOrder = 0;
+        private int _baseSortingOrder = 100;
         [SerializeField, Tooltip("Uniform scale multiplier applied to each spawned unit instance.")]
         private float _scaleMultiplier = 1f;
         [SerializeField, Tooltip("If true, logs detailed information about loaded unit placements.")]
@@ -229,6 +229,8 @@ namespace SevenBattles.Battle.Save
                     }
 
                     meta.Facing = DecodeFacing(placement.Facing);
+                    meta.SortingLayer = _sortingLayer;
+                    meta.BaseSortingOrder = _baseSortingOrder;
 
                     var stats = go.GetComponent<UnitStats>();
                     if (stats == null)

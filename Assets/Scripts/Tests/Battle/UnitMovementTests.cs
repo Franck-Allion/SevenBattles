@@ -93,6 +93,42 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(def);
         }
 
+        [Test]
+        public void SortingOrder_LowerRowsHaveHigherOrder()
+        {
+            // Test that units on lower rows (closer to camera) have higher sorting orders
+            // This ensures correct visual layering in isometric perspective
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+
+            SetPrivate(board, "_columns", 7);
+            SetPrivate(board, "_rows", 7);
+            SetPrivate(board, "_topLeft", new Vector2(0, 7));
+            SetPrivate(board, "_topRight", new Vector2(7, 7));
+            SetPrivate(board, "_bottomRight", new Vector2(7, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
+            CallPrivate(board, "RebuildGrid");
+
+            int baseSortingOrder = 0;
+            int rowStride = 10;
+
+            // Row 0 (front/bottom) should have highest sorting order
+            int row0Order = board.ComputeSortingOrder(3, 0, baseSortingOrder, rowStride, 0);
+            
+            // Row 2 (middle) should have lower sorting order than row 0
+            int row2Order = board.ComputeSortingOrder(3, 2, baseSortingOrder, rowStride, 0);
+            
+            // Row 6 (back/top) should have lowest sorting order
+            int row6Order = board.ComputeSortingOrder(3, 6, baseSortingOrder, rowStride, 0);
+
+            // Assert that lower row numbers (closer to camera) have higher sorting orders
+            Assert.Greater(row0Order, row2Order, "Row 0 should render above row 2");
+            Assert.Greater(row2Order, row6Order, "Row 2 should render above row 6");
+            Assert.Greater(row0Order, row6Order, "Row 0 should render above row 6");
+
+            Object.DestroyImmediate(boardGo);
+        }
+
         private static void SetPrivate(object obj, string field, object value)
         {
             var fi = obj.GetType().GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);

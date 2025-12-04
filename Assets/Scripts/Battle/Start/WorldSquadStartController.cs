@@ -25,7 +25,7 @@ namespace SevenBattles.Battle.Start
 
         [Header("Rendering")]
         [SerializeField] private string _sortingLayer = "Characters";
-        [SerializeField] private int _baseSortingOrder = 0; // Each subsequent wizard increments by 1 to avoid z-fighting
+        [SerializeField] private int _baseSortingOrder = 100; // Shared base with enemies for consistent row-based depth ordering
         [SerializeField, Tooltip("Uniform scale multiplier applied to each spawned wizard instance.")]
         private float _scaleMultiplier = 1f;
 
@@ -67,7 +67,12 @@ namespace SevenBattles.Battle.Start
                     var go = Object.Instantiate(def.Prefab);
                     SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                     int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);
-                    SevenBattles.Battle.Units.UnitBattleMetadata.Ensure(go, true, def, new Vector2Int(tileX, _rowY));
+                    var meta = SevenBattles.Battle.Units.UnitBattleMetadata.Ensure(go, true, def, new Vector2Int(tileX, _rowY));
+                    if (meta != null)
+                    {
+                        meta.SortingLayer = _sortingLayer;
+                        meta.BaseSortingOrder = _baseSortingOrder;
+                    }
                     SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
                     _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
                 }

@@ -116,7 +116,12 @@ namespace SevenBattles.Battle.Start
                 UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                 int sortingOrder = _board.ComputeSortingOrder(tile.x, tile.y, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10);
                 if (sortingOrder < _sortingOrderFloor) sortingOrder = _sortingOrderFloor + (i % 3);
-                UnitBattleMetadata.Ensure(go, false, def, tile);
+                var meta = UnitBattleMetadata.Ensure(go, false, def, tile);
+                if (meta != null)
+                {
+                    meta.SortingLayer = _sortingLayer;
+                    meta.BaseSortingOrder = _baseSortingOrder;
+                }
                 UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.down);
                 _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
                 ApplyStatsIfAny(go, def);

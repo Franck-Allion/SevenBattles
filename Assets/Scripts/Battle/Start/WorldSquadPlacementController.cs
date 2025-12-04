@@ -30,7 +30,7 @@ namespace SevenBattles.Battle.Start
         [SerializeField, Tooltip("Number of front rows on the player's side that are valid for placement.")]
         private int _playerRows = 2;
         [SerializeField] private string _sortingLayer = "Characters";
-        [SerializeField] private int _baseSortingOrder = 0;
+        [SerializeField] private int _baseSortingOrder = 100;
         [SerializeField] private float _scaleMultiplier = 1f;
 
         [Header("Feedback (optional)")]
@@ -180,7 +180,12 @@ namespace SevenBattles.Battle.Start
             var go = Instantiate(prefab);
             SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
             int sortingOrder = _board != null ? _board.ComputeSortingOrder(tile.x, tile.y, _baseSortingOrder, rowStride: 10, intraRowOffset: index % 10) : (_baseSortingOrder + index);
-            ApplyMetadataIfAny(go, index, tile);
+            var meta = ApplyMetadataIfAny(go, index, tile);
+            if (meta != null)
+            {
+                meta.SortingLayer = _sortingLayer;
+                meta.BaseSortingOrder = _baseSortingOrder;
+            }
             SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
             _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
             ApplyStatsIfAny(go, index);
@@ -350,14 +355,14 @@ namespace SevenBattles.Battle.Start
             stats.ApplyBase(def.BaseStats);
         }
 
-        private void ApplyMetadataIfAny(GameObject go, int index, Vector2Int tile)
+        private UnitBattleMetadata ApplyMetadataIfAny(GameObject go, int index, Vector2Int tile)
         {
             var squad = GetPlayerSquad();
-            if (squad == null) return;
-            if (index < 0 || index >= squad.Length) return;
+            if (squad == null) return null;
+            if (index < 0 || index >= squad.Length) return null;
             var def = squad[index];
-            if (def == null) return;
-            UnitBattleMetadata.Ensure(go, true, def, tile);
+            if (def == null) return null;
+            return UnitBattleMetadata.Ensure(go, true, def, tile);
         }
 
         private void OnValidate()
