@@ -64,6 +64,7 @@ namespace SevenBattles.Battle.Turn
         private int _activeUnitMaxActionPoints;
         private bool _activeUnitHasMoved;
         private bool _movementAnimating;
+        private bool _attackAnimating;
         private bool _hasSelectedMoveTile;
         private Vector2Int _selectedMoveTile;
         private readonly HashSet<Vector2Int> _legalMoveTiles = new HashSet<Vector2Int>();
@@ -704,11 +705,11 @@ namespace SevenBattles.Battle.Turn
 
             float baseZ = transform.position.z;
 
-            object animationManager = TryGetCharacter4DAnimationManager(meta.gameObject, out var characterStateType);
-            if (animationManager != null && characterStateType != null)
-            {
-                TryInvokeCharacterState(animationManager, characterStateType, "Walk");
-            }
+            object animationManager = null;
+            System.Type characterStateType = null;
+            // We can just use the util directly now, no need to cache these locally unless we want to avoid repeated lookups.
+            // For now, let's just call the util helper for simplicity.
+            UnitVisualUtil.TrySetState(meta.gameObject, "Walk");
 
             var currentTile = meta.Tile;
 
@@ -771,10 +772,7 @@ namespace SevenBattles.Battle.Turn
                 }
             }
 
-            if (animationManager != null && characterStateType != null)
-            {
-                TryInvokeCharacterState(animationManager, characterStateType, "Idle");
-            }
+            UnitVisualUtil.TrySetState(meta.gameObject, "Idle");
 
             FaceActiveUnitTowardsNearestEnemy(meta);
 
@@ -925,53 +923,7 @@ namespace SevenBattles.Battle.Turn
             SevenBattles.Battle.Units.UnitVisualUtil.SetDirectionIfCharacter4D(meta.gameObject, direction);
         }
 
-        private static object TryGetCharacter4DAnimationManager(GameObject instance, out System.Type characterStateType)
-        {
-            characterStateType = null;
-            if (instance == null) return null;
 
-            try
-            {
-                var components = instance.GetComponentsInChildren<MonoBehaviour>(true);
-                for (int i = 0; i < components.Length; i++)
-                {
-                    var comp = components[i];
-                    if (comp == null) continue;
-                    var type = comp.GetType();
-
-                    if (type.Name == "AnimationManager" || type.FullName == "Assets.HeroEditor4D.Common.Scripts.CharacterScripts.AnimationManager")
-                    {
-                        var asm = type.Assembly;
-                        characterStateType = asm.GetType("Assets.HeroEditor4D.Common.Scripts.Enums.CharacterState");
-                        if (characterStateType == null) return null;
-                        return comp;
-                    }
-                }
-            }
-            catch
-            {
-                // Ignore and fall through.
-            }
-
-            return null;
-        }
-
-        private static void TryInvokeCharacterState(object animationManager, System.Type characterStateType, string stateName)
-        {
-            if (animationManager == null || characterStateType == null || string.IsNullOrEmpty(stateName)) return;
-
-            try
-            {
-                var method = animationManager.GetType().GetMethod("SetState", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance, null, new System.Type[] { characterStateType }, null);
-                if (method == null) return;
-                var state = System.Enum.Parse(characterStateType, stateName);
-                method.Invoke(animationManager, new object[] { state });
-            }
-            catch
-            {
-                // Ignore reflection failures to keep battle logic robust even if HeroEditor4D is not present.
-            }
-        }
 
         private void UpdateBoardHighlight()
         {
@@ -992,6 +944,51 @@ namespace SevenBattles.Battle.Turn
             }
 
             var tile = meta.Tile;
+            
+            // Validate BaseSortingOrder - should never be 0 or negative
+            if (meta.BaseSortingOrder <= 0)
+            {
+                Debug.LogWarning($"[SimpleTurnOrderController] Active unit has invalid BaseSortingOrder={meta.BaseSortingOrder}. " +
+                                 $"This will cause rendering issues. Setting to default 100.", this);
+                meta.BaseSortingOrder = 100;
+            }
+            
+            // Get actual sorting order from the unit's renderers
+            // We must use the actual value, not computed, because the unit may have been placed with a different sorting order
+            int unitSortingOrder = -1;
+            var group = meta.gameObject.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
+            if (group != null)
+            {
+                unitSortingOrder = group.sortingOrder;
+            }
+            else
+            {
+                var renderer = meta.gameObject.GetComponentInChildren<SpriteRenderer>(true);
+                if (renderer != null)
+                {
+                    unitSortingOrder = renderer.sortingOrder;
+                }
+            }
+            
+            // Fallback to computed value if we couldn't get actual sorting order
+            if (unitSortingOrder < 0)
+            {
+                unitSortingOrder = _board.ComputeSortingOrder(tile.x, tile.y, meta.BaseSortingOrder, rowStride: 10, intraRowOffset: 0);
+                Debug.LogWarning($"[SimpleTurnOrderController] Could not get actual unit sorting order, using computed value: {unitSortingOrder}", this);
+            }
+            
+            // Set highlight to render behind the unit
+            int highlightSortingOrder = unitSortingOrder - 1;
+            
+            // Safety: ensure highlight never goes below minimum threshold (board background)
+            const int MinHighlightSortingOrder = 1;
+            if (highlightSortingOrder < MinHighlightSortingOrder)
+            {
+                highlightSortingOrder = MinHighlightSortingOrder;
+            }
+            
+            _board.SetHighlightSortingOrder(highlightSortingOrder);
+            
             _board.SetHighlightVisible(true);
             _board.MoveHighlightToTile(tile.x, tile.y);
             _board.SetHighlightColor(meta.IsPlayerControlled ? _playerHighlightColor : _enemyHighlightColor);
@@ -1016,7 +1013,9 @@ namespace SevenBattles.Battle.Turn
             if (!_hasActiveUnit) return false;
             if (!IsActiveUnitPlayerControlledInternal()) return false;
             if (_activeUnitCurrentActionPoints < 1) return false;
+            if (_activeUnitCurrentActionPoints < 1) return false;
             if (_movementAnimating) return false;
+            if (_attackAnimating) return false;
             if (_board == null) return false;
 
             var u = _units[_activeIndex];
@@ -1107,31 +1106,89 @@ namespace SevenBattles.Battle.Turn
             int damage = CalculateDamage(attackerStats.Attack, targetStats.Defense);
 
             // Apply damage
-            targetStats.TakeDamage(damage);
+            // Start the attack sequence coroutine
+            StartCoroutine(ExecuteAttackRoutine(attacker, targetUnit.Value, damage));
+        }
+
+        private System.Collections.IEnumerator ExecuteAttackRoutine(TurnUnit attacker, TurnUnit target, int damage)
+        {
+            _attackAnimating = true;
+            SetAttackCursor(false); // Hide cursor during animation
+            if (_board != null) _board.SetSecondaryHighlightVisible(false);
+
+            var attackerMeta = attacker.Metadata;
+            var targetMeta = target.Metadata;
+            var targetStats = target.Stats;
+
+            // 1. Face target
+            if (attackerMeta != null && targetMeta != null)
+            {
+                var dir = ComputeDirection(attackerMeta.Tile, targetMeta.Tile);
+                if (dir != Vector2.zero)
+                {
+                    UnitVisualUtil.SetDirectionIfCharacter4D(attackerMeta.gameObject, dir);
+                }
+            }
+
+            // 2. Play "Attack" on attacker (invokes Attack() method)
+            if (attackerMeta != null)
+            {
+                UnitVisualUtil.TryPlayAnimation(attackerMeta.gameObject, "Attack");
+            }
+
+            // 3. Wait for impact
+            yield return new WaitForSeconds(0.25f);
+
+            // 4. Play "Hit" on target (invokes Hit() method)
+            if (targetMeta != null)
+            {
+                UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Hit");
+            }
+
+            // 5. Apply damage/sound
+            if (targetStats != null)
+            {
+                targetStats.TakeDamage(damage);
+            }
+
+            if (_attackHitClip != null)
+            {
+                AudioSource.PlayClipAtPoint(_attackHitClip, Vector3.zero, 1f);
+            }
+
+            // Raise events for UI update
+            ActiveUnitStatsChanged?.Invoke();
+
+            // Debug log
+            string attackerName = attackerMeta != null ? (attackerMeta.Definition != null ? attackerMeta.Definition.Id : attackerMeta.gameObject.name) : "Unknown";
+            string targetName = targetMeta != null ? (targetMeta.Definition != null ? targetMeta.Definition.Id : targetMeta.gameObject.name) : "Unknown";
+            Debug.Log($"[Combat] {attackerName} hit {targetName} for {damage} damage.");
+
+            // 6. Wait for completion
+            yield return new WaitForSeconds(0.5f);
+
+            // 7. Reset to "Idle"
+            if (attackerMeta != null)
+            {
+                UnitVisualUtil.TryPlayAnimation(attackerMeta.gameObject, "Idle");
+            }
+            if (targetMeta != null)
+            {
+                UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Idle");
+            }
 
             // Consume AP
             if (_activeUnitCurrentActionPoints > 0)
             {
                 _activeUnitCurrentActionPoints--;
             }
-
-            // Play hit sound
-            if (_attackHitClip != null)
-            {
-                AudioSource.PlayClipAtPoint(_attackHitClip, Vector3.zero, 1f);
-            }
-
-            // Raise events
             ActiveUnitActionPointsChanged?.Invoke();
-            ActiveUnitStatsChanged?.Invoke();
 
-            // Debug log
-            string attackerName = attackerMeta.Definition != null ? attackerMeta.Definition.Id : attackerMeta.gameObject.name;
-            string targetName = target.Metadata.Definition != null ? target.Metadata.Definition.Id : target.Metadata.gameObject.name;
-            Debug.Log($"[Combat] {attackerName} hit {targetName} for {damage} damage.");
-
-            // Rebuild attack tiles (AP changed, may no longer be able to attack)
+            // Rebuild attack tiles
             RebuildAttackableEnemyTiles();
+
+            _attackAnimating = false;
+            UpdateBoardHighlight();
         }
 
         private int CalculateDamage(int attack, int defense)

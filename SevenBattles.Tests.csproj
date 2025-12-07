@@ -73,6 +73,7 @@
     <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\ConfirmationMessageBoxHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\EnemyRandomPlacementTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\StartSquadControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\WorldPerspectiveBoardHighlightTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleGameStateLoadHandlerTests.cs" />

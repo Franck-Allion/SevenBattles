@@ -13,7 +13,7 @@ namespace SevenBattles.Battle.Start
         [Header("Params")]
         [SerializeField] private Vector2Int _spawnTile = new Vector2Int(0, 0);
         [SerializeField] private string _sortingLayer = "Characters";
-        [SerializeField] private int _sortingOrder = 0;
+        [SerializeField] private int _sortingOrder = 100;
         [SerializeField] private bool _autoStartOnPlay = true;
 
         private void Start()

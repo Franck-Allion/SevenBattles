@@ -25,6 +25,7 @@
 [Aa]ssets/RVFX
 [Aa]ssets/TextMesh Pro
 [Aa]ssets/HealthBar
+[Aa]ssets/DamageNumbersPro
 
 # Never ignore Asset meta data
 !/[Aa]ssets/**/*.meta

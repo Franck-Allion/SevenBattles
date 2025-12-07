@@ -21,7 +21,7 @@ namespace SevenBattles.Battle.Board
 
         [Header("Highlight (optional)")]
         [SerializeField] private Material _highlightMaterial;
-        [SerializeField] private string _highlightSortingLayer = "Default";
+        [SerializeField] private string _highlightSortingLayer = "Characters";
         [SerializeField] private int _highlightSortingOrder = 10;
 
         [Header("Behavior")]
@@ -123,10 +123,33 @@ namespace SevenBattles.Battle.Board
             _autoHoverUpdate = enabled;
         }
 
-        public void PlaceHero(Transform hero, int x, int y, string sortingLayer = "Characters", int sortingOrder = 0)
+        // Sets the sorting order for the highlight (and secondary highlight).
+        // Use this to ensure the highlight renders behind units by setting it lower than unit sorting orders.
+        public void SetHighlightSortingOrder(int sortingOrder)
+        {
+            _highlightSortingOrder = sortingOrder;
+            if (_highlightMr != null)
+            {
+                _highlightMr.sortingOrder = sortingOrder;
+            }
+            if (_secondaryHighlightMr != null)
+            {
+                _secondaryHighlightMr.sortingOrder = sortingOrder + 1;
+            }
+        }
+
+        public void PlaceHero(Transform hero, int x, int y, string sortingLayer = "Characters", int sortingOrder = 100)
         {
             if (hero == null) return;
             hero.position = TileCenterWorld(x, y);
+
+            // Validate sorting order - should never be 0 or negative (would render behind board)
+            if (sortingOrder <= 0)
+            {
+                Debug.LogWarning($"[WorldPerspectiveBoard] PlaceHero called with invalid sortingOrder={sortingOrder}. " +
+                                 $"This will cause rendering issues. Setting to default 100.", this);
+                sortingOrder = 100;
+            }
 
             // Prefer SortingGroup if present
             var group = hero.GetComponentInChildren<SortingGroup>(true);
