@@ -1219,11 +1219,7 @@ namespace SevenBattles.Battle.Turn
             }
 
             // Consume AP
-            if (_activeUnitCurrentActionPoints > 0)
-            {
-                _activeUnitCurrentActionPoints--;
-            }
-            ActiveUnitActionPointsChanged?.Invoke();
+            ConsumeActiveUnitActionPoint();
 
             // Rebuild attack tiles
             RebuildAttackableEnemyTiles();
@@ -1232,13 +1228,37 @@ namespace SevenBattles.Battle.Turn
             UpdateBoardHighlight();
         }
 
+        private void ConsumeActiveUnitActionPoint()
+        {
+            if (_activeUnitCurrentActionPoints <= 0)
+            {
+                return;
+            }
+
+            _activeUnitCurrentActionPoints--;
+            ActiveUnitActionPointsChanged?.Invoke();
+        }
+
         private int CalculateDamage(int attack, int defense)
         {
+            // No damage if the attacker has no attack power.
+            if (attack <= 0)
+            {
+                return 0;
+            }
+
             // Apply random variance (0.95 to 1.05)
             float variance = UnityEngine.Random.Range(0.95f, 1.05f);
             float rawDamage = attack * variance;
 
-            // Calculate mitigation
+            // If defense is zero or negative, treat it as "no mitigation" and
+            // guarantee that at least 1 point of damage is dealt.
+            if (defense <= 0)
+            {
+                return Mathf.Max(1, Mathf.FloorToInt(rawDamage));
+            }
+
+            // Calculate mitigation – higher defense reduces effective damage.
             float mitigation = (float)attack / (attack + defense);
 
             // Final damage
