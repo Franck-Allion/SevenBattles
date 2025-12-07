@@ -26,6 +26,14 @@ namespace SevenBattles.Battle.Turn
         private Color _moveInvalidColor = new Color(1f, 0.3f, 0.3f, 0.5f);
         [SerializeField, Tooltip("Duration in seconds for the active unit movement animation between tiles.")]
         private float _moveDurationSeconds = 0.35f;
+        [SerializeField, Tooltip("Cursor texture displayed when hovering over a legal movement tile.")]
+        private Texture2D _moveCursorTexture;
+        [SerializeField, Tooltip("Hotspot offset for the move cursor (typically center of the texture).")]
+        private Vector2 _moveCursorHotspot = new Vector2(16f, 16f);
+        [SerializeField, Tooltip("Cursor texture displayed when a movement tile has been selected (awaiting confirmation).")]
+        private Texture2D _selectionCursorTexture;
+        [SerializeField, Tooltip("Hotspot offset for the selection cursor (typically center of the texture).")]
+        private Vector2 _selectionCursorHotspot = new Vector2(16f, 16f);
 
         [Header("Attack")]
         [SerializeField, Tooltip("Cursor texture displayed when hovering over an attackable enemy.")]
@@ -75,6 +83,8 @@ namespace SevenBattles.Battle.Turn
         private readonly Dictionary<Vector2Int, Vector2Int> _movePrevTile = new Dictionary<Vector2Int, Vector2Int>();
         private readonly HashSet<Vector2Int> _attackableEnemyTiles = new HashSet<Vector2Int>();
         private bool _isAttackCursorActive;
+        private bool _isMoveCursorActive;
+        private bool _isSelectionCursorActive;
 
         public bool HasActiveUnit => _hasActiveUnit;
 
@@ -489,6 +499,11 @@ namespace SevenBattles.Battle.Turn
             _legalMoveTiles.Clear();
             _movePrevTile.Clear();
 
+            // Reset cursors when active unit changes
+            SetAttackCursor(false);
+            SetMoveCursor(false);
+            SetSelectionCursor(false);
+
             if (_activeIndex < 0 || _activeIndex >= _units.Count || !IsUnitValid(_units[_activeIndex]))
             {
                 _activeIndex = -1;
@@ -551,6 +566,8 @@ namespace SevenBattles.Battle.Turn
                 }
                 _hasSelectedMoveTile = false;
                 SetAttackCursor(false);
+                SetMoveCursor(false);
+                SetSelectionCursor(false);
                 UpdateBoardHighlight();
                 return;
             }
@@ -564,6 +581,8 @@ namespace SevenBattles.Battle.Turn
                     UpdateBoardHighlight();
                 }
                 SetAttackCursor(false);
+                SetMoveCursor(false);
+                SetSelectionCursor(false);
                 return;
             }
 
@@ -574,6 +593,8 @@ namespace SevenBattles.Battle.Turn
             {
                 // Show attack cursor and highlight
                 SetAttackCursor(true);
+                SetMoveCursor(false); // Ensure move cursor is off when attack cursor is active
+                SetSelectionCursor(false); // Ensure selection cursor is off when attack cursor is active
                 _board.SetSecondaryHighlightVisible(true);
                 _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
                 _board.SetSecondaryHighlightColor(_attackCursorColor);
@@ -597,6 +618,8 @@ namespace SevenBattles.Battle.Turn
                     _board.SetSecondaryHighlightVisible(false);
                 }
                 _hasSelectedMoveTile = false;
+                SetMoveCursor(false);
+                SetSelectionCursor(false);
                 UpdateBoardHighlight();
                 return;
             }
@@ -607,6 +630,8 @@ namespace SevenBattles.Battle.Turn
                 _board.MoveSecondaryHighlightToTile(_selectedMoveTile.x, _selectedMoveTile.y);
                 bool stillValid = IsTileLegalMoveDestination(_selectedMoveTile);
                 _board.SetSecondaryHighlightColor(stillValid ? _moveValidColor : _moveInvalidColor);
+                SetMoveCursor(false); // Don't show move cursor when a tile is already selected
+                SetSelectionCursor(true); // Show selection cursor to indicate tile is selected
 
                 if (Input.GetMouseButtonDown(0))
                 {
@@ -614,9 +639,11 @@ namespace SevenBattles.Battle.Turn
                     {
                         TryExecuteActiveUnitMove(_selectedMoveTile);
                     }
-                    else if (IsTileLegalMoveDestination(hoveredTile))
+                    else
                     {
-                        _selectedMoveTile = hoveredTile;
+                        // Reset selection when clicking any other tile
+                        _hasSelectedMoveTile = false;
+                        SetSelectionCursor(false);
                     }
                 }
 
@@ -627,6 +654,9 @@ namespace SevenBattles.Battle.Turn
             _board.SetSecondaryHighlightVisible(true);
             _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
             _board.SetSecondaryHighlightColor(legal ? _moveValidColor : _moveInvalidColor);
+
+            // Show move cursor only when hovering a legal movement tile
+            SetMoveCursor(legal);
 
             if (Input.GetMouseButtonDown(0) && legal)
             {
@@ -1227,6 +1257,38 @@ namespace SevenBattles.Battle.Turn
             if (active && _attackCursorTexture != null)
             {
                 Cursor.SetCursor(_attackCursorTexture, _attackCursorHotspot, CursorMode.Auto);
+            }
+            else
+            {
+                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            }
+        }
+
+        private void SetMoveCursor(bool active)
+        {
+            if (_isMoveCursorActive == active) return;
+
+            _isMoveCursorActive = active;
+
+            if (active && _moveCursorTexture != null)
+            {
+                Cursor.SetCursor(_moveCursorTexture, _moveCursorHotspot, CursorMode.Auto);
+            }
+            else
+            {
+                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            }
+        }
+
+        private void SetSelectionCursor(bool active)
+        {
+            if (_isSelectionCursorActive == active) return;
+
+            _isSelectionCursorActive = active;
+
+            if (active && _selectionCursorTexture != null)
+            {
+                Cursor.SetCursor(_selectionCursorTexture, _selectionCursorHotspot, CursorMode.Auto);
             }
             else
             {

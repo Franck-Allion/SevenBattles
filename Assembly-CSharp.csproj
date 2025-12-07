@@ -202,7 +202,6 @@
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Overlay.shader" />
     <None Include="Assets\TextMesh Pro\Examples &amp; Extras\Fonts\Roboto-Bold - License.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile-2-Pass.shader" />
-    <None Include="Assets\AddressableAssetsData\link.xml" />
     <None Include="Assets\Layer Lab\GUI Pro-FantasyRPG\+README+\LayerLab_UserAssetGuide.txt" />
     <None Include="Assets\HeroEditor4D\Common\Shaders\GrayPaint.shader" />
     <None Include="Assets\TextMesh Pro\Examples &amp; Extras\Fonts\Unity - OFL.txt" />
