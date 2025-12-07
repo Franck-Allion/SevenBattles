@@ -21,8 +21,10 @@ namespace SevenBattles.Battle.Board
 
         [Header("Highlight (optional)")]
         [SerializeField] private Material _highlightMaterial;
-        [SerializeField] private string _highlightSortingLayer = "Characters";
-        [SerializeField] private int _highlightSortingOrder = 10;
+        [SerializeField, Tooltip("Sorting layer for tile markers. Should be 'Default' to render behind units but above board.")]
+        private string _highlightSortingLayer = "Default";
+        [SerializeField, Tooltip("Sorting order for tile markers. Negative values ensure markers render behind units (which use 100+).")]
+        private int _highlightSortingOrder = 1;
 
         [Header("Behavior")]
         [SerializeField] private bool _autoHoverUpdate = true;
