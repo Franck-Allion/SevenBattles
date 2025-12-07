@@ -19,6 +19,7 @@
   - `_System`
     - `WorldBattleBootstrap` (`WorldBattleBootstrap`) - Entry point for battle initialization.
     - `BattleSessionService` (`BattleSessionService`) - Holds current battle session configuration (player/enemy squads, difficulty).
+    - `BattleVisualFeedbackService` (`BattleVisualFeedbackService`) - Manages battle visual effects (damage numbers, healing, buffs).
     - `SimpleTurnOrderController` (`SimpleTurnOrderController`) - Manages turn order and unit activation.
     - `WorldSquadPlacementController` (`WorldSquadPlacementController`) - Handles pre-battle squad placement.
     - `WorldEnemySquadStartController` (`WorldEnemySquadStartController`) - Spawns enemy units at start.
@@ -83,6 +84,18 @@
     - When pressing Play directly in BattleScene (no previous scene), `WorldBattleBootstrap` auto-generates a session from inspector-assigned ScriptableObject references.
     - This allows rapid iteration without setting up a full scene flow.
     - Legacy `_playerSquad` / `_enemySquad` fields in controllers serve as "debug parameters" for this workflow.
+
+- `BattleVisualFeedbackService` (`Assets/Scripts/Battle/BattleVisualFeedbackService.cs`)
+  - Responsibilities:
+    - Manage battle visual effects (damage numbers, healing effects, buff indicators).
+    - Spawn DamageNumbersPro prefabs at unit positions during combat events.
+    - Provide extension points for future visual feedback (healing, buffs, status effects).
+  - **Actual location:** child of `_System` root GameObject.
+  - **Inspector configuration**:
+    - `_damageNumberPrefab` → Assign a DamageNumbersPro prefab from `Assets/DamageNumbersPro/Demo/Prefabs/2D/` (e.g., "Red Glow", "Blood Text").
+    - `_damageNumberYOffset` → Vertical offset in world units to display numbers above units (default: 2.0).
+  - Extension point:
+    - Controllers needing visual feedback should reference this service and call `ShowDamageNumber()`, `ShowHealNumber()`, or `ShowBuffText()`.
 
 - Battle HUD controllers (`Assets/Scripts/UI/`)
   - `TurnOrderHUD` (under `BattleHUD` root)

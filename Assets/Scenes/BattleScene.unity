@@ -539,6 +539,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 541858502}
+  - {fileID: 346359281}
   - {fileID: 1825238185}
   - {fileID: 532915270}
   - {fileID: 1760860159}
@@ -1975,6 +1976,53 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!1 &346359279
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 346359281}
+  - component: {fileID: 346359280}
+  m_Layer: 0
+  m_Name: BattleVisualFeedbackService
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &346359280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 346359279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c3d4c48dab794624facb0b5cceb4b027, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _damageNumberPrefab: {fileID: 5898165573350529163, guid: c678b90fa62d0074db15d737a00551b7, type: 3}
+  _damageNumberYOffset: 20
+  _damageNumberScale: 2
+--- !u!4 &346359281
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 346359279}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 83980595}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &366027917
 GameObject:
   m_ObjectHideFlags: 0
@@ -13276,6 +13324,7 @@ MonoBehaviour:
   _attackCursorHotspot: {x: 16, y: 16}
   _attackHitClip: {fileID: 8300000, guid: af877ceadde522e4e92b10ac649af0ba, type: 3}
   _attackCursorColor: {r: 1, g: 0.3, b: 0.3, a: 0.6}
+  _visualFeedback: {fileID: 346359280}
   _autoStartOnPlay: 0
   _aiTurnDelaySeconds: 2
   _logTurns: 0

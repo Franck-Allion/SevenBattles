@@ -37,6 +37,10 @@ namespace SevenBattles.Battle.Turn
         [SerializeField, Tooltip("Color for secondary highlight when hovering an attackable enemy.")]
         private Color _attackCursorColor = new Color(1f, 0.3f, 0.3f, 0.6f);
 
+        [Header("Visual Feedback")]
+        [SerializeField, Tooltip("Service managing battle visual effects like damage numbers. Should reference the BattleVisualFeedbackService on _System GameObject.")]
+        private BattleVisualFeedbackService _visualFeedback;
+
         [Header("Flow")]
         [SerializeField, Tooltip("If true, BeginBattle is called automatically on Start. Typically disabled when using placement flow.")]
         private bool _autoStartOnPlay = false;
@@ -1149,6 +1153,13 @@ namespace SevenBattles.Battle.Turn
             if (targetStats != null)
             {
                 targetStats.TakeDamage(damage);
+            }
+
+            // Show damage number above target
+            if (_visualFeedback != null && targetMeta != null)
+            {
+                Vector3 targetPosition = targetMeta.transform.position;
+                _visualFeedback.ShowDamageNumber(targetPosition, damage);
             }
 
             if (_attackHitClip != null)
