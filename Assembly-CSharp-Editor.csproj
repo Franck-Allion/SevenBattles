@@ -64,7 +64,6 @@
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\SpriteCollectionRefresh.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\FirearmMuzzleResolver.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\PackageFeedback.cs" />
-    <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\PackageUpdater.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\IconCollectionEditor.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\TransformHelper.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\SpriteCollectionEditor.cs" />
@@ -1517,6 +1516,10 @@
     <ProjectReference Include="Unity.VisualScripting.Flow.csproj">
       <Project>{D31AD38E-B0BA-7DAB-C704-BA2DAFD2082C}</Project>
       <Name>Unity.VisualScripting.Flow</Name>
+    </ProjectReference>
+    <ProjectReference Include="DamageNumbersPro.csproj">
+      <Project>{B4F873B3-09E3-9D49-3929-C3AA9A345359}</Project>
+      <Name>DamageNumbersPro</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.Localization.csproj">
       <Project>{D71028B7-CB19-EF3E-3E02-3ACC563BEEBE}</Project>

@@ -419,6 +419,67 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(def);
         }
 
+        [UnityTest]
+        public IEnumerator SuccessfulAttack_BothUnitsFaceEachOther()
+        {
+            // This test verifies that when one unit attacks another, both units
+            // turn to face each other before the attack executes.
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+
+            SetPrivate(board, "_columns", 5);
+            SetPrivate(board, "_rows", 5);
+            SetPrivate(board, "_topLeft", new Vector2(0, 5));
+            SetPrivate(board, "_topRight", new Vector2(5, 5));
+            SetPrivate(board, "_bottomRight", new Vector2(5, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
+            CallPrivate(board, "RebuildGrid");
+
+            // Setup: Attacker at (2,2) initially facing UP, Target at (3,2) initially facing UP
+            var attackerGo = new GameObject("Attacker");
+            var attackerStats = attackerGo.AddComponent<UnitStats>();
+            attackerGo.AddComponent<SpriteRenderer>();
+            attackerStats.ApplyBase(new UnitStatsData { Attack = 10, ActionPoints = 2, Speed = 2, Initiative = 10 });
+
+            var targetGo = new GameObject("Target");
+            var targetStats = targetGo.AddComponent<UnitStats>();
+            targetGo.AddComponent<SpriteRenderer>();
+            targetStats.ApplyBase(new UnitStatsData { Attack = 5, Defense = 5, Life = 50, ActionPoints = 2, Speed = 2, Initiative = 5 });
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            var attackerMeta = UnitBattleMetadata.Ensure(attackerGo, true, def, new Vector2Int(2, 2));
+            var targetMeta = UnitBattleMetadata.Ensure(targetGo, false, def, new Vector2Int(3, 2)); // East of attacker
+
+            // Set initial facing direction (both facing up initially)
+            attackerMeta.Facing = Vector2.up;
+            targetMeta.Facing = Vector2.up;
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            SetPrivate(ctrl, "_board", board);
+            CallPrivate(ctrl, "BeginBattle");
+
+            // Execute: Attack target from the west (attacker is west of target)
+            CallPrivate(ctrl, "TryExecuteAttack", new Vector2Int(3, 2));
+            yield return new WaitForSeconds(0.5f);
+
+            // Assert: Attacker should face RIGHT (east towards target)
+            Assert.AreEqual(Vector2.right, attackerMeta.Facing, "Attacker should face right (towards target to the east)");
+
+            // Assert: Target should face LEFT (west towards attacker)
+            Assert.AreEqual(Vector2.left, targetMeta.Facing, "Target should face left (towards attacker to the west)");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(attackerGo);
+            Object.DestroyImmediate(targetGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(def);
+        }
+
+
         // Test helper methods (reused from UnitMovementTests pattern)
         private static void SetPrivate(object obj, string field, object value)
         {

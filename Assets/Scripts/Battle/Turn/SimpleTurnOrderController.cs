@@ -1154,13 +1154,21 @@ namespace SevenBattles.Battle.Turn
             var targetMeta = target.Metadata;
             var targetStats = target.Stats;
 
-            // 1. Face target
+            // 1. Face both combatants towards each other
             if (attackerMeta != null && targetMeta != null)
             {
+                // Face attacker towards target
                 var dir = ComputeDirection(attackerMeta.Tile, targetMeta.Tile);
                 if (dir != Vector2.zero)
                 {
                     UnitVisualUtil.SetDirectionIfCharacter4D(attackerMeta.gameObject, dir);
+                }
+
+                // Face target towards attacker
+                var reverseDir = ComputeDirection(targetMeta.Tile, attackerMeta.Tile);
+                if (reverseDir != Vector2.zero)
+                {
+                    UnitVisualUtil.SetDirectionIfCharacter4D(targetMeta.gameObject, reverseDir);
                 }
             }
 
