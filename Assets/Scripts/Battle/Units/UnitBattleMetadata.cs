@@ -79,6 +79,15 @@ namespace SevenBattles.Battle.Units
             set => _baseSortingOrder = value;
         }
 
+        /// <summary>
+        /// Removes this unit from the logical board by clearing its tile flag.
+        /// The unit remains in the scene for save/load and visual purposes.
+        /// </summary>
+        public void ClearTile()
+        {
+            _hasTile = false;
+        }
+
         public static UnitBattleMetadata Ensure(GameObject instance, bool isPlayerControlled, UnitDefinition definition, Vector2Int tile, string sortingLayer = null, int? baseSortingOrder = null)
         {
             if (instance == null) return null;
@@ -111,4 +120,3 @@ namespace SevenBattles.Battle.Units
         }
     }
 }
-

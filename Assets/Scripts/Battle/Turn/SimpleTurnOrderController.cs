@@ -48,6 +48,12 @@ namespace SevenBattles.Battle.Turn
         [Header("Visual Feedback")]
         [SerializeField, Tooltip("Service managing battle visual effects like damage numbers. Should reference the BattleVisualFeedbackService on _System GameObject.")]
         private BattleVisualFeedbackService _visualFeedback;
+        [SerializeField, Tooltip("Optional VFX prefab instantiated when a unit dies (e.g., puff of smoke or soul effect).")]
+        private GameObject _deathVfxPrefab;
+        [SerializeField, Tooltip("Lifetime in seconds before the death VFX instance is destroyed.")]
+        private float _deathVfxLifetimeSeconds = 2f;
+        [SerializeField, Tooltip("Duration in seconds to wait after playing a death animation before removing the unit GameObject from the board.")]
+        private float _deathAnimationDurationSeconds = 1f;
 
         [Header("Flow")]
         [SerializeField, Tooltip("If true, BeginBattle is called automatically on Start. Typically disabled when using placement flow.")]
@@ -1030,7 +1036,11 @@ namespace SevenBattles.Battle.Turn
 
         private static bool IsUnitValid(TurnUnit unit)
         {
-            return unit.Metadata != null && unit.Metadata.isActiveAndEnabled && unit.Stats != null;
+            if (unit.Metadata == null || !unit.Metadata.isActiveAndEnabled) return false;
+            if (unit.Stats == null) return false;
+            if (unit.Stats.Life <= 0) return false;
+            if (!unit.Metadata.HasTile) return false;
+            return true;
         }
 
         private bool IsActiveUnitPlayerControlledInternal()
@@ -1188,9 +1198,11 @@ namespace SevenBattles.Battle.Turn
             }
 
             // 5. Apply damage/sound
+            bool targetDied = false;
             if (targetStats != null)
             {
                 targetStats.TakeDamage(damage);
+                targetDied = targetStats.Life <= 0;
             }
 
             // Show damage number above target
@@ -1216,18 +1228,45 @@ namespace SevenBattles.Battle.Turn
             // 6. Wait for completion
             yield return new WaitForSeconds(0.5f);
 
-            // 7. Reset to "Idle"
+            // 7. Reset to "Idle" or play death, spawn VFX, and schedule removal from board
             if (attackerMeta != null)
             {
                 UnitVisualUtil.TryPlayAnimation(attackerMeta.gameObject, "Idle");
             }
             if (targetMeta != null)
             {
-                UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Idle");
+                if (targetDied)
+                {
+                    // Play Character4D death animation if available.
+                    UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Death");
+
+                    // Spawn optional death VFX at the unit's position.
+                    if (_deathVfxPrefab != null)
+                    {
+                        var vfxInstance = Instantiate(_deathVfxPrefab, targetMeta.transform.position, Quaternion.identity);
+                        if (_deathVfxLifetimeSeconds > 0f)
+                        {
+                            Destroy(vfxInstance, _deathVfxLifetimeSeconds);
+                        }
+                    }
+
+                    // Defer logical removal and GameObject destruction until after the death animation has finished.
+                    StartCoroutine(HandleUnitDeathCleanup(targetMeta));
+                }
+                else
+                {
+                    UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Idle");
+                }
             }
 
             // Consume AP
             ConsumeActiveUnitActionPoint();
+
+            // Remove dead units from the turn order before rebuilding attack tiles.
+            if (targetDied)
+            {
+                CompactUnits();
+            }
 
             // Rebuild attack tiles
             RebuildAttackableEnemyTiles();
@@ -1245,6 +1284,31 @@ namespace SevenBattles.Battle.Turn
 
             _activeUnitCurrentActionPoints--;
             ActiveUnitActionPointsChanged?.Invoke();
+        }
+
+        private System.Collections.IEnumerator HandleUnitDeathCleanup(UnitBattleMetadata targetMeta)
+        {
+            if (targetMeta == null)
+            {
+                yield break;
+            }
+
+            var targetGo = targetMeta.gameObject;
+            float waitSeconds = Mathf.Max(0f, _deathAnimationDurationSeconds);
+            if (waitSeconds > 0f)
+            {
+                yield return new WaitForSeconds(waitSeconds);
+            }
+
+            if (targetMeta != null)
+            {
+                targetMeta.ClearTile();
+            }
+
+            if (targetGo != null)
+            {
+                Destroy(targetGo);
+            }
         }
 
         private int CalculateDamage(int attack, int defense)
