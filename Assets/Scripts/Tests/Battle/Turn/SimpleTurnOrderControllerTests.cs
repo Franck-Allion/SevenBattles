@@ -153,6 +153,66 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(enemyDef);
         }
 
+        [Test]
+        public void HighlightIsHiddenWhileUnitMoves()
+        {
+            // Setup board with a basic grid and highlight material
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 5);
+            SetPrivate(board, "_rows", 5);
+
+            var shader = Shader.Find("Sprites/Default");
+            Assert.NotNull(shader, "Sprites/Default shader should be available in tests.");
+            var highlightMat = new Material(shader);
+            SetPrivate(board, "_highlightMaterial", highlightMat);
+
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            // Active player unit
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData
+            {
+                Attack = 5,
+                ActionPoints = 2,
+                Speed = 3,
+                Initiative = 10
+            });
+            var playerDef = ScriptableObject.CreateInstance<UnitDefinition>();
+            playerDef.Portrait = null;
+            UnitBattleMetadata.Ensure(playerGo, true, playerDef, new Vector2Int(2, 2));
+
+            // Initialize battle and build movement grid
+            CallPrivate(ctrl, "BeginBattle");
+            CallPrivate(ctrl, "RebuildLegalMoveTilesForActiveUnit");
+
+            // Force the board highlight to be visible before starting movement
+            board.SetHighlightVisible(true);
+            var highlightRendererBefore = GetPrivate<MeshRenderer>(board, "_highlightMr");
+            Assert.NotNull(highlightRendererBefore, "Highlight renderer should exist after SetHighlightVisible(true).");
+            Assert.IsTrue(highlightRendererBefore.gameObject.activeSelf, "Highlight should be active before movement starts.");
+
+            // Execute a legal move to the right
+            var destination = new Vector2Int(3, 2);
+            CallPrivate(ctrl, "TryExecuteActiveUnitMove", destination);
+
+            // After starting movement, the selection highlight (active tile marker) should be hidden
+            var highlightRendererAfter = GetPrivate<MeshRenderer>(board, "_highlightMr");
+            Assert.NotNull(highlightRendererAfter, "Highlight renderer should still exist after starting movement.");
+            Assert.IsFalse(highlightRendererAfter.gameObject.activeSelf, "Highlight should be hidden while the unit is moving.");
+
+            // Cleanup
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerDef);
+        }
+
         private static void SetPrivate(object obj, string field, object value)
         {
             var fi = obj.GetType().GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -164,6 +224,18 @@ namespace SevenBattles.Tests.Battle
             {
                 Debug.LogError($"Field '{field}' not found on {obj.GetType().Name}");
             }
+        }
+
+        private static T GetPrivate<T>(object obj, string field) where T : class
+        {
+            var fi = obj.GetType().GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            if (fi != null)
+            {
+                return fi.GetValue(obj) as T;
+            }
+
+            Debug.LogError($"Field '{field}' not found on {obj.GetType().Name}");
+            return null;
         }
 
         private static object CallPrivate(object obj, string method, params object[] args)

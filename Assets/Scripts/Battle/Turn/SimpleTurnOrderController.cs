@@ -725,6 +725,7 @@ namespace SevenBattles.Battle.Turn
             _hasSelectedMoveTile = false;
             if (_board != null)
             {
+                _board.SetHighlightVisible(false);
                 _board.SetSecondaryHighlightVisible(false);
             }
             StartCoroutine(MoveActiveUnitRoutine(meta, path));
