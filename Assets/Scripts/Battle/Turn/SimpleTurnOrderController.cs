@@ -1250,6 +1250,24 @@ namespace SevenBattles.Battle.Turn
                         }
                     }
 
+                    // Play optional per-unit death SFX defined on the unit type.
+                    var def = targetMeta.Definition;
+                    if (def != null && def.DeathSfx != null)
+                    {
+                        float volume = 1f;
+                        try
+                        {
+                            volume = Mathf.Clamp(def.DeathSfxVolume, 0f, 1.5f);
+                        }
+                        catch
+                        {
+                            // If older assets do not have the field yet, fall back to default volume.
+                            volume = 1f;
+                        }
+
+                        AudioSource.PlayClipAtPoint(def.DeathSfx, targetMeta.transform.position, volume);
+                    }
+
                     // Defer logical removal and GameObject destruction until after the death animation has finished.
                     StartCoroutine(HandleUnitDeathCleanup(targetMeta));
                 }

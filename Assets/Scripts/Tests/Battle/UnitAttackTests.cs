@@ -496,7 +496,14 @@ namespace SevenBattles.Tests.Battle
             var attackerGo = new GameObject("Attacker");
             var attackerStats = attackerGo.AddComponent<UnitStats>();
             attackerGo.AddComponent<SpriteRenderer>();
-            attackerStats.ApplyBase(new UnitStatsData { Attack = 20, ActionPoints = 2, Speed = 2, Initiative = 10 });
+            attackerStats.ApplyBase(new UnitStatsData
+            {
+                Life = 30,
+                Attack = 20,
+                ActionPoints = 2,
+                Speed = 2,
+                Initiative = 10
+            });
 
             var targetGo = new GameObject("Target");
             var targetStats = targetGo.AddComponent<UnitStats>();
@@ -531,6 +538,62 @@ namespace SevenBattles.Tests.Battle
 
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(attackerGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [UnityTest]
+        public IEnumerator LethalAttack_WithDeathSfx_DoesNotThrowAndStillKillsTarget()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+
+            SetPrivate(board, "_columns", 5);
+            SetPrivate(board, "_rows", 5);
+            SetPrivate(board, "_topLeft", new Vector2(0, 5));
+            SetPrivate(board, "_topRight", new Vector2(5, 5));
+            SetPrivate(board, "_bottomRight", new Vector2(5, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
+            CallPrivate(board, "RebuildGrid");
+
+            var attackerGo = new GameObject("Attacker");
+            var attackerStats = attackerGo.AddComponent<UnitStats>();
+            attackerGo.AddComponent<SpriteRenderer>();
+            attackerStats.ApplyBase(new UnitStatsData
+            {
+                Life = 30,
+                Attack = 20,
+                ActionPoints = 2,
+                Speed = 2,
+                Initiative = 10
+            });
+
+            var targetGo = new GameObject("Target");
+            var targetStats = targetGo.AddComponent<UnitStats>();
+            targetGo.AddComponent<SpriteRenderer>();
+            targetStats.ApplyBase(new UnitStatsData { Life = 10, Defense = 0, ActionPoints = 2, Speed = 2, Initiative = 5 });
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+            def.DeathSfx = AudioClip.Create("TestDeathSfx", 44100, 1, 44100, false);
+
+            UnitBattleMetadata.Ensure(attackerGo, true, def, new Vector2Int(2, 2));
+            UnitBattleMetadata.Ensure(targetGo, false, def, new Vector2Int(2, 3)); // Adjacent north
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            SetPrivate(ctrl, "_board", board);
+            CallPrivate(ctrl, "BeginBattle");
+
+            CallPrivate(ctrl, "TryExecuteAttack", new Vector2Int(2, 3));
+            yield return new WaitForSeconds(1.0f);
+
+            Assert.AreEqual(0, targetStats.Life, "Lethal attack with death SFX should still clamp target life to 0");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(attackerGo);
+            Object.DestroyImmediate(targetGo);
             Object.DestroyImmediate(boardGo);
             Object.DestroyImmediate(def);
         }

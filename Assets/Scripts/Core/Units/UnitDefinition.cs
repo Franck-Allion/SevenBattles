@@ -11,6 +11,13 @@ namespace SevenBattles.Core.Units
         [Header("Presentation")]
         public Sprite Portrait;
 
+        [Header("Audio")]
+        [Tooltip("Optional SFX played when a unit of this type dies (e.g., Assets/Art/SFX/Wizard_Death.wav).")]
+        public AudioClip DeathSfx;
+        [Range(0f, 1.5f)]
+        [Tooltip("Volume multiplier for the death SFX (0 = silent, 1 = default, >1 = boosted).")]
+        public float DeathSfxVolume = 1f;
+
         [Header("Prefab")]
         public GameObject Prefab;
 
@@ -18,4 +25,3 @@ namespace SevenBattles.Core.Units
         public UnitStatsData BaseStats;
     }
 }
-

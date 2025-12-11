@@ -17,8 +17,18 @@ namespace SevenBattles.Tests.Battle
             var aStats = aGo.AddComponent<UnitStats>();
             var bStats = bGo.AddComponent<UnitStats>();
 
-            aStats.ApplyBase(new UnitStatsData { Initiative = 5 });
-            bStats.ApplyBase(new UnitStatsData { Initiative = 10 });
+            aStats.ApplyBase(new UnitStatsData
+            {
+                Life = 30,
+                ActionPoints = 4,
+                Initiative = 5
+            });
+            bStats.ApplyBase(new UnitStatsData
+            {
+                Life = 30,
+                ActionPoints = 4,
+                Initiative = 10
+            });
 
             var def = ScriptableObject.CreateInstance<UnitDefinition>();
 
