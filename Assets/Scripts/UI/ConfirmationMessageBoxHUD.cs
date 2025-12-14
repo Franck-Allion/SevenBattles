@@ -357,6 +357,14 @@ namespace SevenBattles.UI
                 return;
             }
 
+            // Ensure the GameObject is active before starting a coroutine-driven
+            // transition. This makes the dialog more robust when authors keep the
+            // root object disabled in the scene and rely on code to show it.
+            if (visible && !gameObject.activeSelf)
+            {
+                gameObject.SetActive(true);
+            }
+
             if (_fadeDuration <= 0f)
             {
                 ApplyInstantState(visible);
@@ -552,4 +560,3 @@ namespace SevenBattles.UI
         }
     }
 }
-

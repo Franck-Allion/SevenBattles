@@ -207,9 +207,9 @@
     <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\treeview\Snapping\ISnappable.cs" />
     <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\Window\TimelineNavigator.cs" />
     <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\Actions\TrackActions.cs" />
-    <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\Window\TimelineWindow_TrackGui.cs" />
     <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\Tooltip.cs" />
     <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\Manipulators\Sequence\TrimClip.cs" />
+    <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\Window\TimelineWindow_TrackGui.cs" />
     <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\Actions\Menus\TimelineContextMenu.cs" />
     <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\DirectorNamedColor.cs" />
     <Compile Include="Library\PackageCache\com.unity.timeline@c58b4ee65782\Editor\treeview\ManipulationsTracks.cs" />

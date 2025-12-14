@@ -32,6 +32,10 @@ namespace SevenBattles.Tests.UI
             public int ActiveUnitMaxActionPoints { get; set; }
             public bool IsInteractionLocked { get; private set; }
             public int TurnIndex { get; set; }
+            public bool HasBattleEnded { get; set; }
+            public BattleOutcome Outcome { get; set; }
+
+            public event System.Action<BattleOutcome> BattleEnded;
 
             public void RequestEndTurn()
             {

@@ -49,6 +49,9 @@ namespace SevenBattles.Tests.Battle
             public int ActiveUnitCurrentActionPoints => 0;
             public int ActiveUnitMaxActionPoints => 0;
             public int TurnIndex => 0;
+            public bool HasBattleEnded => false;
+            public BattleOutcome Outcome => BattleOutcome.None;
+            public event System.Action<BattleOutcome> BattleEnded;
 
             public bool TryGetActiveUnitStats(out UnitStatsViewData stats)
             {

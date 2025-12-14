@@ -25,8 +25,12 @@ namespace SevenBattles.Tests.UI
 
             public bool IsInteractionLocked { get; private set; }
             public int TurnIndex { get; set; }
+            public bool HasBattleEnded { get; set; }
+            public BattleOutcome Outcome { get; set; }
 
             public UnitStatsViewData ActiveStats;
+
+            public event Action<BattleOutcome> BattleEnded;
 
             public void RequestEndTurn()
             {

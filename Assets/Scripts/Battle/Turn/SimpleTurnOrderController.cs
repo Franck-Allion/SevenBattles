@@ -91,6 +91,8 @@ namespace SevenBattles.Battle.Turn
         private bool _isAttackCursorActive;
         private bool _isMoveCursorActive;
         private bool _isSelectionCursorActive;
+        private bool _battleEnded;
+        private BattleOutcome _battleOutcome = BattleOutcome.None;
 
         public bool HasActiveUnit => _hasActiveUnit;
 
@@ -99,6 +101,10 @@ namespace SevenBattles.Battle.Turn
         public bool IsInteractionLocked => _interactionLocked;
 
         public int TurnIndex => _turnIndex;
+
+        public bool HasBattleEnded => _battleEnded;
+
+        public BattleOutcome Outcome => _battleOutcome;
 
         public Sprite ActiveUnitPortrait
         {
@@ -147,6 +153,7 @@ namespace SevenBattles.Battle.Turn
         public event Action ActiveUnitChanged;
         public event Action ActiveUnitActionPointsChanged;
         public event Action ActiveUnitStatsChanged;
+        public event Action<BattleOutcome> BattleEnded;
 
         public int ActiveUnitCurrentActionPoints => _hasActiveUnit ? _activeUnitCurrentActionPoints : 0;
         public int ActiveUnitMaxActionPoints => _hasActiveUnit ? _activeUnitMaxActionPoints : 0;
@@ -175,6 +182,7 @@ namespace SevenBattles.Battle.Turn
 
         private void Update()
         {
+            if (_battleEnded) return;
             if (_interactionLocked) return;
             if (!HasActiveUnit) return;
             if (_movementAnimating) return;
@@ -221,6 +229,8 @@ namespace SevenBattles.Battle.Turn
         // Internal rebuild used by StartBattle and tests.
         private void BeginBattle()
         {
+            _battleEnded = false;
+            _battleOutcome = BattleOutcome.None;
             RebuildUnits();
             _turnIndex = 0;
             ConfigureBoardForBattle();
@@ -229,6 +239,7 @@ namespace SevenBattles.Battle.Turn
 
         public void RequestEndTurn()
         {
+            if (_battleEnded) return;
             // Treat any positive lock count as authoritative for blocking interaction,
             // even if the cached bool is temporarily out of sync.
             if (_interactionLockCount > 0 || _interactionLocked) return;
@@ -337,10 +348,16 @@ namespace SevenBattles.Battle.Turn
                 }
             }
 
+            // After compaction, always evaluate battle outcome in case an entire squad
+            // has been wiped out even if some units remain (e.g., enemy-only or player-only).
+            EvaluateBattleOutcomeAndStop();
+            if (_battleEnded)
+            {
+                return;
+            }
+
             if (_units.Count == 0)
             {
-                _activeIndex = -1;
-                _hasActiveUnit = false;
                 return;
             }
 
@@ -362,11 +379,75 @@ namespace SevenBattles.Battle.Turn
                     _activeIndex = firstValid;
                     _hasActiveUnit = true;
                 }
+                // If firstValid < 0 here, _units would be empty and handled above.
+            }
+        }
+
+        private void EvaluateBattleOutcomeAndStop()
+        {
+            if (_battleEnded)
+            {
+                return;
+            }
+
+            int playerAlive = 0;
+            int enemyAlive = 0;
+
+            for (int i = 0; i < _units.Count; i++)
+            {
+                var unit = _units[i];
+                if (!IsUnitValid(unit))
+                {
+                    continue;
+                }
+
+                if (unit.Metadata != null && unit.Metadata.IsPlayerControlled)
+                {
+                    playerAlive++;
+                }
                 else
                 {
-                    _activeIndex = -1;
-                    _hasActiveUnit = false;
+                    enemyAlive++;
                 }
+            }
+
+            // Determine outcome. If both sides reach zero simultaneously, treat as defeat.
+            BattleOutcome outcome;
+            if (playerAlive <= 0 && enemyAlive > 0)
+            {
+                outcome = BattleOutcome.PlayerDefeat;
+                Debug.Log("[Battle] Player defeated. All player units are dead.", this);
+            }
+            else if (enemyAlive <= 0 && playerAlive > 0)
+            {
+                outcome = BattleOutcome.PlayerVictory;
+                Debug.Log("[Battle] Player victory. All enemy units are dead.", this);
+            }
+            else
+            {
+                // Both zero or still mixed; for MVP treat simultaneous zero as defeat for consistency.
+                if (playerAlive <= 0 && enemyAlive <= 0)
+                {
+                    outcome = BattleOutcome.PlayerDefeat;
+                    Debug.Log("[Battle] Player defeated (simultaneous wipe). Both squads have no units remaining.", this);
+                }
+                else
+                {
+                    // No terminal condition reached; keep battle running.
+                    return;
+                }
+            }
+
+            _battleEnded = true;
+            _battleOutcome = outcome;
+
+            _turnIndex = 0;
+            SetActiveIndex(-1);
+
+            var handler = BattleEnded;
+            if (handler != null)
+            {
+                handler(outcome);
             }
         }
 
@@ -376,8 +457,7 @@ namespace SevenBattles.Battle.Turn
 
             if (_units.Count == 0)
             {
-                _turnIndex = 0;
-                SetActiveIndex(-1);
+                // Battle outcome has already been evaluated in CompactUnits.
                 return;
             }
 

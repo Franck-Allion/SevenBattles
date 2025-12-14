@@ -1385,13 +1385,13 @@
       <Project>{29D3F6BB-E008-9785-D240-FCFF20A17CD9}</Project>
       <Name>Unity.2D.IK.Runtime</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.2D.SpriteShape.Runtime.csproj">
-      <Project>{E2A69154-FD26-E319-2C9E-C1DB7247AD8D}</Project>
-      <Name>Unity.2D.SpriteShape.Runtime</Name>
-    </ProjectReference>
     <ProjectReference Include="CFXRDemo.csproj">
       <Project>{C904A665-3349-DF97-41C4-B4878DA904E7}</Project>
       <Name>CFXRDemo</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.2D.SpriteShape.Runtime.csproj">
+      <Project>{E2A69154-FD26-E319-2C9E-C1DB7247AD8D}</Project>
+      <Name>Unity.2D.SpriteShape.Runtime</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.Timeline.Editor.csproj">
       <Project>{2B0A6D0B-CC6B-F241-52FD-2D4AB2DD2DF0}</Project>
@@ -1473,25 +1473,25 @@
       <Project>{FD0C2C77-B2BB-BAC2-0015-48E84802677A}</Project>
       <Name>Unity.VisualScripting.Shared.Editor</Name>
     </ProjectReference>
-    <ProjectReference Include="Unity.VisualScripting.Core.Editor.csproj">
-      <Project>{22CB855D-374D-A11C-634E-8903565AC2EC}</Project>
-      <Name>Unity.VisualScripting.Core.Editor</Name>
+    <ProjectReference Include="CFXRRuntime.csproj">
+      <Project>{462A769A-83A7-BC10-000F-990D1F9417DF}</Project>
+      <Name>CFXRRuntime</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.2D.Tilemap.Extras.Editor.csproj">
       <Project>{64919DAC-9F06-53C1-61B0-955E8447BC07}</Project>
       <Name>Unity.2D.Tilemap.Extras.Editor</Name>
     </ProjectReference>
-    <ProjectReference Include="CFXRRuntime.csproj">
-      <Project>{462A769A-83A7-BC10-000F-990D1F9417DF}</Project>
-      <Name>CFXRRuntime</Name>
-    </ProjectReference>
-    <ProjectReference Include="KinoBloom.Runtime.csproj">
-      <Project>{718A4BB2-CF88-CC85-FBC9-28557FD23708}</Project>
-      <Name>KinoBloom.Runtime</Name>
+    <ProjectReference Include="Unity.VisualScripting.Core.Editor.csproj">
+      <Project>{22CB855D-374D-A11C-634E-8903565AC2EC}</Project>
+      <Name>Unity.VisualScripting.Core.Editor</Name>
     </ProjectReference>
     <ProjectReference Include="Unity.VisualScripting.Flow.Editor.csproj">
       <Project>{07CDD740-9201-192B-B099-68021FFD776A}</Project>
       <Name>Unity.VisualScripting.Flow.Editor</Name>
+    </ProjectReference>
+    <ProjectReference Include="KinoBloom.Runtime.csproj">
+      <Project>{718A4BB2-CF88-CC85-FBC9-28557FD23708}</Project>
+      <Name>KinoBloom.Runtime</Name>
     </ProjectReference>
     <ProjectReference Include="ToonyColorsPro.Demo.Editor.csproj">
       <Project>{7B62943D-02CC-43BE-CC4D-D9260AE14EF1}</Project>

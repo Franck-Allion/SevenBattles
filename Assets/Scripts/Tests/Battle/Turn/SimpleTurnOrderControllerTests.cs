@@ -4,6 +4,7 @@ using SevenBattles.Battle.Turn;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Board;
 using SevenBattles.Core.Units;
+using SevenBattles.Core;
 using System.Collections;
 using UnityEngine.TestTools;
 
@@ -11,6 +12,125 @@ namespace SevenBattles.Tests.Battle
 {
     public class SimpleTurnOrderControllerTests
     {
+        [Test]
+        public void BattleEndsWithPlayerDefeat_WhenAllPlayerUnitsAreDead_AndEnemyRemains()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 3);
+            SetPrivate(board, "_rows", 3);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            // Dead player unit
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 0, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+
+            // Alive enemy unit
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(1, 0));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            Assert.IsTrue(ctrl.HasBattleEnded, "Battle should have ended when all player units are dead.");
+            Assert.AreEqual(BattleOutcome.PlayerDefeat, ctrl.Outcome);
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [Test]
+        public void BattleEndsWithPlayerVictory_WhenAllEnemyUnitsAreDead_AndPlayerRemains()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 3);
+            SetPrivate(board, "_rows", 3);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            // Alive player unit
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+
+            // Dead enemy unit
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 0, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(1, 0));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            Assert.IsTrue(ctrl.HasBattleEnded, "Battle should have ended when all enemy units are dead.");
+            Assert.AreEqual(BattleOutcome.PlayerVictory, ctrl.Outcome);
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [Test]
+        public void BattleTreatsSimultaneousZeroAsDefeat()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 3);
+            SetPrivate(board, "_rows", 3);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            // Dead player unit
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 0, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+
+            // Dead enemy unit
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 0, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(1, 0));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            Assert.IsTrue(ctrl.HasBattleEnded, "Battle should have ended when both squads are dead.");
+            Assert.AreEqual(BattleOutcome.PlayerDefeat, ctrl.Outcome);
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(def);
+        }
         [Test]
         public void CanActiveUnitAttack_ReturnsTrue_WhenEnemyAdjacentAndApAvailable()
         {

@@ -76,8 +76,8 @@
     <Compile Include="Assets\DamageNumbersPro\Scripts\Settings\TextSettings.cs" />
     <Compile Include="Assets\DamageNumbersPro\Demo\Scripts\DNP_2DDemo.cs" />
     <Compile Include="Assets\DamageNumbersPro\Scripts\Settings\CombinationSettings.cs" />
-    <Compile Include="Assets\DamageNumbersPro\Scripts\Settings\DigitSettings.cs" />
     <Compile Include="Assets\DamageNumbersPro\Scripts\Internal\DNPUpdater.cs" />
+    <Compile Include="Assets\DamageNumbersPro\Scripts\Settings\DigitSettings.cs" />
     <Compile Include="Assets\DamageNumbersPro\Scripts\Settings\FollowSettings.cs" />
     <Compile Include="Assets\DamageNumbersPro\Demo\Scripts\DNP_FallingCube.cs" />
     <Compile Include="Assets\DamageNumbersPro\Scripts\Internal\DNPPreset.cs" />
