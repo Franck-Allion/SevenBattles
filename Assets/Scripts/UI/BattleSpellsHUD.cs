@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -126,6 +127,7 @@ namespace SevenBattles.UI
             if (_controller != null)
             {
                 _controller.ActiveUnitChanged += HandleActiveUnitChanged;
+                _controller.ActiveUnitStatsChanged += HandleActiveUnitStatsChanged;
             }
 
             if (_useFixedSlots)
@@ -141,6 +143,7 @@ namespace SevenBattles.UI
             if (_controller != null)
             {
                 _controller.ActiveUnitChanged -= HandleActiveUnitChanged;
+                _controller.ActiveUnitStatsChanged -= HandleActiveUnitStatsChanged;
             }
 
             UnwireSlotClicks();
@@ -155,6 +158,11 @@ namespace SevenBattles.UI
         private void HandleActiveUnitChanged()
         {
             SetSelectedIndex(-1);
+        }
+
+        private void HandleActiveUnitStatsChanged()
+        {
+            RefreshSelectedSpellDescriptionValue();
         }
 
         private void Refresh()
@@ -428,6 +436,28 @@ namespace SevenBattles.UI
             BindSelectedSpellDescription(spell);
         }
 
+        private void RefreshSelectedSpellDescriptionValue()
+        {
+            if (_selectedSpellDescriptionText == null)
+            {
+                return;
+            }
+
+            if (_selectedSpell == null)
+            {
+                return;
+            }
+
+            if (_selectedSpellDescriptionString != null)
+            {
+                UpdateSelectedSpellDescriptionArgs(_selectedSpell);
+                _selectedSpellDescriptionString.RefreshString();
+                return;
+            }
+
+            _selectedSpellDescriptionText.text = BuildFallbackSpellDescription(_selectedSpell);
+        }
+
         private void BindSelectedSpellDescription(SpellDefinition spell)
         {
             UnbindSelectedSpellDescription();
@@ -447,13 +477,74 @@ namespace SevenBattles.UI
             if (!string.IsNullOrWhiteSpace(_spellDescriptionTable) && !string.IsNullOrWhiteSpace(key))
             {
                 _selectedSpellDescriptionString = new LocalizedString(_spellDescriptionTable, key);
+                UpdateSelectedSpellDescriptionArgs(spell);
                 _selectedSpellDescriptionString.StringChanged += HandleSelectedSpellDescriptionChanged;
                 _selectedSpellDescriptionString.RefreshString();
                 return;
             }
 
             // Fallback for dev/debug when a spell asset is missing a localization key.
-            _selectedSpellDescriptionText.text = spell.Description ?? string.Empty;
+            _selectedSpellDescriptionText.text = BuildFallbackSpellDescription(spell);
+        }
+
+        private void UpdateSelectedSpellDescriptionArgs(SpellDefinition spell)
+        {
+            if (_selectedSpellDescriptionString == null)
+            {
+                return;
+            }
+
+            _selectedSpellDescriptionString.Arguments = new object[]
+            {
+                BuildFormattedPrimaryAmount(spell)
+            };
+        }
+
+        private string BuildFallbackSpellDescription(SpellDefinition spell)
+        {
+            var template = spell != null ? (spell.Description ?? string.Empty) : string.Empty;
+            if (string.IsNullOrWhiteSpace(template))
+            {
+                return string.Empty;
+            }
+
+            var amount = BuildFormattedPrimaryAmount(spell);
+
+            if (template.Contains("{0}", StringComparison.Ordinal))
+            {
+                return string.Format(CultureInfo.InvariantCulture, template, amount);
+            }
+
+            if (template.Contains("X", StringComparison.Ordinal))
+            {
+                return template.Replace("X", amount);
+            }
+
+            return template;
+        }
+
+        private string BuildFormattedPrimaryAmount(SpellDefinition spell)
+        {
+            if (_controller != null && spell != null && _controller.TryGetActiveUnitSpellAmountPreview(spell, out var preview))
+            {
+                int baseAmount = preview.BaseAmount;
+                int modifiedAmount = preview.ModifiedAmount;
+                string number = modifiedAmount.ToString(CultureInfo.InvariantCulture);
+
+                if (modifiedAmount > baseAmount)
+                {
+                    return $"<color=#00C853><b>{number}</b></color>";
+                }
+
+                if (modifiedAmount < baseAmount)
+                {
+                    return $"<color=#D50000><b>{number}</b></color>";
+                }
+
+                return number;
+            }
+
+            return "X";
         }
 
         private void HandleSelectedSpellDescriptionChanged(string value)

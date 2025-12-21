@@ -61,6 +61,12 @@ namespace SevenBattles.Tests.Battle
                 return false;
             }
 
+            public bool TryGetActiveUnitSpellAmountPreview(SpellDefinition spell, out SpellAmountPreview preview)
+            {
+                preview = default;
+                return false;
+            }
+
             public void RequestEndTurn()
             {
             }

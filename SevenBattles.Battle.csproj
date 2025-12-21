@@ -68,6 +68,7 @@
     <Compile Include="Assets\Scripts\Battle\Save\BattleBoardGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiTileHighlightGraphic.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleSessionSaveProvider.cs" />
+    <Compile Include="Assets\Scripts\Battle\Spells\SpellAmountModifierSource.cs" />
     <Compile Include="Assets\Scripts\Battle\Turn\SimpleTurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Battle\Units\UnitBattleMetadata.cs" />
     <Compile Include="Assets\Scripts\Battle\BattleSessionService.cs" />

@@ -39,6 +39,13 @@ namespace SevenBattles.Core
         /// </summary>
         SpellDefinition[] ActiveUnitSpells { get; }
 
+        /// <summary>
+        /// Computes a UI-friendly preview for the spell's primary numeric effect (e.g., damage/heal),
+        /// including scaling from the active unit stats and any runtime modifiers.
+        /// Returns false when there is no active unit, stats are not available, or the spell has no primary amount configured.
+        /// </summary>
+        bool TryGetActiveUnitSpellAmountPreview(SpellDefinition spell, out SpellAmountPreview preview);
+
         void RequestEndTurn();
     }
 }

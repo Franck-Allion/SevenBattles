@@ -166,6 +166,61 @@ namespace SevenBattles.Battle.Turn
             return true;
         }
 
+        public bool TryGetActiveUnitSpellAmountPreview(SpellDefinition spell, out SpellAmountPreview preview)
+        {
+            preview = default;
+
+            if (!_hasActiveUnit || spell == null)
+            {
+                return false;
+            }
+
+            if (_activeIndex < 0 || _activeIndex >= _units.Count)
+            {
+                return false;
+            }
+
+            if (spell.PrimaryAmountKind == SpellPrimaryAmountKind.None)
+            {
+                return false;
+            }
+
+            var unit = _units[_activeIndex];
+            var stats = unit.Stats;
+            if (stats == null)
+            {
+                return false;
+            }
+
+            int baseAmount = Mathf.Max(0, spell.PrimaryBaseAmount);
+            float scaling = spell.PrimarySpellStatScaling;
+            int scaledAmount = baseAmount;
+
+            if (!Mathf.Approximately(scaling, 0f))
+            {
+                scaledAmount += Mathf.RoundToInt(stats.Spell * scaling);
+            }
+
+            var context = new SpellAmountCalculationContext
+            {
+                Kind = spell.PrimaryAmountKind,
+                Element = spell.PrimaryDamageElement,
+                BaseAmount = baseAmount,
+                Amount = scaledAmount,
+                CasterSpellStat = stats.Spell
+            };
+
+            ApplySpellAmountModifiers(stats.gameObject, spell, ref context);
+
+            context.Amount = Mathf.Max(0, context.Amount);
+
+            preview.Kind = context.Kind;
+            preview.Element = context.Element;
+            preview.BaseAmount = context.BaseAmount;
+            preview.ModifiedAmount = context.Amount;
+            return true;
+        }
+
         public event Action ActiveUnitChanged;
         public event Action ActiveUnitActionPointsChanged;
         public event Action ActiveUnitStatsChanged;
@@ -185,6 +240,33 @@ namespace SevenBattles.Battle.Turn
                 }
 
                 return _units[_activeIndex].Metadata;
+            }
+        }
+
+        private static void ApplySpellAmountModifiers(GameObject unitGameObject, SpellDefinition spell, ref SpellAmountCalculationContext context)
+        {
+            if (unitGameObject == null)
+            {
+                return;
+            }
+
+            var behaviours = unitGameObject.GetComponents<MonoBehaviour>();
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var provider = behaviours[i] as ISpellAmountModifierProvider;
+                if (provider == null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    provider.ModifySpellAmount(spell, ref context);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"SimpleTurnOrderController: Spell amount modifier threw an exception and was ignored: {ex.Message}", behaviours[i]);
+                }
             }
         }
 
