@@ -76,6 +76,7 @@
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGrid.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellAmountPreview.cs" />
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\ISpellSelectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />

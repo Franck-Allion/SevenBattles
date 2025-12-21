@@ -12,7 +12,7 @@ namespace SevenBattles.Battle.Turn
     // Basic initiative-based turn controller for wizards.
     // Discovers UnitBattleMetadata instances at battle start, sorts by UnitStats.Initiative,
     // and advances turns for player and AI units.
-    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController
+    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController, ISpellSelectionController
     {
         [Header("Board Highlight (optional)")]
         [SerializeField] private WorldPerspectiveBoard _board;
@@ -89,9 +89,20 @@ namespace SevenBattles.Battle.Turn
         private readonly HashSet<Vector2Int> _legalMoveTiles = new HashSet<Vector2Int>();
         private readonly Dictionary<Vector2Int, Vector2Int> _movePrevTile = new Dictionary<Vector2Int, Vector2Int>();
         private readonly HashSet<Vector2Int> _attackableEnemyTiles = new HashSet<Vector2Int>();
-        private bool _isAttackCursorActive;
-        private bool _isMoveCursorActive;
-        private bool _isSelectionCursorActive;
+
+        private enum CursorKind
+        {
+            None = 0,
+            Move = 1,
+            Selection = 2,
+            Attack = 3,
+            Spell = 4
+        }
+
+        private CursorKind _cursorKind;
+        private Texture2D _cursorTexture;
+        private Vector2 _cursorHotspot;
+        private SpellDefinition _selectedSpell;
         private bool _battleEnded;
         private BattleOutcome _battleOutcome = BattleOutcome.None;
 
@@ -121,6 +132,8 @@ namespace SevenBattles.Battle.Turn
                 return spells ?? Array.Empty<SpellDefinition>();
             }
         }
+
+        public SpellDefinition SelectedSpell => _selectedSpell;
 
         public Sprite ActiveUnitPortrait
         {
@@ -225,6 +238,7 @@ namespace SevenBattles.Battle.Turn
         public event Action ActiveUnitActionPointsChanged;
         public event Action ActiveUnitStatsChanged;
         public event Action<BattleOutcome> BattleEnded;
+        public event Action SelectedSpellChanged;
 
         public int ActiveUnitCurrentActionPoints => _hasActiveUnit ? _activeUnitCurrentActionPoints : 0;
         public int ActiveUnitMaxActionPoints => _hasActiveUnit ? _activeUnitMaxActionPoints : 0;
@@ -351,6 +365,33 @@ namespace SevenBattles.Battle.Turn
                 return;
             }
             AdvanceToNextUnit();
+        }
+
+        public void SetSelectedSpell(SpellDefinition spell)
+        {
+            if (spell != null && !IsSpellAvailableToActiveUnit(spell))
+            {
+                spell = null;
+            }
+
+            if (ReferenceEquals(_selectedSpell, spell))
+            {
+                return;
+            }
+
+            _selectedSpell = spell;
+
+            // Spell targeting overrides any pending movement selection.
+            _hasSelectedMoveTile = false;
+
+            if (_board != null)
+            {
+                _board.SetSecondaryHighlightVisible(false);
+            }
+
+            SetSpellCursor(_selectedSpell != null);
+
+            SelectedSpellChanged?.Invoke();
         }
 
         private void ConfigureBoardForBattle()
@@ -687,6 +728,7 @@ namespace SevenBattles.Battle.Turn
             SetAttackCursor(false);
             SetMoveCursor(false);
             SetSelectionCursor(false);
+            SetSelectedSpell(null);
 
             if (_activeIndex < 0 || _activeIndex >= _units.Count || !IsUnitValid(_units[_activeIndex]))
             {
@@ -738,6 +780,12 @@ namespace SevenBattles.Battle.Turn
 
         private void UpdatePlayerTurnInput()
         {
+            if (_selectedSpell != null)
+            {
+                UpdateSpellTargetingInput(_selectedSpell);
+                return;
+            }
+
             // First check if we can do anything at all
             bool canMove = CanActiveUnitMove();
             bool canAttack = CanActiveUnitAttack();
@@ -847,6 +895,130 @@ namespace SevenBattles.Battle.Turn
                 _hasSelectedMoveTile = true;
                 _selectedMoveTile = hoveredTile;
             }
+        }
+
+        private void UpdateSpellTargetingInput(SpellDefinition spell)
+        {
+            if (_board == null)
+            {
+                return;
+            }
+
+            // Cancel spell targeting (AAA-style): RMB or ESC clears selection.
+            if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
+            {
+                SetSelectedSpell(null);
+                SetSpellCursor(false);
+                _board.SetSecondaryHighlightVisible(false);
+                UpdateBoardHighlight();
+                return;
+            }
+
+            // Spell targeting uses its own cursor and always clears move-selection visuals.
+            _hasSelectedMoveTile = false;
+            SetSelectionCursor(false);
+            SetMoveCursor(false);
+            SetAttackCursor(false);
+            SetSpellCursor(true);
+
+            if (!_board.TryScreenToTile(Input.mousePosition, out var x, out var y))
+            {
+                _board.SetSecondaryHighlightVisible(false);
+                return;
+            }
+
+            var hoveredTile = new Vector2Int(x, y);
+            bool eligible = IsTileLegalSpellTarget(spell, hoveredTile);
+
+            _board.SetSecondaryHighlightVisible(true);
+            _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
+            _board.SetSecondaryHighlightColor(eligible ? _moveValidColor : _moveInvalidColor);
+        }
+
+        private bool IsSpellAvailableToActiveUnit(SpellDefinition spell)
+        {
+            if (spell == null) return false;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
+
+            var meta = _units[_activeIndex].Metadata;
+            var spells = meta != null && meta.Definition != null ? meta.Definition.Spells : null;
+            if (spells == null) return false;
+
+            for (int i = 0; i < spells.Length; i++)
+            {
+                if (ReferenceEquals(spells[i], spell))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool CanActiveUnitCastSpell(SpellDefinition spell)
+        {
+            if (spell == null) return false;
+            if (!_hasActiveUnit) return false;
+            if (!IsActiveUnitPlayerControlledInternal()) return false;
+            if (_movementAnimating) return false;
+            if (_attackAnimating) return false;
+            if (_board == null) return false;
+
+            int apCost = Mathf.Max(0, spell.ActionPointCost);
+            return _activeUnitCurrentActionPoints >= apCost;
+        }
+
+        private bool IsTileLegalSpellTarget(SpellDefinition spell, Vector2Int tile)
+        {
+            if (!CanActiveUnitCastSpell(spell)) return false;
+            if (_activeIndex < 0 || _activeIndex >= _units.Count) return false;
+
+            var caster = _units[_activeIndex];
+            var casterMeta = caster.Metadata;
+            if (casterMeta == null || !casterMeta.HasTile) return false;
+
+            int minRange = Mathf.Max(0, spell.MinCastRange);
+            int maxRange = Mathf.Max(0, spell.MaxCastRange);
+            if (maxRange < minRange) maxRange = minRange;
+
+            var delta = tile - casterMeta.Tile;
+            int distance = Mathf.Abs(delta.x) + Mathf.Abs(delta.y);
+            if (distance < minRange || distance > maxRange) return false;
+
+            bool hasUnit = TryGetValidUnitAtTile(tile, out var targetUnit);
+            bool isFriendly = hasUnit && targetUnit.Metadata != null && targetUnit.Metadata.IsPlayerControlled == casterMeta.IsPlayerControlled;
+            bool isEnemy = hasUnit && !isFriendly;
+
+            switch (spell.TargetFilter)
+            {
+                case SpellTargetFilter.EnemyUnit:
+                    return hasUnit && isEnemy;
+                case SpellTargetFilter.FriendlyUnit:
+                    return hasUnit && isFriendly;
+                case SpellTargetFilter.AnyUnit:
+                    return hasUnit;
+                case SpellTargetFilter.EmptyTile:
+                    return !hasUnit;
+                case SpellTargetFilter.AnyTile:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private bool TryGetValidUnitAtTile(Vector2Int tile, out TurnUnit unit)
+        {
+            for (int i = 0; i < _units.Count; i++)
+            {
+                var candidate = _units[i];
+                if (!IsUnitValid(candidate)) continue;
+                if (candidate.Metadata.Tile != tile) continue;
+                unit = candidate;
+                return true;
+            }
+
+            unit = default;
+            return false;
         }
 
         private bool CanActiveUnitMove()
@@ -1539,29 +1711,63 @@ namespace SevenBattles.Battle.Turn
 
         private void SetAttackCursor(bool active)
         {
-            if (_isAttackCursorActive == active) return;
-
-            _isAttackCursorActive = active;
-
-            if (active && _attackCursorTexture != null)
+            if (active)
             {
-                Cursor.SetCursor(_attackCursorTexture, _attackCursorHotspot, CursorMode.Auto);
+                ApplyCursor(CursorKind.Attack, _attackCursorTexture, _attackCursorHotspot);
+                return;
             }
-            else
-            {
-                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-            }
+
+            ClearCursorIfActive(CursorKind.Attack);
         }
 
         private void SetMoveCursor(bool active)
         {
-            if (_isMoveCursorActive == active) return;
-
-            _isMoveCursorActive = active;
-
-            if (active && _moveCursorTexture != null)
+            if (active)
             {
-                Cursor.SetCursor(_moveCursorTexture, _moveCursorHotspot, CursorMode.Auto);
+                ApplyCursor(CursorKind.Move, _moveCursorTexture, _moveCursorHotspot);
+                return;
+            }
+
+            ClearCursorIfActive(CursorKind.Move);
+        }
+
+        private void SetSelectionCursor(bool active)
+        {
+            if (active)
+            {
+                ApplyCursor(CursorKind.Selection, _selectionCursorTexture, _selectionCursorHotspot);
+                return;
+            }
+
+            ClearCursorIfActive(CursorKind.Selection);
+        }
+
+        private void SetSpellCursor(bool active)
+        {
+            if (!active)
+            {
+                ClearCursorIfActive(CursorKind.Spell);
+                return;
+            }
+
+            var spell = _selectedSpell;
+            ApplyCursor(CursorKind.Spell, spell != null ? spell.TargetingCursorTexture : null, spell != null ? spell.TargetingCursorHotspot : Vector2.zero);
+        }
+
+        private void ApplyCursor(CursorKind kind, Texture2D texture, Vector2 hotspot)
+        {
+            if (_cursorKind == kind && ReferenceEquals(_cursorTexture, texture) && _cursorHotspot == hotspot)
+            {
+                return;
+            }
+
+            _cursorKind = kind;
+            _cursorTexture = texture;
+            _cursorHotspot = hotspot;
+
+            if (texture != null)
+            {
+                Cursor.SetCursor(texture, hotspot, CursorMode.Auto);
             }
             else
             {
@@ -1569,20 +1775,17 @@ namespace SevenBattles.Battle.Turn
             }
         }
 
-        private void SetSelectionCursor(bool active)
+        private void ClearCursorIfActive(CursorKind kind)
         {
-            if (_isSelectionCursorActive == active) return;
-
-            _isSelectionCursorActive = active;
-
-            if (active && _selectionCursorTexture != null)
+            if (_cursorKind != kind)
             {
-                Cursor.SetCursor(_selectionCursorTexture, _selectionCursorHotspot, CursorMode.Auto);
+                return;
             }
-            else
-            {
-                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-            }
+
+            _cursorKind = CursorKind.None;
+            _cursorTexture = null;
+            _cursorHotspot = Vector2.zero;
+            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
         }
     }
 }

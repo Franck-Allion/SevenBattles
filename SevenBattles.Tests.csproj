@@ -72,6 +72,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\BattleTurnGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridQuadTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerSpellTargetingTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\ConfirmationMessageBoxHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\EnemyRandomPlacementTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerTests.cs" />

@@ -18,6 +18,7 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Reference to a MonoBehaviour that implements ITurnOrderController (e.g., SimpleTurnOrderController).")]
         private MonoBehaviour _controllerBehaviour;
         private ITurnOrderController _controller;
+        private ISpellSelectionController _spellSelectionController;
 
         [Header("Audio (optional)")]
         [SerializeField, Tooltip("AudioSource used to play spell click SFX (optional). If not set, PlayClipAtPoint will be used unless a custom player is assigned.")]
@@ -86,6 +87,7 @@ namespace SevenBattles.UI
             if (_controllerBehaviour == null)
                 Debug.LogWarning("BattleSpellsHUD: Please assign a controller (MonoBehaviour implementing ITurnOrderController).", this);
             _controller = _controllerBehaviour as ITurnOrderController;
+            _spellSelectionController = _controllerBehaviour as ISpellSelectionController;
 
             _sfxPlayer = _sfxPlayerBehaviour as IUiSfxPlayer;
 
@@ -119,6 +121,11 @@ namespace SevenBattles.UI
                 _controller = _controllerBehaviour as ITurnOrderController;
             }
 
+            if (_spellSelectionController == null && _controllerBehaviour != null)
+            {
+                _spellSelectionController = _controllerBehaviour as ISpellSelectionController;
+            }
+
             if (_sfxPlayer == null && _sfxPlayerBehaviour != null)
             {
                 _sfxPlayer = _sfxPlayerBehaviour as IUiSfxPlayer;
@@ -128,6 +135,11 @@ namespace SevenBattles.UI
             {
                 _controller.ActiveUnitChanged += HandleActiveUnitChanged;
                 _controller.ActiveUnitStatsChanged += HandleActiveUnitStatsChanged;
+            }
+
+            if (_spellSelectionController != null)
+            {
+                _spellSelectionController.SelectedSpellChanged += HandleSelectedSpellChanged;
             }
 
             if (_useFixedSlots)
@@ -146,6 +158,11 @@ namespace SevenBattles.UI
                 _controller.ActiveUnitStatsChanged -= HandleActiveUnitStatsChanged;
             }
 
+            if (_spellSelectionController != null)
+            {
+                _spellSelectionController.SelectedSpellChanged -= HandleSelectedSpellChanged;
+            }
+
             UnwireSlotClicks();
             UnbindSelectedSpellDescription();
             _selectedSpell = null;
@@ -157,6 +174,13 @@ namespace SevenBattles.UI
 
         private void HandleActiveUnitChanged()
         {
+            if (_spellSelectionController != null)
+            {
+                SyncSelectedIndexFromController();
+                Refresh();
+                return;
+            }
+
             SetSelectedIndex(-1);
         }
 
@@ -180,6 +204,12 @@ namespace SevenBattles.UI
 
             var spells = shouldShow && _controller != null ? _controller.ActiveUnitSpells : Array.Empty<SpellDefinition>();
             _currentSpells = spells ?? Array.Empty<SpellDefinition>();
+
+            if (_spellSelectionController != null)
+            {
+                _selectedIndex = FindSpellIndex(_spellSelectionController.SelectedSpell, _currentSpells);
+            }
+
             if (_selectedIndex >= _currentSpells.Length)
             {
                 _selectedIndex = -1;
@@ -401,6 +431,23 @@ namespace SevenBattles.UI
 
             PlaySpellClickSfx();
 
+            if (_spellSelectionController != null)
+            {
+                var spell = index >= 0 && index < _currentSpells.Length ? _currentSpells[index] : null;
+                if (index == _selectedIndex)
+                {
+                    _spellSelectionController.SetSelectedSpell(null);
+                }
+                else
+                {
+                    _spellSelectionController.SetSelectedSpell(spell);
+                }
+
+                SyncSelectedIndexFromController();
+                Refresh();
+                return;
+            }
+
             if (index == _selectedIndex)
             {
                 SetSelectedIndex(-1);
@@ -414,6 +461,40 @@ namespace SevenBattles.UI
         {
             _selectedIndex = index;
             Refresh();
+        }
+
+        private void HandleSelectedSpellChanged()
+        {
+            SyncSelectedIndexFromController();
+            Refresh();
+        }
+
+        private void SyncSelectedIndexFromController()
+        {
+            if (_spellSelectionController == null)
+            {
+                return;
+            }
+
+            _selectedIndex = FindSpellIndex(_spellSelectionController.SelectedSpell, _currentSpells);
+        }
+
+        private static int FindSpellIndex(SpellDefinition spell, SpellDefinition[] spells)
+        {
+            if (spell == null || spells == null)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < spells.Length; i++)
+            {
+                if (ReferenceEquals(spells[i], spell))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private void RefreshSelectedSpellDescription(bool shouldShow)

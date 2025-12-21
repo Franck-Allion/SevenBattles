@@ -2,6 +2,15 @@ using UnityEngine;
 
 namespace SevenBattles.Core.Battle
 {
+    public enum SpellTargetFilter
+    {
+        EnemyUnit = 0,
+        FriendlyUnit = 1,
+        AnyUnit = 2,
+        EmptyTile = 3,
+        AnyTile = 4
+    }
+
     public enum SpellPrimaryAmountKind
     {
         None = 0,
@@ -46,6 +55,24 @@ namespace SevenBattles.Core.Battle
         [Min(0)]
         [Tooltip("Action Points cost required to cast this spell.")]
         public int ActionPointCost;
+
+        [Header("Targeting")]
+        [Tooltip("What this spell can target when selecting a tile on the board.")]
+        public SpellTargetFilter TargetFilter = SpellTargetFilter.EnemyUnit;
+
+        [Min(0)]
+        [Tooltip("Minimum Manhattan range (in tiles) from the caster tile to the target tile.")]
+        public int MinCastRange = 1;
+
+        [Min(0)]
+        [Tooltip("Maximum Manhattan range (in tiles) from the caster tile to the target tile.")]
+        public int MaxCastRange = 3;
+
+        [Tooltip("Optional cursor texture used while this spell is selected for targeting. If null, the default cursor is used.")]
+        public Texture2D TargetingCursorTexture;
+
+        [Tooltip("Hotspot offset for the targeting cursor (typically center of the texture).")]
+        public Vector2 TargetingCursorHotspot = new Vector2(16f, 16f);
 
         [Header("Primary Amount (optional)")]
         [Tooltip("Primary numeric effect previewed in UI (e.g., Damage for Firebolt).")]
