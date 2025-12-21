@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Core\Battle\BattleOutcome.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\SpellDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleTurnController.cs" />
     <Compile Include="Assets\Scripts\Core\Save\SaveGameService.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerSquadGameStateSaveProvider.cs" />

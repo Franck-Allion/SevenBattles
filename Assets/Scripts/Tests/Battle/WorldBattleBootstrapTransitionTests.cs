@@ -5,6 +5,7 @@ using UnityEngine.TestTools;
 using System.Collections;
 using SevenBattles.Battle.Start;
 using SevenBattles.Core;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Turn;
@@ -41,6 +42,7 @@ namespace SevenBattles.Tests.Battle
             public bool HasActiveUnit => true;
             public bool IsActiveUnitPlayerControlled => true;
             public Sprite ActiveUnitPortrait => null;
+            public SpellDefinition[] ActiveUnitSpells => System.Array.Empty<SpellDefinition>();
             public event System.Action ActiveUnitChanged;
             public event System.Action ActiveUnitActionPointsChanged;
             public event System.Action ActiveUnitStatsChanged;

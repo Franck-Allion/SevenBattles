@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.TestTools;
 using TMPro;
 using SevenBattles.Core;
+using SevenBattles.Core.Battle;
 using SevenBattles.UI;
 
 namespace SevenBattles.Tests.UI
@@ -21,6 +22,7 @@ namespace SevenBattles.Tests.UI
             public bool HasActiveUnit { get; set; }
             public bool IsActiveUnitPlayerControlled { get; set; }
             public Sprite ActiveUnitPortrait { get; set; }
+            public SpellDefinition[] ActiveUnitSpells => System.Array.Empty<SpellDefinition>();
 
             public event System.Action ActiveUnitChanged;
             public event System.Action ActiveUnitActionPointsChanged;

@@ -3,6 +3,7 @@ using UnityEngine;
 using SevenBattles.Battle.Turn;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Board;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 using SevenBattles.Core;
 using System.Collections;
@@ -12,6 +13,69 @@ namespace SevenBattles.Tests.Battle
 {
     public class SimpleTurnOrderControllerTests
     {
+        [Test]
+        public void ActiveUnitSpells_ReturnsEmptyArray_WhenNoActiveUnit()
+        {
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            Assert.IsNotNull(ctrl.ActiveUnitSpells);
+            Assert.AreEqual(0, ctrl.ActiveUnitSpells.Length);
+
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void ActiveUnitSpells_ReturnsConfiguredSpells_ForActiveUnit()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 3);
+            SetPrivate(board, "_rows", 3);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+            var s1 = ScriptableObject.CreateInstance<SpellDefinition>();
+            s1.Id = "spell.firebolt";
+            s1.ActionPointCost = 1;
+            var s2 = ScriptableObject.CreateInstance<SpellDefinition>();
+            s2.Id = "spell.arcane_shield";
+            s2.ActionPointCost = 2;
+            def.Spells = new[] { s1, s2 };
+
+            // Active player unit (highest initiative)
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+
+            // Enemy unit
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(1, 0));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            var spells = ctrl.ActiveUnitSpells;
+            Assert.AreEqual(2, spells.Length);
+            Assert.AreEqual(1, spells[0].ActionPointCost);
+            Assert.AreEqual(2, spells[1].ActionPointCost);
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(def);
+            Object.DestroyImmediate(s1);
+            Object.DestroyImmediate(s2);
+        }
+
         [Test]
         public void BattleEndsWithPlayerDefeat_WhenAllPlayerUnitsAreDead_AndEnemyRemains()
         {

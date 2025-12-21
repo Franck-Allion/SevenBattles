@@ -4,6 +4,7 @@ using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 
 namespace SevenBattles.Battle.Turn
@@ -105,6 +106,21 @@ namespace SevenBattles.Battle.Turn
         public bool HasBattleEnded => _battleEnded;
 
         public BattleOutcome Outcome => _battleOutcome;
+
+        public SpellDefinition[] ActiveUnitSpells
+        {
+            get
+            {
+                if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
+                {
+                    return Array.Empty<SpellDefinition>();
+                }
+
+                var meta = _units[_activeIndex].Metadata;
+                var spells = meta != null && meta.Definition != null ? meta.Definition.Spells : null;
+                return spells ?? Array.Empty<SpellDefinition>();
+            }
+        }
 
         public Sprite ActiveUnitPortrait
         {

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization;
@@ -78,6 +79,7 @@ namespace SevenBattles.UI
             if (_controllerBehaviour == null)
                 Debug.LogWarning("SquadPlacementHUD: Please assign a controller (MonoBehaviour implementing ISquadPlacementController).", this);
             _controller = _controllerBehaviour as ISquadPlacementController;
+
             WireButtons();
             SetupStartButtonLocalization();
             SetupInstructionLocalization();

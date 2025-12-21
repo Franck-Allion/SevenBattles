@@ -1,4 +1,5 @@
 using UnityEngine;
+using SevenBattles.Core.Battle;
 
 namespace SevenBattles.Core.Units
 {
@@ -23,5 +24,8 @@ namespace SevenBattles.Core.Units
 
         [Header("Base Stats")]
         public UnitStatsData BaseStats;
+
+        [Header("Spells")]
+        public SpellDefinition[] Spells;
     }
 }

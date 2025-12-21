@@ -34,6 +34,8 @@
     - Camera rigs and controllers
   - `BattleHUD`
     - `TurnOrderHUD` (`TurnOrderHUD`) - Shows active unit stats, health, action points, and End Turn button
+    - `SpellsContainer` (`BattleSpellsHUD`) - Displays active unit spells (icons + AP cost) using a HorizontalLayoutGroup
+    - `SelectedSpellDescription` (`TextMeshProUGUI`) - Shows the currently selected spell description (localized)
     - `BattlePauseHUD` (`BattlePauseHUD`) - Pause menu overlay
   - `SquadPlacementHUD`
     - Pre-battle placement UI (`SquadPlacementHUD`)
@@ -101,6 +103,8 @@
   - `TurnOrderHUD` (under `BattleHUD` root)
     - Shows active unit portrait, stats, health, and action points.
     - End Turn button drives `IBattleTurnController` / `ITurnOrderController`.
+  - `BattleSpellsHUD` (under `BattleHUD/SpellsContainer`)
+    - Displays the active unit's spells (icons + AP cost overlay) driven by `ITurnOrderController`.
   - `BattlePauseHUD` (under `BattleHUD` root)
     - Pause menu overlay for battle.
   - `SquadPlacementHUD` (under `SquadPlacementHUD` root)
@@ -141,6 +145,16 @@ When adding new functionality, prefer extending these areas instead of inventing
 - `SquadPlacementHUD` (under `SquadPlacementHUD` root)
   - Should be wired to the placement controller (`WorldSquadPlacementController` under `_System`) rather than talking directly to board/unit components.
 
+- `BattleSpellsHUD` (under `BattleHUD/SpellsContainer`)
+  - `_controllerBehaviour` → reference to a component implementing `ITurnOrderController` (e.g., `SimpleTurnOrderController` under `_System`).
+  - `_spellsContainer` → reference to the `SpellsContainer` RectTransform (same object).
+  - `_selectedSpellDescriptionText` → reference to `BattleHUD/Canvas/SelectedSpellDescription` (`TextMeshProUGUI`).
+  - Slot binding options:
+    - Fixed slots (recommended): author inactive children `Spell0`, `Spell1`, ... under `SpellsContainer` and (optionally) add `BattleSpellSlotView` to each slot to wire `Icon`, `ApCost`, `SelectionFrame` and `Button`.
+    - Template fallback: assign `_slotTemplate` to a UI prefab representing a single spell slot (recommended to add `BattleSpellSlotView` on the prefab and wire its fields).
+  - Audio (optional):
+    - Assign `_spellClickClip` (and optionally `_audio`) to play a click SFX when selecting/deselecting spells.
+
 - `SaveLoadHUD` (under `SaveLoadHUD` root)
   - Wired to save/load services for persisting game state.
 
@@ -154,4 +168,3 @@ When adding new functionality, prefer extending these areas instead of inventing
 When implementing a feature:
 - Link to this document from your PR `Unity Wiring` section.
 - Only change roots or key controllers when necessary, and update this document accordingly.
-
