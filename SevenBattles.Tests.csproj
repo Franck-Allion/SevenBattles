@@ -85,6 +85,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\UnitAttackTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattlePauseHUDTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerSpellCastTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SquadPlacementHUDTests.cs" />
   </ItemGroup>

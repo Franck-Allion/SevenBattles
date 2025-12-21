@@ -8,6 +8,7 @@ namespace SevenBattles.Battle.Units
     {
         [Header("Core Stats")]
         [SerializeField] private int _life;
+        [SerializeField] private int _maxLife;
         [SerializeField] private int _attack;
         [SerializeField] private int _actionPoints;
         [SerializeField] private int _shoot;
@@ -20,7 +21,7 @@ namespace SevenBattles.Battle.Units
         [SerializeField] private int _morale;
 
         public int Life => _life;
-        public int MaxLife => _life;
+        public int MaxLife => _maxLife;
         public int Attack => _attack;
         public int Shoot => _shoot;
         public int Spell => _spell;
@@ -32,12 +33,13 @@ namespace SevenBattles.Battle.Units
         public int Morale => _morale;
 
         // Backwards-compatible aliases for older tests/usages.
-        public int MaxHP => _life;
+        public int MaxHP => _maxLife;
         public int ActionPoints => _actionPoints;
 
         public void ApplyBase(UnitStatsData data)
         {
-            _life = data.Life;
+            _maxLife = Mathf.Max(0, data.Life);
+            _life = _maxLife;
             _attack = data.Attack;
             // Action points are fully independent from Attack.
             _actionPoints = Mathf.Max(0, data.ActionPoints);
@@ -58,7 +60,8 @@ namespace SevenBattles.Battle.Units
                 return;
             }
 
-            _life = data.Life;
+            _maxLife = data.MaxLife > 0 ? data.MaxLife : Mathf.Max(0, data.Life);
+            _life = Mathf.Clamp(data.Life, 0, _maxLife);
             _attack = data.Attack;
             _shoot = data.Shoot;
             _spell = data.Spell;
@@ -84,6 +87,17 @@ namespace SevenBattles.Battle.Units
             }
 
             _life = Mathf.Max(0, _life - damage);
+        }
+
+        public void Heal(int amount)
+        {
+            if (amount < 0)
+            {
+                Debug.LogWarning($"[UnitStats] Heal called with negative amount: {amount}. Ignoring.");
+                return;
+            }
+
+            _life = Mathf.Clamp(_life + amount, 0, Mathf.Max(0, _maxLife));
         }
     }
 }

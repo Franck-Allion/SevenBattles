@@ -95,6 +95,7 @@
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\AnchorManager.cs" />
     <Compile Include="Assets\HealthBar\Scripts\ChangeSize.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\InventoryBase.cs" />
+    <Compile Include="Assets\Lana Studio\Casual RPG VFX\Demo\Scripts\ObjectsSwitcher.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\Character.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMP_ExampleScript_01.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\TMPro_InstructionOverlay.cs" />
@@ -102,6 +103,7 @@
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexShakeB.cs" />
     <Compile Include="Assets\HealthBar\Scripts\MaterialHealhBar.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\Character4D.cs" />
+    <Compile Include="Assets\Lana Studio\Casual RPG VFX\Scripts\UVscroll.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\EditorScripts\SliderReset.cs" />
     <Compile Include="Assets\HealthBar\Scripts\RotateGear.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexJitter.cs" />
@@ -170,6 +172,7 @@
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Collections\FirearmCollection.cs" />
     <Compile Include="Assets\HeroEditor4D\InventorySystem\Scripts\Enums\PropertyId.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Common\Md5.cs" />
+    <Compile Include="Assets\Lana Studio\Casual RPG VFX\Demo\Scripts\_InputKeyBoard.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\DropdownSample.cs" />
     <Compile Include="Assets\TextMesh Pro\Examples &amp; Extras\Scripts\VertexColorCycler.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\CharacterScripts\AvatarSetup.cs" />
@@ -240,6 +243,7 @@
     <None Include="Assets\TextMesh Pro\Resources\LineBreaking Following Characters.txt" />
     <None Include="Assets\Art\Fonts\Alata - OFL.txt" />
     <None Include="Assets\HealthBar\FMAWaveHealhtBarUI.shader" />
+    <None Include="Assets\Lana Studio\Casual RPG VFX\Readme.txt" />
     <None Include="Assets\TextMesh Pro\Shaders\TMP_SDF-Mobile Masking.shader" />
     <None Include="Assets\RVFX\UIShaderEffects-EdgeEffects\Shader\Electric_Additive.shader" />
     <None Include="Assets\HealthBar\FMACardio.shader" />

@@ -74,6 +74,35 @@ namespace SevenBattles.Core.Battle
         [Tooltip("Hotspot offset for the targeting cursor (typically center of the texture).")]
         public Vector2 TargetingCursorHotspot = new Vector2(16f, 16f);
 
+        [Header("VFX (optional)")]
+        [Tooltip("Optional prefab instantiated at the target position when the spell is cast.")]
+        public GameObject TargetVfxPrefab;
+
+        [Min(0f)]
+        [Tooltip("Optional lifetime in seconds before the target VFX instance is destroyed. 0 means 'do not auto-destroy'.")]
+        public float TargetVfxLifetimeSeconds = 2f;
+
+        [Min(0f)]
+        [Tooltip("Multiplies the instantiated target VFX transform scale (uniform).")]
+        public float TargetVfxScaleMultiplier = 1f;
+
+        [Tooltip("Optional sorting layer override for the target VFX. When empty, the VFX inherits target/caster layer.")]
+        public string TargetVfxSortingLayerOverride;
+
+        [Tooltip("Sorting order offset added on top of the chosen base sorting order (target/caster).")]
+        public int TargetVfxSortingOrderOffset = 25;
+
+        [Header("SFX (optional)")]
+        [Tooltip("Optional AudioClip played when the spell is cast.")]
+        public AudioClip CastSfxClip;
+
+        [Range(0f, 1.5f)]
+        [Tooltip("Volume multiplier for CastSfxClip.")]
+        public float CastSfxVolume = 1f;
+
+        [Tooltip("If true, plays CastSfxClip at the target position; otherwise plays at the caster position.")]
+        public bool CastSfxAtTarget = true;
+
         [Header("Primary Amount (optional)")]
         [Tooltip("Primary numeric effect previewed in UI (e.g., Damage for Firebolt).")]
         public SpellPrimaryAmountKind PrimaryAmountKind = SpellPrimaryAmountKind.None;
