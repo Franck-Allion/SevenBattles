@@ -70,9 +70,11 @@
     <Compile Include="Assets\Scripts\Battle\Save\BattleSessionSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Spells\SpellAmountModifierSource.cs" />
     <Compile Include="Assets\Scripts\Battle\Turn\SimpleTurnOrderController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Combat\BattleDamageCalculator.cs" />
     <Compile Include="Assets\Scripts\Battle\Units\UnitBattleMetadata.cs" />
     <Compile Include="Assets\Scripts\Battle\BattleSessionService.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldBattleStartController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Input\BattleCursorController.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\SquadPlacementModel.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleSessionLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldSquadStartController.cs" />

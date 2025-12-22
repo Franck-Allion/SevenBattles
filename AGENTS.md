@@ -373,6 +373,11 @@ For more details on the current save/load architecture and JSON format, see:
 - Core formulas (damage, hit chance, etc.) must be implemented as **pure, stateless static functions** (e.g., `BattleDamageCalculator`) or stateless services.
 - Never embed complex formula logic directly into `SimpleTurnOrderController` or other orchestration classes.
 
+### Cursor Management
+- `BattleCursorController` is the **single source of truth** for the visual cursor state (Move, Attack, Spell, simple Selection).
+- Logic that changes the cursor must inject and use this service; do not use `Cursor.SetCursor` directly in battle controllers.
+- To add new cursor types, extend `BattleCursorController` rather than creating parallel input managers.
+
 ### Turn Index & Banners
 - `IBattleTurnController.TurnIndex` is the **only** source of truth for the battle turn number; UI must not maintain its own counters.  
 - Turn-based overlays (e.g., "Turn X" banners) must use `TurnIndex` + `LocalizedString` smart strings, and must acquire/release `SetInteractionLocked` in a balanced way (no permanent locks).  

@@ -56,6 +56,10 @@ namespace SevenBattles.Battle.Turn
         [SerializeField, Tooltip("Duration in seconds to wait after playing a death animation before removing the unit GameObject from the board.")]
         private float _deathAnimationDurationSeconds = 1f;
 
+        [Header("Cursor Management")]
+        [SerializeField, Tooltip("Service managing battle cursor states (move, attack, selection, spell). Should reference a BattleCursorController component.")]
+        private SevenBattles.Battle.Cursors.BattleCursorController _cursorController;
+
         [Header("Flow")]
         [SerializeField, Tooltip("If true, BeginBattle is called automatically on Start. Typically disabled when using placement flow.")]
         private bool _autoStartOnPlay = false;
@@ -91,18 +95,7 @@ namespace SevenBattles.Battle.Turn
         private readonly Dictionary<Vector2Int, Vector2Int> _movePrevTile = new Dictionary<Vector2Int, Vector2Int>();
         private readonly HashSet<Vector2Int> _attackableEnemyTiles = new HashSet<Vector2Int>();
 
-        private enum CursorKind
-        {
-            None = 0,
-            Move = 1,
-            Selection = 2,
-            Attack = 3,
-            Spell = 4
-        }
-
-        private CursorKind _cursorKind;
-        private Texture2D _cursorTexture;
-        private Vector2 _cursorHotspot;
+        // Cursor state is now managed by BattleCursorController
         private SpellDefinition _selectedSpell;
         private bool _battleEnded;
         private BattleOutcome _battleOutcome = BattleOutcome.None;
@@ -392,7 +385,10 @@ namespace SevenBattles.Battle.Turn
                 _board.SetSecondaryHighlightVisible(false);
             }
 
-            SetSpellCursor(_selectedSpell != null);
+            if (_cursorController != null)
+            {
+                _cursorController.SetSpellCursor(_selectedSpell != null, _selectedSpell);
+            }
 
             SelectedSpellChanged?.Invoke();
         }
@@ -728,9 +724,12 @@ namespace SevenBattles.Battle.Turn
             _movePrevTile.Clear();
 
             // Reset cursors when active unit changes
-            SetAttackCursor(false);
-            SetMoveCursor(false);
-            SetSelectionCursor(false);
+            if (_cursorController != null)
+            {
+                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+            }
             SetSelectedSpell(null);
 
             if (_activeIndex < 0 || _activeIndex >= _units.Count || !IsUnitValid(_units[_activeIndex]))
@@ -800,9 +799,12 @@ namespace SevenBattles.Battle.Turn
                     _board.SetSecondaryHighlightVisible(false);
                 }
                 _hasSelectedMoveTile = false;
-                SetAttackCursor(false);
-                SetMoveCursor(false);
-                SetSelectionCursor(false);
+                if (_cursorController != null)
+                {
+                    _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+                }
                 UpdateBoardHighlight();
                 return;
             }
@@ -815,9 +817,12 @@ namespace SevenBattles.Battle.Turn
                 {
                     UpdateBoardHighlight();
                 }
-                SetAttackCursor(false);
-                SetMoveCursor(false);
-                SetSelectionCursor(false);
+                if (_cursorController != null)
+                {
+                    _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+                }
                 return;
             }
 
@@ -827,9 +832,12 @@ namespace SevenBattles.Battle.Turn
             if (canAttack && IsAttackableEnemyTile(hoveredTile))
             {
                 // Show attack cursor and highlight
-                SetAttackCursor(true);
-                SetMoveCursor(false); // Ensure move cursor is off when attack cursor is active
-                SetSelectionCursor(false); // Ensure selection cursor is off when attack cursor is active
+                if (_cursorController != null)
+                {
+                    _cursorController.SetAttackCursor(true, _attackCursorTexture, _attackCursorHotspot);
+                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+                }
                 _board.SetSecondaryHighlightVisible(true);
                 _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
                 _board.SetSecondaryHighlightColor(_attackCursorColor);
@@ -843,7 +851,10 @@ namespace SevenBattles.Battle.Turn
             }
 
             // Reset attack cursor if not hovering attackable enemy
-            SetAttackCursor(false);
+            if (_cursorController != null)
+            {
+                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+            }
 
             // PRIORITY 2: Movement input handling (fallback if not attacking)
             if (!canMove)
@@ -853,8 +864,11 @@ namespace SevenBattles.Battle.Turn
                     _board.SetSecondaryHighlightVisible(false);
                 }
                 _hasSelectedMoveTile = false;
-                SetMoveCursor(false);
-                SetSelectionCursor(false);
+                if (_cursorController != null)
+                {
+                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+                }
                 UpdateBoardHighlight();
                 return;
             }
@@ -865,8 +879,11 @@ namespace SevenBattles.Battle.Turn
                 _board.MoveSecondaryHighlightToTile(_selectedMoveTile.x, _selectedMoveTile.y);
                 bool stillValid = IsTileLegalMoveDestination(_selectedMoveTile);
                 _board.SetSecondaryHighlightColor(stillValid ? _moveValidColor : _moveInvalidColor);
-                SetMoveCursor(false); // Don't show move cursor when a tile is already selected
-                SetSelectionCursor(true); // Show selection cursor to indicate tile is selected
+                if (_cursorController != null)
+                {
+                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                    _cursorController.SetSelectionCursor(true, _selectionCursorTexture, _selectionCursorHotspot);
+                }
 
                 if (Input.GetMouseButtonDown(0))
                 {
@@ -878,7 +895,10 @@ namespace SevenBattles.Battle.Turn
                     {
                         // Reset selection when clicking any other tile
                         _hasSelectedMoveTile = false;
-                        SetSelectionCursor(false);
+                        if (_cursorController != null)
+                        {
+                            _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+                        }
                     }
                 }
 
@@ -891,7 +911,10 @@ namespace SevenBattles.Battle.Turn
             _board.SetSecondaryHighlightColor(legal ? _moveValidColor : _moveInvalidColor);
 
             // Show move cursor only when hovering a legal movement tile
-            SetMoveCursor(legal);
+            if (_cursorController != null)
+            {
+                _cursorController.SetMoveCursor(legal, _moveCursorTexture, _moveCursorHotspot);
+            }
 
             if (Input.GetMouseButtonDown(0) && legal)
             {
@@ -911,7 +934,10 @@ namespace SevenBattles.Battle.Turn
             if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
             {
                 SetSelectedSpell(null);
-                SetSpellCursor(false);
+                if (_cursorController != null)
+                {
+                    _cursorController.SetSpellCursor(false, _selectedSpell);
+                }
                 _board.SetSecondaryHighlightVisible(false);
                 UpdateBoardHighlight();
                 return;
@@ -919,10 +945,13 @@ namespace SevenBattles.Battle.Turn
 
             // Spell targeting uses its own cursor and always clears move-selection visuals.
             _hasSelectedMoveTile = false;
-            SetSelectionCursor(false);
-            SetMoveCursor(false);
-            SetAttackCursor(false);
-            SetSpellCursor(true);
+            if (_cursorController != null)
+            {
+                _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+                _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                _cursorController.SetSpellCursor(true, _selectedSpell);
+            }
 
             if (!_board.TryScreenToTile(Input.mousePosition, out var x, out var y))
             {
@@ -964,7 +993,10 @@ namespace SevenBattles.Battle.Turn
             }
 
             _spellAnimating = true;
-            SetSpellCursor(false);
+            if (_cursorController != null)
+            {
+                _cursorController.SetSpellCursor(false, _selectedSpell);
+            }
             if (_board != null) _board.SetSecondaryHighlightVisible(false);
 
             try
@@ -1814,7 +1846,10 @@ namespace SevenBattles.Battle.Turn
         private System.Collections.IEnumerator ExecuteAttackRoutine(TurnUnit attacker, TurnUnit target, int damage)
         {
             _attackAnimating = true;
-            SetAttackCursor(false); // Hide cursor during animation
+            if (_cursorController != null)
+            {
+                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+            } // Hide cursor during animation
             if (_board != null) _board.SetSecondaryHighlightVisible(false);
 
             var attackerMeta = attacker.Metadata;
@@ -2002,83 +2037,5 @@ namespace SevenBattles.Battle.Turn
             return SevenBattles.Battle.Combat.BattleDamageCalculator.Calculate(attack, defense);
         }
 
-        private void SetAttackCursor(bool active)
-        {
-            if (active)
-            {
-                ApplyCursor(CursorKind.Attack, _attackCursorTexture, _attackCursorHotspot);
-                return;
-            }
-
-            ClearCursorIfActive(CursorKind.Attack);
-        }
-
-        private void SetMoveCursor(bool active)
-        {
-            if (active)
-            {
-                ApplyCursor(CursorKind.Move, _moveCursorTexture, _moveCursorHotspot);
-                return;
-            }
-
-            ClearCursorIfActive(CursorKind.Move);
-        }
-
-        private void SetSelectionCursor(bool active)
-        {
-            if (active)
-            {
-                ApplyCursor(CursorKind.Selection, _selectionCursorTexture, _selectionCursorHotspot);
-                return;
-            }
-
-            ClearCursorIfActive(CursorKind.Selection);
-        }
-
-        private void SetSpellCursor(bool active)
-        {
-            if (!active)
-            {
-                ClearCursorIfActive(CursorKind.Spell);
-                return;
-            }
-
-            var spell = _selectedSpell;
-            ApplyCursor(CursorKind.Spell, spell != null ? spell.TargetingCursorTexture : null, spell != null ? spell.TargetingCursorHotspot : Vector2.zero);
-        }
-
-        private void ApplyCursor(CursorKind kind, Texture2D texture, Vector2 hotspot)
-        {
-            if (_cursorKind == kind && ReferenceEquals(_cursorTexture, texture) && _cursorHotspot == hotspot)
-            {
-                return;
-            }
-
-            _cursorKind = kind;
-            _cursorTexture = texture;
-            _cursorHotspot = hotspot;
-
-            if (texture != null)
-            {
-                Cursor.SetCursor(texture, hotspot, CursorMode.Auto);
-            }
-            else
-            {
-                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-            }
-        }
-
-        private void ClearCursorIfActive(CursorKind kind)
-        {
-            if (_cursorKind != kind)
-            {
-                return;
-            }
-
-            _cursorKind = CursorKind.None;
-            _cursorTexture = null;
-            _cursorHotspot = Vector2.zero;
-            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-        }
     }
 }
