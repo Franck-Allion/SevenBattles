@@ -348,10 +348,9 @@ For more details on the current save/load architecture and JSON format, see:
 ## 13. 🧬 DOMAIN-SPECIFIC BATTLE INVARIANTS
 
 ### Movement
-- Must go through `SimpleTurnOrderController`.  
-- Must use its BFS logic.  
-- Must use legal tile caching.  
-- Never implement parallel movement systems.
+- **BattleMovementController** is the **single source of truth** for unit movement.
+- Must use BFS logic and cache valid moves.
+- `SimpleTurnOrderController` delegates to this service; do not implement movement logic directly in the orchestrator.
 
 ### Highlighting
 - Primary highlight: active unit tile only (never cursor-driven).  
@@ -372,6 +371,11 @@ For more details on the current save/load architecture and JSON format, see:
 ### Combat Calculations
 - Core formulas (damage, hit chance, etc.) must be implemented as **pure, stateless static functions** (e.g., `BattleDamageCalculator`) or stateless services.
 - Never embed complex formula logic directly into `SimpleTurnOrderController` or other orchestration classes.
+
+### Combat Execution
+- **BattleCombatController** is the **single source of truth** for executing attacks and dealing damage.
+- Responsible for attack validation, AP consumption, and utilizing `BattleDamageCalculator`.
+- `SimpleTurnOrderController` delegates to this service; do not implement attack sequences directly in the orchestrator.
 
 ### Cursor Management
 - `BattleCursorController` is the **single source of truth** for the visual cursor state (Move, Attack, Spell, simple Selection).

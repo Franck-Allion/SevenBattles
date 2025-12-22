@@ -45,6 +45,10 @@ namespace SevenBattles.Battle.Turn
         [SerializeField, Tooltip("Service managing attack validation, execution, and damage application. Should reference a BattleCombatController component.")]
         private SevenBattles.Battle.Combat.BattleCombatController _combatController;
 
+        [Header("Movement Management")]
+        [SerializeField, Tooltip("Service managing movement validation, BFS pathfinding, and movement execution. Should reference a BattleMovementController component.")]
+        private SevenBattles.Battle.Movement.BattleMovementController _movementController;
+
         [Header("Cursor Management")]
         [SerializeField, Tooltip("Service managing battle cursor states (move, attack, selection, spell). Should reference a BattleCursorController component.")]
         private SevenBattles.Battle.Cursors.BattleCursorController _cursorController;
@@ -92,8 +96,6 @@ namespace SevenBattles.Battle.Turn
         private bool _spellAnimating;
         private bool _hasSelectedMoveTile;
         private Vector2Int _selectedMoveTile;
-        private readonly HashSet<Vector2Int> _legalMoveTiles = new HashSet<Vector2Int>();
-        private readonly Dictionary<Vector2Int, Vector2Int> _movePrevTile = new Dictionary<Vector2Int, Vector2Int>();
 
         // Cursor state is now managed by BattleCursorController
         private SpellDefinition _selectedSpell;
@@ -720,8 +722,6 @@ namespace SevenBattles.Battle.Turn
             _pendingAiEndTime = -1f;
             _activeUnitHasMoved = false;
             _hasSelectedMoveTile = false;
-            _legalMoveTiles.Clear();
-            _movePrevTile.Clear();
 
             // Reset cursors when active unit changes
             if (_cursorController != null)
@@ -1381,19 +1381,19 @@ namespace SevenBattles.Battle.Turn
 
         private bool CanActiveUnitMove()
         {
-            if (!_hasActiveUnit) return false;
-            if (!IsActiveUnitPlayerControlledInternal()) return false;
-            if (_activeUnitCurrentActionPoints <= 0) return false;
-            if (_activeUnitHasMoved) return false;
-            if (_board == null) return false;
-            return true;
+            if (_movementController == null) return false;
+            // Provide data needed for validation, but do not pass full state if not needed
+            // But CanMove needs stats, AP, etc.
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
+            var u = _units[_activeIndex];
+            // We use the controller's validation but we also check local state references if needed
+            return _movementController.CanMove(u.Stats, _activeUnitCurrentActionPoints, _activeUnitHasMoved, IsActiveUnitPlayerControlledInternal());
         }
 
         private bool IsTileLegalMoveDestination(Vector2Int tile)
         {
-            if (!CanActiveUnitMove()) return false;
-            if (_legalMoveTiles.Count == 0) return false;
-            return _legalMoveTiles.Contains(tile);
+            if (_movementController == null) return false;
+            return _movementController.IsTileLegalMoveDestination(tile);
         }
 
         private bool IsTileOccupiedByAnyUnit(Vector2Int tile)
@@ -1410,206 +1410,49 @@ namespace SevenBattles.Battle.Turn
 
         private void TryExecuteActiveUnitMove(Vector2Int destinationTile)
         {
-            if (!IsTileLegalMoveDestination(destinationTile))
-            {
-                return;
-            }
-
+            if (_movementController == null) return;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return;
             var u = _units[_activeIndex];
             var meta = u.Metadata;
             if (meta == null) return;
 
-            var transform = meta.transform;
-            if (transform == null) return;
-
-            var originTile = meta.Tile;
-            var path = BuildMovePath(originTile, destinationTile);
-            if (path == null || path.Count == 0)
-            {
-                return;
-            }
-
-            _movementAnimating = true;
-            _hasSelectedMoveTile = false;
-            if (_board != null)
-            {
-                _board.SetHighlightVisible(false);
-                _board.SetSecondaryHighlightVisible(false);
-            }
-            StartCoroutine(MoveActiveUnitRoutine(meta, path));
-        }
-
-        private System.Collections.IEnumerator MoveActiveUnitRoutine(UnitBattleMetadata meta, List<Vector2Int> path)
-        {
-            if (_board == null)
-            {
-                yield break;
-            }
-
-            var transform = meta.transform;
-            if (transform == null)
-            {
-                yield break;
-            }
-
-            float baseZ = transform.position.z;
-
-            object animationManager = null;
-            System.Type characterStateType = null;
-            // We can just use the util directly now, no need to cache these locally unless we want to avoid repeated lookups.
-            // For now, let's just call the util helper for simplicity.
-            UnitVisualUtil.TrySetState(meta.gameObject, "Walk");
-
-            var currentTile = meta.Tile;
-
-            for (int i = 0; i < path.Count; i++)
-            {
-                var nextTile = path[i];
-                Vector3 start = transform.position;
-                Vector3 target = _board.TileCenterWorld(nextTile.x, nextTile.y);
-                target.z = baseZ;
-
-                Vector2 direction = ComputeDirection(currentTile, nextTile);
-                if (direction != Vector2.zero)
-                {
-                    SevenBattles.Battle.Units.UnitVisualUtil.SetDirectionIfCharacter4D(meta.gameObject, direction);
-                }
-
-                float t = 0f;
-                float duration = Mathf.Max(0.01f, _moveDurationSeconds);
-
-                while (t < duration)
-                {
-                    t += Time.deltaTime;
-                    float p = Mathf.Clamp01(t / duration);
-                    float eased = p * p * (3f - 2f * p);
-                    transform.position = Vector3.LerpUnclamped(start, target, eased);
-                    yield return null;
-                }
-
-                transform.position = target;
-                currentTile = nextTile;
-            }
-
-            meta.Tile = currentTile;
-
-            // Update sorting order based on new tile position to ensure correct visual layering
-            if (_board != null)
-            {
-                int newSortingOrder = _board.ComputeSortingOrder(
-                    currentTile.x, 
-                    currentTile.y, 
-                    meta.BaseSortingOrder, 
-                    rowStride: 10, 
-                    intraRowOffset: 0);
-                
-                // Apply the new sorting order to the unit's renderers
-                var sortingGroup = transform.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
-                if (sortingGroup != null)
-                {
-                    sortingGroup.sortingLayerName = meta.SortingLayer;
-                    sortingGroup.sortingOrder = newSortingOrder;
-                }
-                else
-                {
-                    var renderers = transform.GetComponentsInChildren<SpriteRenderer>(true);
-                    for (int i = 0; i < renderers.Length; i++)
+            _movementController.TryExecuteMove(
+                destinationTile, 
+                meta,
+                () => { // On Start
+                    _movementAnimating = true;
+                    _hasSelectedMoveTile = false;
+                    if (_board != null)
                     {
-                        renderers[i].sortingLayerName = meta.SortingLayer;
-                        renderers[i].sortingOrder = newSortingOrder;
+                        _board.SetHighlightVisible(false);
+                        _board.SetSecondaryHighlightVisible(false);
                     }
+                },
+                () => { // On AP Consumed
+                    if (_activeUnitCurrentActionPoints > 0)
+                    {
+                        _activeUnitCurrentActionPoints--;
+                    }
+                    ActiveUnitActionPointsChanged?.Invoke();
+                },
+                (m) => { // On Face Enemy
+                     FaceActiveUnitTowardsNearestEnemy(m);
+                },
+                () => { // On Complete
+                    _activeUnitHasMoved = true;
+                    _movementAnimating = false;
+                    UpdateBoardHighlight();
+                    RebuildAttackableEnemyTiles();
                 }
-            }
-
-            UnitVisualUtil.TrySetState(meta.gameObject, "Idle");
-
-            FaceActiveUnitTowardsNearestEnemy(meta);
-
-            _activeUnitHasMoved = true;
-            if (_activeUnitCurrentActionPoints > 0)
-            {
-                _activeUnitCurrentActionPoints--;
-            }
-
-            ActiveUnitActionPointsChanged?.Invoke();
-            _movementAnimating = false;
-            UpdateBoardHighlight();
-            _legalMoveTiles.Clear();
-            _movePrevTile.Clear();
-            
-            // Rebuild attackable enemies based on new position after movement
-            RebuildAttackableEnemyTiles();
+            );
         }
 
         private void RebuildLegalMoveTilesForActiveUnit()
         {
-            _legalMoveTiles.Clear();
-            _movePrevTile.Clear();
-            if (!CanActiveUnitMove()) return;
-            int cols = _board.Columns;
-            int rows = _board.Rows;
-            if (cols <= 0 || rows <= 0) return;
-            var u = _units[_activeIndex];
-            var meta = u.Metadata;
-            var stats = u.Stats;
-            if (meta == null || !meta.HasTile || stats == null) return;
-            int speed = Mathf.Max(0, stats.Speed);
-            if (speed <= 0) return;
-
-            var origin = meta.Tile;
-            var visited = new Dictionary<Vector2Int, int>();
-            var queue = new Queue<Vector2Int>();
-            visited[origin] = 0;
-            queue.Enqueue(origin);
-
-            while (queue.Count > 0)
+            if (_movementController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
             {
-                var current = queue.Dequeue();
-                int used = visited[current];
-                if (used >= speed) continue;
-
-                TryEnqueueNeighbor(origin, current, new Vector2Int(current.x + 1, current.y), used, cols, rows, visited, queue);
-                TryEnqueueNeighbor(origin, current, new Vector2Int(current.x - 1, current.y), used, cols, rows, visited, queue);
-                TryEnqueueNeighbor(origin, current, new Vector2Int(current.x, current.y + 1), used, cols, rows, visited, queue);
-                TryEnqueueNeighbor(origin, current, new Vector2Int(current.x, current.y - 1), used, cols, rows, visited, queue);
+                _movementController.RebuildLegalMoveTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats, IsTileOccupiedByAnyUnit);
             }
-        }
-
-        private void TryEnqueueNeighbor(Vector2Int origin, Vector2Int from, Vector2Int tile, int usedSteps, int cols, int rows, Dictionary<Vector2Int, int> visited, Queue<Vector2Int> queue)
-        {
-            if (tile.x < 0 || tile.x >= cols || tile.y < 0 || tile.y >= rows) return;
-            if (visited.ContainsKey(tile)) return;
-            if (tile != origin && IsTileOccupiedByAnyUnit(tile)) return;
-
-            int nextUsed = usedSteps + 1;
-            visited[tile] = nextUsed;
-            _movePrevTile[tile] = from;
-            if (tile != origin)
-            {
-                _legalMoveTiles.Add(tile);
-            }
-            queue.Enqueue(tile);
-        }
-
-        private List<Vector2Int> BuildMovePath(Vector2Int origin, Vector2Int destination)
-        {
-            if (!_movePrevTile.ContainsKey(destination))
-            {
-                return null;
-            }
-
-            var path = new List<Vector2Int>();
-            var current = destination;
-            while (current != origin)
-            {
-                path.Add(current);
-                if (!_movePrevTile.TryGetValue(current, out current))
-                {
-                    return null;
-                }
-            }
-            path.Reverse();
-            return path;
         }
 
         private static Vector2 ComputeDirection(Vector2Int from, Vector2Int to)
