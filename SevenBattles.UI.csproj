@@ -63,6 +63,7 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\UI\SquadPlacementHUD.cs" />
     <Compile Include="Assets\Scripts\UI\IUiSfxPlayer.cs" />
+    <Compile Include="Assets\Scripts\UI\AssemblyInfo.cs" />
     <Compile Include="Assets\Scripts\UI\WorldSpaceCanvasFitter.cs" />
     <Compile Include="Assets\Scripts\UI\BattleSpellSlotView.cs" />
     <Compile Include="Assets\Scripts\UI\ConfirmationMessageBoxHUD.cs" />

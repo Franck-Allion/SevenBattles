@@ -336,28 +336,6 @@ For more details on the current save/load architecture and JSON format, see:
 - Confirmation-style overlays must expose a single reusable API accepting `LocalizedString` title/message/button labels and per-call callbacks, instead of hardcoded or duplicated UI flows.  
 - For confirmation flows in the UI domain (Quit, Load, delete save, reset settings, etc.), agents must first consider reusing or extending `SevenBattles.UI.ConfirmationMessageBoxHUD` before introducing any new confirmation UI component.
 
----
-
-## 13. 🧬 DOMAIN-SPECIFIC BATTLE INVARIANTS
-
-### Movement
-- Must go through `SimpleTurnOrderController`.  
-- Must use its BFS logic.  
-- Must use legal tile caching.  
-- Never implement parallel movement systems.
-
-### Highlighting
-- Primary highlight: active unit tile only (never cursor-driven).  
-- Secondary highlight: cursor-driven preview only.
-
-### AP (Action Points)
-- Only from `UnitStatsData.ActionPoints` → HUD.  
-- Never repurpose other stats.
-
-### HeroEditor4D
-- Must use `UnitVisualUtil` and controller reflection helpers.  
-- Never reference HeroEditor4D types directly in Battle/UI assemblies.
-
 
 - All blocking overlays (pause menus, confirmation dialogs, turn banners, etc.) must be driven by a `CanvasGroup` that controls both `alpha` and `blocksRaycasts`.  
 - While visible, modal overlays must use `blocksRaycasts = true` to prevent clicks on underlying HUD or world UI; when hidden, they must restore `blocksRaycasts = false` and any related HUD `CanvasGroup.alpha` state.  
