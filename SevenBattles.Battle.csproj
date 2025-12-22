@@ -67,6 +67,7 @@
     <Compile Include="Assets\Scripts\Battle\Board\FullscreenSpriteFitter.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleTurnGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Spells\BattleSpellController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Spells\SpellProjectileImpactRelay.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleBoardGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiTileHighlightGraphic.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleSessionSaveProvider.cs" />

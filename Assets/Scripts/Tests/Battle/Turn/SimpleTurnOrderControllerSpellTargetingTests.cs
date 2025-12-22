@@ -180,6 +180,122 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(boardGo);
         }
 
+        [Test]
+        public void IsTileLegalSpellTarget_ReturnsTrue_ForOrthogonalLineSpell_WhenSameRowAndClear()
+        {
+            var (ctrl, boardGo, ctrlGo, cleanup) = CreateControllerWithBoard(columns: 8, rows: 8);
+
+            var playerDef = ScriptableObject.CreateInstance<UnitDefinition>();
+            var enemyDef = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 3, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, playerDef, new Vector2Int(2, 2));
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, enemyDef, new Vector2Int(6, 2));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            var spell = ScriptableObject.CreateInstance<SpellDefinition>();
+            spell.ActionPointCost = 1;
+            spell.TargetFilter = SpellTargetFilter.EnemyUnit;
+            spell.MinCastRange = 1;
+            spell.MaxCastRange = 6;
+            spell.RequiresSameRowOrColumn = true;
+            spell.RequiresClearLineOfSight = true;
+
+            bool eligible = (bool)CallPrivate(ctrl, "IsTileLegalSpellTarget", spell, new Vector2Int(6, 2));
+            Assert.IsTrue(eligible);
+
+            Object.DestroyImmediate(spell);
+            cleanup(new Object[] { playerGo, enemyGo, playerDef, enemyDef });
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+        }
+
+        [Test]
+        public void IsTileLegalSpellTarget_ReturnsFalse_ForOrthogonalLineSpell_WhenBlockedByAnyUnit()
+        {
+            var (ctrl, boardGo, ctrlGo, cleanup) = CreateControllerWithBoard(columns: 8, rows: 8);
+
+            var playerDef = ScriptableObject.CreateInstance<UnitDefinition>();
+            var enemyDef = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 3, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, playerDef, new Vector2Int(2, 2));
+
+            var blockerGo = new GameObject("BlockerUnit");
+            var blockerStats = blockerGo.AddComponent<UnitStats>();
+            blockerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 1 });
+            UnitBattleMetadata.Ensure(blockerGo, true, playerDef, new Vector2Int(4, 2));
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, enemyDef, new Vector2Int(6, 2));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            var spell = ScriptableObject.CreateInstance<SpellDefinition>();
+            spell.ActionPointCost = 1;
+            spell.TargetFilter = SpellTargetFilter.EnemyUnit;
+            spell.MinCastRange = 1;
+            spell.MaxCastRange = 6;
+            spell.RequiresSameRowOrColumn = true;
+            spell.RequiresClearLineOfSight = true;
+
+            bool eligible = (bool)CallPrivate(ctrl, "IsTileLegalSpellTarget", spell, new Vector2Int(6, 2));
+            Assert.IsFalse(eligible);
+
+            Object.DestroyImmediate(spell);
+            cleanup(new Object[] { playerGo, blockerGo, enemyGo, playerDef, enemyDef });
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+        }
+
+        [Test]
+        public void IsTileLegalSpellTarget_ReturnsFalse_ForOrthogonalLineSpell_WhenDiagonalTarget()
+        {
+            var (ctrl, boardGo, ctrlGo, cleanup) = CreateControllerWithBoard(columns: 8, rows: 8);
+
+            var playerDef = ScriptableObject.CreateInstance<UnitDefinition>();
+            var enemyDef = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 3, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, playerDef, new Vector2Int(2, 2));
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, enemyDef, new Vector2Int(4, 3));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            var spell = ScriptableObject.CreateInstance<SpellDefinition>();
+            spell.ActionPointCost = 1;
+            spell.TargetFilter = SpellTargetFilter.EnemyUnit;
+            spell.MinCastRange = 1;
+            spell.MaxCastRange = 6;
+            spell.RequiresSameRowOrColumn = true;
+            spell.RequiresClearLineOfSight = true;
+
+            bool eligible = (bool)CallPrivate(ctrl, "IsTileLegalSpellTarget", spell, new Vector2Int(4, 3));
+            Assert.IsFalse(eligible);
+
+            Object.DestroyImmediate(spell);
+            cleanup(new Object[] { playerGo, enemyGo, playerDef, enemyDef });
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+        }
+
         private static (SimpleTurnOrderController ctrl, GameObject boardGo, GameObject ctrlGo, System.Action<Object[]> cleanup) CreateControllerWithBoard(int columns, int rows)
         {
             var boardGo = new GameObject("Board");

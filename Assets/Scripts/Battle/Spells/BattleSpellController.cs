@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Cursors;
@@ -65,6 +66,20 @@ namespace SevenBattles.Battle.Spells
             int distance = Mathf.Abs(delta.x) + Mathf.Abs(delta.y);
             if (distance < minRange || distance > maxRange) return false;
 
+            if (spell.RequiresSameRowOrColumn)
+            {
+                bool orthogonalOrSelf = (delta.x == 0) || (delta.y == 0);
+                if (!orthogonalOrSelf) return false;
+
+                if (spell.RequiresClearLineOfSight && delta != Vector2Int.zero)
+                {
+                    if (HasBlockingUnitBetween(casterMeta.Tile, tile, allUnits, getMetadata, isUnitAtTile))
+                    {
+                        return false;
+                    }
+                }
+            }
+
             // Find if there is a unit at the target tile
             bool hasUnit = false;
             UnitBattleMetadata targetUnitMeta = null;
@@ -112,6 +127,55 @@ namespace SevenBattles.Battle.Spells
                 default:
                     return false;
             }
+        }
+
+        private static bool HasBlockingUnitBetween<T>(
+            Vector2Int from,
+            Vector2Int to,
+            List<T> allUnits,
+            Func<T, UnitBattleMetadata> getMetadata,
+            Func<Vector2Int, T, bool> isUnitAtTile) where T : struct
+        {
+            var delta = to - from;
+            if (delta == Vector2Int.zero) return false;
+
+            Vector2Int step;
+            if (delta.x != 0 && delta.y != 0)
+            {
+                return false;
+            }
+
+            step = delta.x != 0 ? new Vector2Int(Math.Sign(delta.x), 0) : new Vector2Int(0, Math.Sign(delta.y));
+            var cursor = from + step;
+
+            while (cursor != to)
+            {
+                for (int i = 0; i < allUnits.Count; i++)
+                {
+                    var unit = allUnits[i];
+                    var meta = getMetadata(unit);
+                    if (meta == null || !meta.HasTile) continue;
+
+                    if (isUnitAtTile != null)
+                    {
+                        if (isUnitAtTile(cursor, unit))
+                        {
+                            return true;
+                        }
+                    }
+                    else
+                    {
+                        if (meta.Tile == cursor)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                cursor += step;
+            }
+
+            return false;
         }
 
         #endregion
@@ -258,9 +322,6 @@ namespace SevenBattles.Battle.Spells
                     targetWorld.z = casterMeta.transform.position.z;
                 }
 
-                SpawnSpellTargetVfx(spell, targetWorld, casterMeta, targetMeta, targetTile);
-                PlaySpellCastSfx(spell, casterMeta, targetWorld);
-
                 // Calculate Amount
                 int amount = 0;
                 SpellPrimaryAmountKind kind = SpellPrimaryAmountKind.None;
@@ -287,7 +348,114 @@ namespace SevenBattles.Battle.Spells
                     }
                 }
 
-                bool targetDied = false;
+                bool usesProjectile = spell != null && spell.ProjectilePrefab != null;
+                if (usesProjectile)
+                {
+                    if (targetMeta == null || targetStats == null)
+                    {
+                        onComplete?.Invoke();
+                        return;
+                    }
+
+                    var casterWorld = casterMeta.transform.position;
+                    var travel = targetWorld - casterWorld;
+                    travel.z = 0f;
+                    if (travel.sqrMagnitude < 0.0001f)
+                    {
+                        travel = Vector3.right;
+                    }
+
+                    var direction = travel.normalized;
+                    float spawnOffset = Mathf.Max(0f, spell.ProjectileSpawnOffset);
+                    float casterPadding = GetApproxUnitRadius(casterMeta);
+                    var spawnPos = casterWorld + direction * (spawnOffset + casterPadding);
+                    spawnPos.z = casterWorld.z;
+
+                    Quaternion rotation;
+                    if (spell.ProjectileOrientation == ProjectileOrientation.FaceCamera2D)
+                    {
+                        rotation = Compute2DRotation(direction);
+                    }
+                    else
+                    {
+                        rotation = ComputeProjectileRotation(direction);
+                    }
+                    var projectileInstance = InstantiatePrefabAsGameObject(spell.ProjectilePrefab, spawnPos, rotation);
+                    if (projectileInstance == null)
+                    {
+                        Debug.LogError($"[BattleSpellController] ProjectilePrefab is not a GameObject prefab: '{spell.ProjectilePrefab?.name}'.", this);
+                        onComplete?.Invoke();
+                        return;
+                    }
+
+                    TryOverrideHovlProjectileSpeed(projectileInstance, spell.ProjectileSpeedOverride);
+                    TryIgnoreCollisionWithCaster(projectileInstance, casterMeta.gameObject);
+                    ConfigureProjectileRendering(projectileInstance, casterMeta, targetMeta, targetTile);
+
+                    PlaySpellCastSfx(spell, casterMeta, targetWorld);
+
+                    int cost = Mathf.Max(0, spell.ActionPointCost);
+                    onAPConsumed?.Invoke(cost);
+
+                    var relay = projectileInstance.GetComponent<SpellProjectileImpactRelay>();
+                    if (relay == null)
+                    {
+                        relay = projectileInstance.AddComponent<SpellProjectileImpactRelay>();
+                    }
+
+                    relay.Initialize(
+                        expectedTargetRoot: targetMeta.gameObject,
+                        onImpact: (validHit, impactPosition) =>
+                        {
+                            if (!validHit) return;
+
+                            bool targetDied = false;
+
+                            Vector3 impactWorld = targetMeta != null ? targetMeta.transform.position : targetWorld;
+                            impactWorld.z = casterWorld.z;
+
+                            SpawnSpellTargetVfx(spell, impactWorld, casterMeta, targetMeta, targetTile);
+                            PlaySpellImpactSfx(spell, impactWorld);
+
+                            if (kind == SpellPrimaryAmountKind.Damage && targetStats != null)
+                            {
+                                UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Hit");
+                                targetStats.TakeDamage(amount);
+                                targetDied = targetStats.Life <= 0;
+
+                                if (_visualFeedback != null)
+                                {
+                                    _visualFeedback.ShowDamageNumber(impactWorld, amount);
+                                }
+                            }
+                            else if (kind == SpellPrimaryAmountKind.Heal && targetStats != null)
+                            {
+                                targetStats.Heal(amount);
+                            }
+
+                            if (targetDied && targetMeta != null)
+                            {
+                                onUnitDied?.Invoke(targetMeta);
+                            }
+
+                            if (targetMeta != null && ReferenceEquals(targetMeta, casterMeta))
+                            {
+                                onStatsChanged?.Invoke();
+                            }
+                        },
+                        onComplete: () =>
+                        {
+                            onComplete?.Invoke();
+                        }
+                    );
+
+                    return;
+                }
+
+                SpawnSpellTargetVfx(spell, targetWorld, casterMeta, targetMeta, targetTile);
+                PlaySpellCastSfx(spell, casterMeta, targetWorld);
+
+                bool diedImmediate = false;
 
                 if (kind == SpellPrimaryAmountKind.Damage && targetStats != null)
                 {
@@ -296,7 +464,7 @@ namespace SevenBattles.Battle.Spells
                         UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Hit");
                     }
                     targetStats.TakeDamage(amount);
-                    targetDied = targetStats.Life <= 0;
+                    diedImmediate = targetStats.Life <= 0;
 
                     if (_visualFeedback != null)
                     {
@@ -308,17 +476,14 @@ namespace SevenBattles.Battle.Spells
                     targetStats.Heal(amount);
                 }
 
-                // Handle Death
-                if (targetDied && targetMeta != null)
+                if (diedImmediate && targetMeta != null)
                 {
                     onUnitDied?.Invoke(targetMeta);
                 }
 
-                // Consume AP
-                int cost = Mathf.Max(0, spell != null ? spell.ActionPointCost : 0);
-                onAPConsumed?.Invoke(cost);
+                int immediateCost = Mathf.Max(0, spell != null ? spell.ActionPointCost : 0);
+                onAPConsumed?.Invoke(immediateCost);
 
-                // Notify Stats Changed (e.g. self heal)
                 if (targetMeta != null && ReferenceEquals(targetMeta, casterMeta))
                 {
                     onStatsChanged?.Invoke();
@@ -359,7 +524,12 @@ namespace SevenBattles.Battle.Spells
                 return;
             }
 
-            var instance = Instantiate(spell.TargetVfxPrefab, worldPosition, Quaternion.identity);
+            var instance = InstantiatePrefabAsGameObject(spell.TargetVfxPrefab, worldPosition, Quaternion.identity);
+            if (instance == null)
+            {
+                Debug.LogError($"[BattleSpellController] TargetVfxPrefab is not a GameObject prefab: '{spell.TargetVfxPrefab?.name}'.", this);
+                return;
+            }
             ConfigureSpellVfxRendering(instance, spell, casterMeta, targetMeta, targetTile);
 
             float scaleMultiplier = Mathf.Max(0f, spell.TargetVfxScaleMultiplier);
@@ -396,6 +566,137 @@ namespace SevenBattles.Battle.Spells
             AudioSource.PlayClipAtPoint(spell.CastSfxClip, pos, volume);
         }
 
+        private static void PlaySpellImpactSfx(SpellDefinition spell, Vector3 impactWorld)
+        {
+            if (spell == null || spell.ImpactSfxClip == null)
+            {
+                return;
+            }
+
+            float volume = Mathf.Clamp(spell.ImpactSfxVolume, 0f, 1.5f);
+            AudioSource.PlayClipAtPoint(spell.ImpactSfxClip, impactWorld, volume);
+        }
+
+        private static void TryOverrideHovlProjectileSpeed(GameObject projectileInstance, float speed)
+        {
+            if (projectileInstance == null) return;
+            if (speed <= 0f) return;
+
+            Component mover = projectileInstance.GetComponent("HS_ProjectileMover2D");
+            if (mover == null)
+            {
+                var components = projectileInstance.GetComponentsInChildren<Component>(true);
+                for (int i = 0; i < components.Length; i++)
+                {
+                    var c = components[i];
+                    if (c == null) continue;
+                    if (c.GetType().Name != "HS_ProjectileMover2D") continue;
+                    mover = c;
+                    break;
+                }
+            }
+
+            if (mover == null) return;
+
+            try
+            {
+                var field = mover.GetType().GetField("speed", BindingFlags.Instance | BindingFlags.Public);
+                if (field != null && field.FieldType == typeof(float))
+                {
+                    field.SetValue(mover, speed);
+                }
+            }
+            catch
+            {
+                // Ignore third-party reflection issues.
+            }
+        }
+
+        private static void TryIgnoreCollisionWithCaster(GameObject projectileInstance, GameObject casterRoot)
+        {
+            if (projectileInstance == null || casterRoot == null) return;
+
+            var projectileColliders = projectileInstance.GetComponentsInChildren<Collider2D>(true);
+            var casterColliders = casterRoot.GetComponentsInChildren<Collider2D>(true);
+            if (projectileColliders == null || casterColliders == null) return;
+
+            for (int i = 0; i < projectileColliders.Length; i++)
+            {
+                var pc = projectileColliders[i];
+                if (pc == null) continue;
+
+                for (int j = 0; j < casterColliders.Length; j++)
+                {
+                    var cc = casterColliders[j];
+                    if (cc == null) continue;
+                    Physics2D.IgnoreCollision(pc, cc, true);
+                }
+            }
+        }
+
+        private static Quaternion ComputeProjectileRotation(Vector3 direction)
+        {
+            direction.z = 0f;
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                direction = Vector3.right;
+            }
+
+            var forward = direction.normalized;
+            var up = Vector3.Cross(Vector3.forward, forward);
+            if (up.sqrMagnitude < 0.0001f)
+            {
+                up = Vector3.up;
+            }
+
+            return Quaternion.LookRotation(forward, up);
+        }
+
+        private static Quaternion Compute2DRotation(Vector3 direction)
+        {
+            direction.z = 0f;
+            if (direction.sqrMagnitude < 0.0001f)
+            {
+                direction = Vector3.right;
+            }
+
+            float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+            return Quaternion.Euler(0f, 0f, angle);
+        }
+
+        private static GameObject InstantiatePrefabAsGameObject(GameObject prefab, Vector3 position, Quaternion rotation)
+        {
+            if (prefab == null) return null;
+
+            // Avoid Unity's generic Instantiate<T> cast exceptions when a mismatched object reference is assigned.
+            var obj = UnityEngine.Object.Instantiate((UnityEngine.Object)prefab, position, rotation);
+            return obj as GameObject;
+        }
+
+        private static float GetApproxUnitRadius(UnitBattleMetadata meta)
+        {
+            if (meta == null) return 0f;
+
+            float best = 0f;
+
+            var sprite = meta.GetComponentInChildren<SpriteRenderer>();
+            if (sprite != null)
+            {
+                var extents = sprite.bounds.extents;
+                best = Mathf.Max(best, Mathf.Max(extents.x, extents.y));
+            }
+
+            var colliders = meta.GetComponentsInChildren<Collider2D>();
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                if (colliders[i] == null) continue;
+                var extents = colliders[i].bounds.extents;
+                best = Mathf.Max(best, Mathf.Max(extents.x, extents.y));
+            }
+
+            return best;
+        }
+
         private void ConfigureSpellVfxRendering(GameObject instance, SpellDefinition spell, UnitBattleMetadata casterMeta, UnitBattleMetadata targetMeta, Vector2Int targetTile)
         {
             if (instance == null) return;
@@ -421,6 +722,53 @@ namespace SevenBattles.Battle.Spells
 
             int orderOffset = spell != null ? spell.TargetVfxSortingOrderOffset : 0;
             sortingOrder += orderOffset;
+
+            var group = instance.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
+            if (group != null)
+            {
+                group.sortingLayerName = sortingLayerName;
+                group.sortingOrder = sortingOrder;
+            }
+
+            var spriteRenderers = instance.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < spriteRenderers.Length; i++)
+            {
+                var sr = spriteRenderers[i];
+                if (sr == null) continue;
+                sr.sortingLayerName = sortingLayerName;
+                sr.sortingOrder = sortingOrder;
+            }
+
+            var particleRenderers = instance.GetComponentsInChildren<ParticleSystemRenderer>(true);
+            for (int i = 0; i < particleRenderers.Length; i++)
+            {
+                var pr = particleRenderers[i];
+                if (pr == null) continue;
+                pr.sortingLayerName = sortingLayerName;
+                pr.sortingOrder = sortingOrder;
+            }
+        }
+
+        private void ConfigureProjectileRendering(GameObject instance, UnitBattleMetadata casterMeta, UnitBattleMetadata targetMeta, Vector2Int targetTile)
+        {
+            if (instance == null) return;
+
+            string sortingLayerName = "Characters";
+            int sortingOrder = 100;
+
+            if (casterMeta != null)
+            {
+                sortingLayerName = !string.IsNullOrEmpty(casterMeta.SortingLayer) ? casterMeta.SortingLayer : sortingLayerName;
+                sortingOrder = GetUnitSortingOrder(casterMeta, sortingOrder);
+            }
+
+            if (targetMeta != null)
+            {
+                sortingLayerName = !string.IsNullOrEmpty(targetMeta.SortingLayer) ? targetMeta.SortingLayer : sortingLayerName;
+                sortingOrder = GetUnitSortingOrder(targetMeta, sortingOrder);
+            }
+
+            sortingOrder += 5;
 
             var group = instance.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
             if (group != null)

@@ -30,6 +30,12 @@ namespace SevenBattles.Core.Battle
         Shadow = 7
     }
 
+    public enum ProjectileOrientation
+    {
+        LookAtTarget = 0,
+        FaceCamera2D = 1
+    }
+
     [CreateAssetMenu(menuName = "SevenBattles/Spells/Spell Definition", fileName = "SpellDefinition")]
     public sealed class SpellDefinition : ScriptableObject
     {
@@ -60,6 +66,12 @@ namespace SevenBattles.Core.Battle
         [Tooltip("What this spell can target when selecting a tile on the board.")]
         public SpellTargetFilter TargetFilter = SpellTargetFilter.EnemyUnit;
 
+        [Tooltip("If true, the target must be in the same row or the same column as the caster (no diagonal targeting).")]
+        public bool RequiresSameRowOrColumn;
+
+        [Tooltip("If true, the line between caster and target must be clear (no unit between them). Only applies when RequiresSameRowOrColumn is enabled.")]
+        public bool RequiresClearLineOfSight;
+
         [Min(0)]
         [Tooltip("Minimum Manhattan range (in tiles) from the caster tile to the target tile.")]
         public int MinCastRange = 1;
@@ -73,6 +85,21 @@ namespace SevenBattles.Core.Battle
 
         [Tooltip("Hotspot offset for the targeting cursor (typically center of the texture).")]
         public Vector2 TargetingCursorHotspot = new Vector2(16f, 16f);
+
+        [Header("Projectile (optional)")]
+        [Tooltip("Optional projectile prefab instantiated at the caster and moved toward the target. If set, the spell's primary effect is applied on projectile impact.")]
+        public GameObject ProjectilePrefab;
+
+        [Min(0f)]
+        [Tooltip("Optional override for HS_ProjectileMover2D.speed on the spawned projectile. 0 means 'keep prefab default'.")]
+        public float ProjectileSpeedOverride;
+
+        [Min(0f)]
+        [Tooltip("Distance in world units to spawn the projectile in front of the caster (to avoid immediate self-collisions).")]
+        public float ProjectileSpawnOffset = 0.15f;
+
+        [Tooltip("Orientation used when spawning the projectile (3D look-at vs. flat 2D rotation).")]
+        public ProjectileOrientation ProjectileOrientation = ProjectileOrientation.LookAtTarget;
 
         [Header("VFX (optional)")]
         [Tooltip("Optional prefab instantiated at the target position when the spell is cast.")]
@@ -102,6 +129,13 @@ namespace SevenBattles.Core.Battle
 
         [Tooltip("If true, plays CastSfxClip at the target position; otherwise plays at the caster position.")]
         public bool CastSfxAtTarget = true;
+
+        [Tooltip("Optional AudioClip played when the spell projectile impacts a valid target.")]
+        public AudioClip ImpactSfxClip;
+
+        [Range(0f, 1.5f)]
+        [Tooltip("Volume multiplier for ImpactSfxClip.")]
+        public float ImpactSfxVolume = 1f;
 
         [Header("Primary Amount (optional)")]
         [Tooltip("Primary numeric effect previewed in UI (e.g., Damage for Firebolt).")]
