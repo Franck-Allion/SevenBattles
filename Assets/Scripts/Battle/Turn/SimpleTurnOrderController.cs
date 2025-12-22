@@ -81,6 +81,7 @@ namespace SevenBattles.Battle.Turn
         }
 
         private readonly List<TurnUnit> _units = new List<TurnUnit>();
+        private readonly HashSet<UnitStats> _healingSubscriptions = new HashSet<UnitStats>();
         private int _activeIndex = -1;
         private float _pendingAiEndTime = -1f;
         private bool _advancing;
@@ -138,6 +139,11 @@ namespace SevenBattles.Battle.Turn
                 // Also try finding on _System if not adjacent, though strict component requirement preferred
                 if (_highlightController == null) _highlightController = FindObjectOfType<SevenBattles.Battle.Board.BattleBoardHighlightController>();
             }
+        }
+
+        private void OnDisable()
+        {
+            ClearHealingSubscriptions();
         }
 
         public bool HasActiveUnit => _hasActiveUnit;
@@ -391,6 +397,7 @@ namespace SevenBattles.Battle.Turn
 
         private void RebuildUnits()
         {
+            ClearHealingSubscriptions();
             _units.Clear();
             _activeIndex = -1;
             _pendingAiEndTime = -1f;
@@ -403,6 +410,7 @@ namespace SevenBattles.Battle.Turn
                 var stats = meta.GetComponent<UnitStats>();
                 if (stats == null) continue;
                 _units.Add(new TurnUnit { Metadata = meta, Stats = stats });
+                SubscribeToHealing(stats);
             }
 
             _units.Sort((a, b) =>
@@ -458,6 +466,7 @@ namespace SevenBattles.Battle.Turn
             {
                 if (!IsUnitValid(_units[i]))
                 {
+                    UnsubscribeFromHealing(_units[i].Stats);
                     _units.RemoveAt(i);
                     if (i <= _activeIndex)
                     {
@@ -499,6 +508,55 @@ namespace SevenBattles.Battle.Turn
                 }
                 // If firstValid < 0 here, _units would be empty and handled above.
             }
+        }
+
+        private void ClearHealingSubscriptions()
+        {
+            foreach (var stats in _healingSubscriptions)
+            {
+                if (stats != null)
+                {
+                    stats.Healed -= HandleUnitHealed;
+                }
+            }
+
+            _healingSubscriptions.Clear();
+        }
+
+        private void SubscribeToHealing(UnitStats stats)
+        {
+            if (stats == null)
+            {
+                return;
+            }
+
+            if (_healingSubscriptions.Add(stats))
+            {
+                stats.Healed += HandleUnitHealed;
+            }
+        }
+
+        private void UnsubscribeFromHealing(UnitStats stats)
+        {
+            if (stats == null)
+            {
+                return;
+            }
+
+            if (_healingSubscriptions.Remove(stats))
+            {
+                stats.Healed -= HandleUnitHealed;
+            }
+        }
+
+        private void HandleUnitHealed(UnitStats stats, int effectiveHealAmount)
+        {
+            if (_visualFeedback == null || stats == null)
+            {
+                return;
+            }
+
+            _visualFeedback.ShowHealNumber(stats.transform.position, effectiveHealAmount);
         }
 
         private void EvaluateBattleOutcomeAndStop()

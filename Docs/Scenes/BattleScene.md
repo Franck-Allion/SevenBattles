@@ -96,6 +96,10 @@
   - **Inspector configuration**:
     - `_damageNumberPrefab` → Assign a DamageNumbersPro prefab from `Assets/DamageNumbersPro/Demo/Prefabs/2D/` (e.g., "Red Glow", "Blood Text").
     - `_damageNumberYOffset` → Vertical offset in world units to display numbers above units (default: 2.0).
+    - `_healNumberPrefab` -> Assign a visually distinct DamageNumbersPro prefab (e.g., green heal numbers).
+    - `_healNumberYOffset` -> Vertical offset in world units to display heal numbers above units (default: 2.0).
+    - `_healNumberSortingLayer` -> Sorting layer used for heal numbers (default: `Characters`).
+    - `_healNumberSortingOrder` -> Sorting order used for heal numbers (default: `32767`) so they render in front of units.
   - Extension point:
     - Controllers needing visual feedback should reference this service and call `ShowDamageNumber()`, `ShowHealNumber()`, or `ShowBuffText()`.
 

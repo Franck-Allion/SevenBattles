@@ -306,11 +306,6 @@ namespace SevenBattles.Battle.Spells
                 else if (kind == SpellPrimaryAmountKind.Heal && targetStats != null)
                 {
                     targetStats.Heal(amount);
-
-                    if (_visualFeedback != null)
-                    {
-                        _visualFeedback.ShowHealNumber(targetWorld, amount);
-                    }
                 }
 
                 // Handle Death

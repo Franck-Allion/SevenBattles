@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using SevenBattles.Core.Units;
 
@@ -35,6 +36,8 @@ namespace SevenBattles.Battle.Units
         // Backwards-compatible aliases for older tests/usages.
         public int MaxHP => _maxLife;
         public int ActionPoints => _actionPoints;
+
+        public event Action<UnitStats, int> Healed;
 
         public void ApplyBase(UnitStatsData data)
         {
@@ -89,15 +92,21 @@ namespace SevenBattles.Battle.Units
             _life = Mathf.Max(0, _life - damage);
         }
 
-        public void Heal(int amount)
+        public int Heal(int amount)
         {
             if (amount < 0)
             {
                 Debug.LogWarning($"[UnitStats] Heal called with negative amount: {amount}. Ignoring.");
-                return;
+                return 0;
             }
 
-            _life = Mathf.Clamp(_life + amount, 0, Mathf.Max(0, _maxLife));
+            int previousLife = _life;
+            int maxLife = Mathf.Max(0, _maxLife);
+            _life = Mathf.Clamp(_life + amount, 0, maxLife);
+
+            int effectiveHeal = _life - previousLife;
+            Healed?.Invoke(this, effectiveHeal);
+            return effectiveHeal;
         }
     }
 }
