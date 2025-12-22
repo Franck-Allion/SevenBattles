@@ -15,17 +15,12 @@ namespace SevenBattles.Battle.Turn
     // and advances turns for player and AI units.
     public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController, ISpellSelectionController
     {
-        [Header("Board Highlight (optional)")]
-        [SerializeField] private WorldPerspectiveBoard _board;
-        [SerializeField] private Color _playerHighlightColor = new Color(0.3f, 1f, 0.3f, 0.4f);
-        [SerializeField] private Color _enemyHighlightColor = new Color(1f, 0.3f, 0.3f, 0.4f);
-        [SerializeField, Tooltip("Optional material used for the active unit tile highlight during battle (e.g., outline-only). If null, the board's default highlight material is used.")]
-        private Material _activeUnitHighlightMaterial;
+        [Header("Board Highlight (delegated)")]
+        [SerializeField] private WorldPerspectiveBoard _board; // Kept for other initialization if needed, or remove if unused. Checking usage needed. 
+        [SerializeField, Tooltip("Service managing board highlights.")]
+        private SevenBattles.Battle.Board.BattleBoardHighlightController _highlightController;
         [Header("Movement")]
-        [SerializeField, Tooltip("Color used to highlight a legal destination tile for the active unit.")]
-        private Color _moveValidColor = new Color(0.3f, 1f, 0.3f, 0.5f);
-        [SerializeField, Tooltip("Color used to highlight an illegal destination tile for the active unit.")]
-        private Color _moveInvalidColor = new Color(1f, 0.3f, 0.3f, 0.5f);
+        [Header("Movement")]
         [SerializeField, Tooltip("Duration in seconds for the active unit movement animation between tiles.")]
         private float _moveDurationSeconds = 0.35f;
         [SerializeField, Tooltip("Cursor texture displayed when hovering over a legal movement tile.")]
@@ -135,6 +130,13 @@ namespace SevenBattles.Battle.Turn
             if (_cursorController == null)
             {
                 _cursorController = FindObjectOfType<SevenBattles.Battle.Cursors.BattleCursorController>();
+            }
+
+            if (_highlightController == null)
+            {
+                _highlightController = GetComponent<SevenBattles.Battle.Board.BattleBoardHighlightController>();
+                // Also try finding on _System if not adjacent, though strict component requirement preferred
+                if (_highlightController == null) _highlightController = FindObjectOfType<SevenBattles.Battle.Board.BattleBoardHighlightController>();
             }
         }
 
@@ -378,10 +380,12 @@ namespace SevenBattles.Battle.Turn
 
             // During combat, disable hover-driven highlight so only the active unit tile is marked,
             // and optionally switch to the dedicated active-unit highlight material.
+            // Highlighting material is now handled by BattleBoardHighlightController.
             _board.SetHoverEnabled(false);
-            if (_activeUnitHighlightMaterial != null)
+
+            if (_highlightController != null)
             {
-                _board.SetHighlightMaterial(_activeUnitHighlightMaterial);
+                _highlightController.InitializeForBattle();
             }
         }
 
@@ -772,9 +776,9 @@ namespace SevenBattles.Battle.Turn
 
             if (!canMove && !canAttack)
             {
-                if (_board != null)
+                if (_highlightController != null)
                 {
-                    _board.SetSecondaryHighlightVisible(false);
+                    _highlightController.HideSecondaryHighlight();
                 }
                 _hasSelectedMoveTile = false;
                 if (_cursorController != null)
@@ -791,7 +795,7 @@ namespace SevenBattles.Battle.Turn
 
             if (!_board.TryScreenToTile(Input.mousePosition, out var x, out var y))
             {
-                if (!_hasSelectedMoveTile && _board != null)
+                if (!_hasSelectedMoveTile)
                 {
                     UpdateBoardHighlight();
                 }
@@ -816,9 +820,11 @@ namespace SevenBattles.Battle.Turn
                     _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
                     _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
                 }
-                _board.SetSecondaryHighlightVisible(true);
-                _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
-                _board.SetSecondaryHighlightColor(_combatController.AttackCursorColor);
+                
+                if (_highlightController != null)
+                {
+                    _highlightController.SetSecondaryHighlight(hoveredTile, _combatController.AttackCursorColor);
+                }
 
                 if (Input.GetMouseButtonDown(0) && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                 {
@@ -853,9 +859,9 @@ namespace SevenBattles.Battle.Turn
             // PRIORITY 2: Movement input handling (fallback if not attacking)
             if (!canMove)
             {
-                if (_board != null)
+                if (_highlightController != null)
                 {
-                    _board.SetSecondaryHighlightVisible(false);
+                    _highlightController.HideSecondaryHighlight();
                 }
                 _hasSelectedMoveTile = false;
                 if (_cursorController != null)
@@ -869,10 +875,12 @@ namespace SevenBattles.Battle.Turn
 
             if (_hasSelectedMoveTile)
             {
-                _board.SetSecondaryHighlightVisible(true);
-                _board.MoveSecondaryHighlightToTile(_selectedMoveTile.x, _selectedMoveTile.y);
                 bool stillValid = IsTileLegalMoveDestination(_selectedMoveTile);
-                _board.SetSecondaryHighlightColor(stillValid ? _moveValidColor : _moveInvalidColor);
+                if (_highlightController != null)
+                {
+                    _highlightController.SetSecondaryHighlight(_selectedMoveTile, stillValid);
+                }
+                
                 if (_cursorController != null)
                 {
                     _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
@@ -900,9 +908,10 @@ namespace SevenBattles.Battle.Turn
             }
 
             bool legal = IsTileLegalMoveDestination(hoveredTile);
-            _board.SetSecondaryHighlightVisible(true);
-            _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
-            _board.SetSecondaryHighlightColor(legal ? _moveValidColor : _moveInvalidColor);
+            if (_highlightController != null)
+            {
+                _highlightController.SetSecondaryHighlight(hoveredTile, legal);
+            }
 
             // Show move cursor only when hovering a legal movement tile
             if (_cursorController != null)
@@ -956,9 +965,10 @@ namespace SevenBattles.Battle.Turn
             var hoveredTile = new Vector2Int(x, y);
             bool eligible = IsTileLegalSpellTarget(spell, hoveredTile);
 
-            _board.SetSecondaryHighlightVisible(true);
-            _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
-            _board.SetSecondaryHighlightColor(eligible ? _moveValidColor : _moveInvalidColor);
+            if (_highlightController != null)
+            {
+                _highlightController.SetSecondaryHighlight(hoveredTile, eligible);
+            }
 
             if (Input.GetMouseButtonDown(0) && eligible)
             {
@@ -1139,11 +1149,11 @@ namespace SevenBattles.Battle.Turn
                 () => { // On Start
                     _movementAnimating = true;
                     _hasSelectedMoveTile = false;
-                    if (_board != null)
+                    if (_highlightController != null)
                     {
-                        _board.SetHighlightVisible(false);
-                        _board.SetSecondaryHighlightVisible(false);
+                        _highlightController.HideAll();
                     }
+                    /* _board directly usage removed */
                 },
                 () => { // On AP Consumed
                     if (_activeUnitCurrentActionPoints > 0)
@@ -1236,71 +1246,18 @@ namespace SevenBattles.Battle.Turn
 
         private void UpdateBoardHighlight()
         {
-            if (_board == null) return;
+            if (_highlightController == null) return;
+            // Also explicitly clearing old board highlighting to act as safety during transition if needed,
+            // but controller handles it.
 
             if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
             {
-                _board.SetHighlightVisible(false);
+                _highlightController.HideAll();
                 return;
             }
 
             var u = _units[_activeIndex];
-            var meta = u.Metadata;
-            if (meta == null || !meta.HasTile)
-            {
-                _board.SetHighlightVisible(false);
-                return;
-            }
-
-            var tile = meta.Tile;
-            
-            // Validate BaseSortingOrder - should never be 0 or negative
-            if (meta.BaseSortingOrder <= 0)
-            {
-                Debug.LogWarning($"[SimpleTurnOrderController] Active unit has invalid BaseSortingOrder={meta.BaseSortingOrder}. " +
-                                 $"This will cause rendering issues. Setting to default 100.", this);
-                meta.BaseSortingOrder = 100;
-            }
-            
-            // Get actual sorting order from the unit's renderers
-            // We must use the actual value, not computed, because the unit may have been placed with a different sorting order
-            int unitSortingOrder = -1;
-            var group = meta.gameObject.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
-            if (group != null)
-            {
-                unitSortingOrder = group.sortingOrder;
-            }
-            else
-            {
-                var renderer = meta.gameObject.GetComponentInChildren<SpriteRenderer>(true);
-                if (renderer != null)
-                {
-                    unitSortingOrder = renderer.sortingOrder;
-                }
-            }
-            
-            // Fallback to computed value if we couldn't get actual sorting order
-            if (unitSortingOrder < 0)
-            {
-                unitSortingOrder = _board.ComputeSortingOrder(tile.x, tile.y, meta.BaseSortingOrder, rowStride: 10, intraRowOffset: 0);
-                Debug.LogWarning($"[SimpleTurnOrderController] Could not get actual unit sorting order, using computed value: {unitSortingOrder}", this);
-            }
-            
-            // Set highlight to render behind the unit
-            int highlightSortingOrder = unitSortingOrder - 1;
-            
-            // Safety: ensure highlight never goes below minimum threshold (board background)
-            const int MinHighlightSortingOrder = 1;
-            if (highlightSortingOrder < MinHighlightSortingOrder)
-            {
-                highlightSortingOrder = MinHighlightSortingOrder;
-            }
-            
-            _board.SetHighlightSortingOrder(highlightSortingOrder);
-            
-            _board.SetHighlightVisible(true);
-            _board.MoveHighlightToTile(tile.x, tile.y);
-            _board.SetHighlightColor(meta.IsPlayerControlled ? _playerHighlightColor : _enemyHighlightColor);
+            _highlightController.UpdateActiveUnitHighlight(u.Metadata);
         }
 
         private static bool IsUnitValid(TurnUnit unit)

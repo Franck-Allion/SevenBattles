@@ -353,8 +353,13 @@ For more details on the current save/load architecture and JSON format, see:
 - `SimpleTurnOrderController` delegates to this service; do not implement movement logic directly in the orchestrator.
 
 ### Highlighting
-- Primary highlight: active unit tile only (never cursor-driven).  
-- Secondary highlight: cursor-driven preview only.
+- **BattleBoardHighlightController** is the **single source of truth** for board tile highlighting.
+- It manages:
+  - **Primary Highlight**: Visualizes the active unit's position. Handles distinct materials for Battle vs Placement phases (initialized via `InitializeForBattle`).
+  - **Secondary Highlight**: Visualizes cursor interactions (Movement valid/invalid, Attack targeting).
+- **Color Overrides**: Supports overriding the active unit highlight color (e.g., for specific game states) via inspector configuration.
+- `SimpleTurnOrderController` delegates all board highlight updates to this service.
+- General rule: Primary highlight = active unit only; Secondary highlight = cursor preview only.
 
 ### AP (Action Points)
 - Only from `UnitStatsData.ActionPoints` → HUD.  
@@ -405,6 +410,22 @@ For more details on the current save/load architecture and JSON format, see:
   - **Development/Debugging**: Allows pressing Play directly in BattleScene without a previous scene. `WorldBattleBootstrap` auto-generates a session from inspector references.
   - **Backward Compatibility**: Existing scenes continue to work during migration.
 - **Production workflow**: External systems (campaign, menu, SceneFlow) must create `BattleSessionConfig` programmatically and inject it before loading BattleScene.
+
+## 14. 🧹 REFACTORING & SAFE DELETION
+
+To prevent "Name does not exist in the current context" errors and broken references during refactoring:
+
+1.  **Mandatory Grep Search**: Before deleting ANY field, method, or property, you **MUST** perform a global codebase search (using `grep_search`) for its name.
+    *   Do not rely on memory or scrolling.
+    *   Ensure ALL usages are updated or removed *before* deleting the definition.
+2.  **Incremental Extraction**: When managing large "god class" refactors (extracting logic to services):
+    *   **Phase 1**: Copy logic to the new service.
+    *   **Phase 2**: Inject the service into the original class.
+    *   **Phase 3**: Replace the original method body with a call to the service (delegation).
+    *   **Phase 4**: Verify everything works (tests/compiler).
+    *   **Phase 5**: ONLY THEN delete the original fields/helper methods that are now unused.
+3.  **Compile Check**: Use your internal knowledge of the language to verify that removing a symbol won't break compilation. If you removed a `private` field, search the *entire file* to ensure no other methods reference it.
+
 
 ---
 
