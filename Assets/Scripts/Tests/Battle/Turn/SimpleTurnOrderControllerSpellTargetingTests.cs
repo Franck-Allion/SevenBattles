@@ -3,6 +3,7 @@ using UnityEngine;
 using SevenBattles.Battle.Turn;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Board;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 using System.Reflection;
@@ -188,8 +189,13 @@ namespace SevenBattles.Tests.Battle
             CallPrivate(board, "RebuildGrid");
 
             var ctrlGo = new GameObject("TurnController");
+            // Add dependencies first so Awake finds them
+            var spellCtrl = ctrlGo.AddComponent<BattleSpellController>();
+            SetPrivate(spellCtrl, "_board", board);
+
             var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
             SetPrivate(ctrl, "_board", board);
+            // No need to SetPrivate _spellController, Awake handles it
 
             System.Action<Object[]> cleanup = (objs) =>
             {

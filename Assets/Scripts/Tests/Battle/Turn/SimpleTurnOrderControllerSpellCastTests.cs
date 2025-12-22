@@ -3,6 +3,7 @@ using UnityEngine;
 using SevenBattles.Battle.Turn;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Board;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 using System.Reflection;
@@ -21,8 +22,13 @@ namespace SevenBattles.Tests.Battle
             CallPrivate(board, "RebuildGrid");
 
             var ctrlGo = new GameObject("TurnController");
+            // Add dependencies first so Awake finds them
+            var spellCtrl = ctrlGo.AddComponent<BattleSpellController>();
+            SetPrivate(spellCtrl, "_board", board);
+
             var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
             SetPrivate(ctrl, "_board", board);
+            // No manual injection of _spellController needed due to Awake auto-wire
 
             var playerDef = ScriptableObject.CreateInstance<UnitDefinition>();
             var enemyDef = ScriptableObject.CreateInstance<UnitDefinition>();
@@ -70,8 +76,6 @@ namespace SevenBattles.Tests.Battle
             Assert.GreaterOrEqual(pr.sortingOrder, 123);
             Assert.AreEqual(Vector3.one * 2f, vfxClone.transform.localScale);
 
-            Object.DestroyImmediate(spell);
-            Object.DestroyImmediate(vfxPrefab);
             if (vfxClone != null) Object.DestroyImmediate(vfxClone);
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(boardGo);
@@ -91,8 +95,13 @@ namespace SevenBattles.Tests.Battle
             CallPrivate(board, "RebuildGrid");
 
             var ctrlGo = new GameObject("TurnController");
+            // Add dependencies first so Awake finds them
+            var spellCtrl = ctrlGo.AddComponent<BattleSpellController>();
+            SetPrivate(spellCtrl, "_board", board);
+
             var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
             SetPrivate(ctrl, "_board", board);
+            // No manual injection of _spellController needed due to Awake auto-wire
 
             var playerDef = ScriptableObject.CreateInstance<UnitDefinition>();
 

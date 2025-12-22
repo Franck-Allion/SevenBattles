@@ -4,6 +4,7 @@ using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 
@@ -48,6 +49,10 @@ namespace SevenBattles.Battle.Turn
         [Header("Movement Management")]
         [SerializeField, Tooltip("Service managing movement validation, BFS pathfinding, and movement execution. Should reference a BattleMovementController component.")]
         private SevenBattles.Battle.Movement.BattleMovementController _movementController;
+
+        [Header("Spell Management")]
+        [SerializeField, Tooltip("Service managing spell targeting, execution, and effects. Should reference a BattleSpellController component.")]
+        private BattleSpellController _spellController;
 
         [Header("Cursor Management")]
         [SerializeField, Tooltip("Service managing battle cursor states (move, attack, selection, spell). Should reference a BattleCursorController component.")]
@@ -101,6 +106,37 @@ namespace SevenBattles.Battle.Turn
         private SpellDefinition _selectedSpell;
         private bool _battleEnded;
         private BattleOutcome _battleOutcome = BattleOutcome.None;
+
+        private void Awake()
+        {
+            if (_movementController == null)
+            {
+                _movementController = GetComponent<SevenBattles.Battle.Movement.BattleMovementController>();
+                if (_movementController == null) Debug.LogError("[SimpleTurnOrderController] BattleMovementController dependency missing!");
+            }
+
+            if (_spellController == null)
+            {
+                _spellController = GetComponent<BattleSpellController>();
+                if (_spellController == null) Debug.LogError("[SimpleTurnOrderController] BattleSpellController dependency missing!");
+            }
+
+            if (_combatController == null)
+            {
+                 _combatController = GetComponent<SevenBattles.Battle.Combat.BattleCombatController>();
+                 if (_combatController == null) Debug.LogError("[SimpleTurnOrderController] BattleCombatController dependency missing!");
+            }
+             
+            if (_visualFeedback == null)
+            {
+                 _visualFeedback = FindObjectOfType<BattleVisualFeedbackService>();
+            }
+            
+            if (_cursorController == null)
+            {
+                _cursorController = FindObjectOfType<SevenBattles.Battle.Cursors.BattleCursorController>();
+            }
+        }
 
         public bool HasActiveUnit => _hasActiveUnit;
 
@@ -179,7 +215,7 @@ namespace SevenBattles.Battle.Turn
         {
             preview = default;
 
-            if (!_hasActiveUnit || spell == null)
+            if (!_hasActiveUnit || _spellController == null || spell == null)
             {
                 return false;
             }
@@ -189,45 +225,8 @@ namespace SevenBattles.Battle.Turn
                 return false;
             }
 
-            if (spell.PrimaryAmountKind == SpellPrimaryAmountKind.None)
-            {
-                return false;
-            }
-
             var unit = _units[_activeIndex];
-            var stats = unit.Stats;
-            if (stats == null)
-            {
-                return false;
-            }
-
-            int baseAmount = Mathf.Max(0, spell.PrimaryBaseAmount);
-            float scaling = spell.PrimarySpellStatScaling;
-            int scaledAmount = baseAmount;
-
-            if (!Mathf.Approximately(scaling, 0f))
-            {
-                scaledAmount += Mathf.RoundToInt(stats.Spell * scaling);
-            }
-
-            var context = new SpellAmountCalculationContext
-            {
-                Kind = spell.PrimaryAmountKind,
-                Element = spell.PrimaryDamageElement,
-                BaseAmount = baseAmount,
-                Amount = scaledAmount,
-                CasterSpellStat = stats.Spell
-            };
-
-            ApplySpellAmountModifiers(stats.gameObject, spell, ref context);
-
-            context.Amount = Mathf.Max(0, context.Amount);
-
-            preview.Kind = context.Kind;
-            preview.Element = context.Element;
-            preview.BaseAmount = context.BaseAmount;
-            preview.ModifiedAmount = context.Amount;
-            return true;
+            return _spellController.TryGetSpellAmountPreview(spell, unit.Metadata, unit.Stats, out preview);
         }
 
         public event Action ActiveUnitChanged;
@@ -253,32 +252,7 @@ namespace SevenBattles.Battle.Turn
             }
         }
 
-        private static void ApplySpellAmountModifiers(GameObject unitGameObject, SpellDefinition spell, ref SpellAmountCalculationContext context)
-        {
-            if (unitGameObject == null)
-            {
-                return;
-            }
 
-            var behaviours = unitGameObject.GetComponents<MonoBehaviour>();
-            for (int i = 0; i < behaviours.Length; i++)
-            {
-                var provider = behaviours[i] as ISpellAmountModifierProvider;
-                if (provider == null)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    provider.ModifySpellAmount(spell, ref context);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"SimpleTurnOrderController: Spell amount modifier threw an exception and was ignored: {ex.Message}", behaviours[i]);
-                }
-            }
-        }
 
         private void Start()
         {
@@ -994,266 +968,35 @@ namespace SevenBattles.Battle.Turn
 
         private void TryExecuteSpellCast(SpellDefinition spell, Vector2Int targetTile)
         {
-            if (!IsTileLegalSpellTarget(spell, targetTile))
-            {
-                return;
-            }
-
-            if (_activeIndex < 0 || _activeIndex >= _units.Count)
-            {
-                return;
-            }
+            if (_spellController == null) return;
+            if (_activeIndex < 0 || _activeIndex >= _units.Count) return;
 
             var caster = _units[_activeIndex];
-            var casterMeta = caster.Metadata;
-            var casterStats = caster.Stats;
-            if (casterMeta == null || casterStats == null || !casterMeta.HasTile)
-            {
-                return;
-            }
 
-            _spellAnimating = true;
-            if (_cursorController != null)
-            {
-                _cursorController.SetSpellCursor(false, _selectedSpell);
-            }
-            if (_board != null) _board.SetSecondaryHighlightVisible(false);
-
-            try
-            {
-                // Optional casting animation (no-op if missing).
-                UnitVisualUtil.TryPlayAnimation(casterMeta.gameObject, "Cast");
-
-                bool hasTargetUnit = TryGetValidUnitAtTile(targetTile, out var targetUnit);
-                var targetMeta = hasTargetUnit ? targetUnit.Metadata : null;
-                var targetStats = hasTargetUnit ? targetUnit.Stats : null;
-
-                Vector3 targetWorld = GetSpellTargetWorldPosition(targetTile, targetMeta);
-                if (targetMeta == null && casterMeta != null)
+            _spellController.TryExecuteSpellCast(
+                spell, targetTile, caster, _units,
+                u => u.Metadata, u => u.Stats,
+                onStart: () =>
                 {
-                    // Keep VFX on the same Z plane as units (helps with 2.5D camera setups / transparency sorting).
-                    targetWorld.z = casterMeta.transform.position.z;
-                }
-
-                SpawnSpellTargetVfx(spell, targetWorld, casterMeta, targetMeta, targetTile);
-                PlaySpellCastSfx(spell, casterMeta, targetWorld);
-
-                // Apply primary effect (if configured).
-                int amount = 0;
-                SpellPrimaryAmountKind kind = SpellPrimaryAmountKind.None;
-                if (spell != null && spell.PrimaryAmountKind != SpellPrimaryAmountKind.None)
+                    _spellAnimating = true;
+                    if (_cursorController != null) _cursorController.SetSpellCursor(false, _selectedSpell);
+                    if (_board != null) _board.SetSecondaryHighlightVisible(false);
+                },
+                onAPConsumed: cost => ConsumeActiveUnitActionPoints(cost),
+                onStatsChanged: () => ActiveUnitStatsChanged?.Invoke(),
+                onUnitDied: meta =>
                 {
-                    kind = spell.PrimaryAmountKind;
-
-                    if (TryGetActiveUnitSpellAmountPreview(spell, out var preview))
-                    {
-                        amount = Mathf.Max(0, preview.ModifiedAmount);
-                        kind = preview.Kind;
-                    }
-                    else
-                    {
-                        int baseAmount = Mathf.Max(0, spell.PrimaryBaseAmount);
-                        float scaling = spell.PrimarySpellStatScaling;
-                        int scaledAmount = baseAmount;
-
-                        if (!Mathf.Approximately(scaling, 0f) && casterStats != null)
-                        {
-                            scaledAmount += Mathf.RoundToInt(casterStats.Spell * scaling);
-                        }
-
-                        amount = Mathf.Max(0, scaledAmount);
-                    }
-                }
-
-                bool targetDied = false;
-
-                if (kind == SpellPrimaryAmountKind.Damage && targetStats != null)
-                {
-                    if (targetMeta != null)
-                    {
-                        UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Hit");
-                    }
-                    targetStats.TakeDamage(amount);
-                    targetDied = targetStats.Life <= 0;
-
-                    if (_visualFeedback != null)
-                    {
-                        _visualFeedback.ShowDamageNumber(targetWorld, amount);
-                    }
-                }
-                else if (kind == SpellPrimaryAmountKind.Heal && targetStats != null)
-                {
-                    targetStats.Heal(amount);
-
-                    if (_visualFeedback != null)
-                    {
-                        _visualFeedback.ShowHealNumber(targetWorld, amount);
-                    }
-                }
-
-                // Death handling mirrors melee attack flow.
-                if (targetDied && targetMeta != null)
-                {
-                    HandleUnitDeathVfxAndCleanup(targetMeta);
+                    HandleUnitDeathVfxAndCleanup(meta);
                     CompactUnits();
-                }
-
-                // Consume AP cost.
-                ConsumeActiveUnitActionPoints(Mathf.Max(0, spell != null ? spell.ActionPointCost : 0));
-
-                // If we modified the active unit's combat stats directly (e.g., self-heal), notify UI.
-                if (targetMeta != null && ReferenceEquals(targetMeta, casterMeta))
+                },
+                onComplete: () =>
                 {
-                    ActiveUnitStatsChanged?.Invoke();
+                    RebuildAttackableEnemyTiles();
+                    UpdateBoardHighlight();
+                    SetSelectedSpell(null);
+                    _spellAnimating = false;
                 }
-
-                RebuildAttackableEnemyTiles();
-                UpdateBoardHighlight();
-
-                // Default AAA flow: return to base mode after a successful cast.
-                SetSelectedSpell(null);
-            }
-            finally
-            {
-                _spellAnimating = false;
-            }
-        }
-
-        private static void PlaySpellCastSfx(SpellDefinition spell, UnitBattleMetadata casterMeta, Vector3 targetWorld)
-        {
-            if (spell == null || spell.CastSfxClip == null)
-            {
-                return;
-            }
-
-            float volume = Mathf.Clamp(spell.CastSfxVolume, 0f, 1.5f);
-            Vector3 pos = spell.CastSfxAtTarget ? targetWorld : (casterMeta != null ? casterMeta.transform.position : targetWorld);
-            AudioSource.PlayClipAtPoint(spell.CastSfxClip, pos, volume);
-        }
-
-        private Vector3 GetSpellTargetWorldPosition(Vector2Int tile, UnitBattleMetadata targetMeta)
-        {
-            if (targetMeta != null)
-            {
-                return targetMeta.transform.position;
-            }
-
-            if (_board != null)
-            {
-                return _board.TileCenterWorld(tile.x, tile.y);
-            }
-
-            return Vector3.zero;
-        }
-
-        private void SpawnSpellTargetVfx(SpellDefinition spell, Vector3 worldPosition, UnitBattleMetadata casterMeta, UnitBattleMetadata targetMeta, Vector2Int targetTile)
-        {
-            if (spell == null || spell.TargetVfxPrefab == null)
-            {
-                return;
-            }
-
-            var instance = Instantiate(spell.TargetVfxPrefab, worldPosition, Quaternion.identity);
-            ConfigureSpellVfxRendering(instance, spell, casterMeta, targetMeta, targetTile);
-
-            float scaleMultiplier = Mathf.Max(0f, spell.TargetVfxScaleMultiplier);
-            if (!Mathf.Approximately(scaleMultiplier, 1f) && scaleMultiplier > 0f)
-            {
-                instance.transform.localScale = instance.transform.localScale * scaleMultiplier;
-            }
-
-            // Some VFX prefabs are authored with Play On Awake; others are not. Ensure playback.
-            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
-            for (int i = 0; i < systems.Length; i++)
-            {
-                if (systems[i] != null)
-                {
-                    systems[i].Play(true);
-                }
-            }
-
-            float lifetime = Mathf.Max(0f, spell.TargetVfxLifetimeSeconds);
-            if (lifetime > 0f)
-            {
-                Destroy(instance, lifetime);
-            }
-        }
-
-        private static void ConfigureSpellVfxRendering(GameObject instance, SpellDefinition spell, UnitBattleMetadata casterMeta, UnitBattleMetadata targetMeta, Vector2Int targetTile)
-        {
-            if (instance == null)
-            {
-                return;
-            }
-
-            string sortingLayerName = "Characters";
-            int sortingOrder = 100;
-
-            if (targetMeta != null)
-            {
-                sortingLayerName = !string.IsNullOrEmpty(targetMeta.SortingLayer) ? targetMeta.SortingLayer : sortingLayerName;
-                sortingOrder = GetUnitSortingOrder(targetMeta, fallbackOrder: sortingOrder);
-            }
-            else if (casterMeta != null)
-            {
-                sortingLayerName = !string.IsNullOrEmpty(casterMeta.SortingLayer) ? casterMeta.SortingLayer : sortingLayerName;
-                sortingOrder = GetUnitSortingOrder(casterMeta, fallbackOrder: sortingOrder);
-            }
-
-            if (spell != null && !string.IsNullOrEmpty(spell.TargetVfxSortingLayerOverride))
-            {
-                sortingLayerName = spell.TargetVfxSortingLayerOverride;
-            }
-
-            int orderOffset = spell != null ? spell.TargetVfxSortingOrderOffset : 0;
-            sortingOrder += orderOffset;
-
-            var group = instance.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
-            if (group != null)
-            {
-                group.sortingLayerName = sortingLayerName;
-                group.sortingOrder = sortingOrder;
-            }
-
-            var spriteRenderers = instance.GetComponentsInChildren<SpriteRenderer>(true);
-            for (int i = 0; i < spriteRenderers.Length; i++)
-            {
-                var sr = spriteRenderers[i];
-                if (sr == null) continue;
-                sr.sortingLayerName = sortingLayerName;
-                sr.sortingOrder = sortingOrder;
-            }
-
-            var particleRenderers = instance.GetComponentsInChildren<ParticleSystemRenderer>(true);
-            for (int i = 0; i < particleRenderers.Length; i++)
-            {
-                var pr = particleRenderers[i];
-                if (pr == null) continue;
-                pr.sortingLayerName = sortingLayerName;
-                pr.sortingOrder = sortingOrder;
-            }
-        }
-
-        private static int GetUnitSortingOrder(UnitBattleMetadata meta, int fallbackOrder)
-        {
-            if (meta == null)
-            {
-                return fallbackOrder;
-            }
-
-            var group = meta.gameObject.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
-            if (group != null)
-            {
-                return group.sortingOrder;
-            }
-
-            var renderer = meta.gameObject.GetComponentInChildren<SpriteRenderer>(true);
-            if (renderer != null)
-            {
-                return renderer.sortingOrder;
-            }
-
-            return fallbackOrder;
+            );
         }
 
         private void HandleUnitDeathVfxAndCleanup(UnitBattleMetadata targetMeta)
@@ -1328,40 +1071,14 @@ namespace SevenBattles.Battle.Turn
 
         private bool IsTileLegalSpellTarget(SpellDefinition spell, Vector2Int tile)
         {
+            if (_spellController == null) return false;
             if (!CanActiveUnitCastSpell(spell)) return false;
             if (_activeIndex < 0 || _activeIndex >= _units.Count) return false;
 
             var caster = _units[_activeIndex];
-            var casterMeta = caster.Metadata;
-            if (casterMeta == null || !casterMeta.HasTile) return false;
-
-            int minRange = Mathf.Max(0, spell.MinCastRange);
-            int maxRange = Mathf.Max(0, spell.MaxCastRange);
-            if (maxRange < minRange) maxRange = minRange;
-
-            var delta = tile - casterMeta.Tile;
-            int distance = Mathf.Abs(delta.x) + Mathf.Abs(delta.y);
-            if (distance < minRange || distance > maxRange) return false;
-
-            bool hasUnit = TryGetValidUnitAtTile(tile, out var targetUnit);
-            bool isFriendly = hasUnit && targetUnit.Metadata != null && targetUnit.Metadata.IsPlayerControlled == casterMeta.IsPlayerControlled;
-            bool isEnemy = hasUnit && !isFriendly;
-
-            switch (spell.TargetFilter)
-            {
-                case SpellTargetFilter.EnemyUnit:
-                    return hasUnit && isEnemy;
-                case SpellTargetFilter.FriendlyUnit:
-                    return hasUnit && isFriendly;
-                case SpellTargetFilter.AnyUnit:
-                    return hasUnit;
-                case SpellTargetFilter.EmptyTile:
-                    return !hasUnit;
-                case SpellTargetFilter.AnyTile:
-                    return true;
-                default:
-                    return false;
-            }
+            return _spellController.IsTileLegalSpellTarget(spell, tile, caster.Metadata, _units, 
+                u => u.Metadata, 
+                (pos, u) => IsUnitValid(u) && u.Metadata.Tile == pos);
         }
 
         private bool TryGetValidUnitAtTile(Vector2Int tile, out TurnUnit unit)

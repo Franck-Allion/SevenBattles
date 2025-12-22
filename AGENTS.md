@@ -377,6 +377,15 @@ For more details on the current save/load architecture and JSON format, see:
 - Responsible for attack validation, AP consumption, and utilizing `BattleDamageCalculator`.
 - `SimpleTurnOrderController` delegates to this service; do not implement attack sequences directly in the orchestrator.
 
+### Spell Execution
+- **BattleSpellController** is the **single source of truth** for spell casting logic.
+- It handles:
+  - Validating spell targets (`IsTileLegalSpellTarget`).
+  - Executing spell effects (Damage/Heal) and calculating amounts.
+  - Spawning spell-specific VFX and playing SFX.
+  - Consuming Action Points for spells.
+- `SimpleTurnOrderController` delegates all spell logic to `BattleSpellController`.
+
 ### Cursor Management
 - `BattleCursorController` is the **single source of truth** for the visual cursor state (Move, Attack, Spell, simple Selection).
 - Logic that changes the cursor must inject and use this service; do not use `Cursor.SetCursor` directly in battle controllers.
