@@ -36,15 +36,18 @@ namespace SevenBattles.Battle.Turn
         [SerializeField, Tooltip("Hotspot offset for the selection cursor (typically center of the texture).")]
         private Vector2 _selectionCursorHotspot = new Vector2(16f, 16f);
 
-        [Header("Attack")]
         [SerializeField, Tooltip("Cursor texture displayed when hovering over an attackable enemy.")]
         private Texture2D _attackCursorTexture;
         [SerializeField, Tooltip("Hotspot offset for the attack cursor (typically center of the texture).")]
         private Vector2 _attackCursorHotspot = new Vector2(16f, 16f);
-        [SerializeField, Tooltip("Audio clip played when an attack hits (one-shot).")]
-        private AudioClip _attackHitClip;
-        [SerializeField, Tooltip("Color for secondary highlight when hovering an attackable enemy.")]
-        private Color _attackCursorColor = new Color(1f, 0.3f, 0.3f, 0.6f);
+
+        [Header("Combat Management")]
+        [SerializeField, Tooltip("Service managing attack validation, execution, and damage application. Should reference a BattleCombatController component.")]
+        private SevenBattles.Battle.Combat.BattleCombatController _combatController;
+
+        [Header("Cursor Management")]
+        [SerializeField, Tooltip("Service managing battle cursor states (move, attack, selection, spell). Should reference a BattleCursorController component.")]
+        private SevenBattles.Battle.Cursors.BattleCursorController _cursorController;
 
         [Header("Visual Feedback")]
         [SerializeField, Tooltip("Service managing battle visual effects like damage numbers. Should reference the BattleVisualFeedbackService on _System GameObject.")]
@@ -56,9 +59,7 @@ namespace SevenBattles.Battle.Turn
         [SerializeField, Tooltip("Duration in seconds to wait after playing a death animation before removing the unit GameObject from the board.")]
         private float _deathAnimationDurationSeconds = 1f;
 
-        [Header("Cursor Management")]
-        [SerializeField, Tooltip("Service managing battle cursor states (move, attack, selection, spell). Should reference a BattleCursorController component.")]
-        private SevenBattles.Battle.Cursors.BattleCursorController _cursorController;
+
 
         [Header("Flow")]
         [SerializeField, Tooltip("If true, BeginBattle is called automatically on Start. Typically disabled when using placement flow.")]
@@ -93,7 +94,6 @@ namespace SevenBattles.Battle.Turn
         private Vector2Int _selectedMoveTile;
         private readonly HashSet<Vector2Int> _legalMoveTiles = new HashSet<Vector2Int>();
         private readonly Dictionary<Vector2Int, Vector2Int> _movePrevTile = new Dictionary<Vector2Int, Vector2Int>();
-        private readonly HashSet<Vector2Int> _attackableEnemyTiles = new HashSet<Vector2Int>();
 
         // Cursor state is now managed by BattleCursorController
         private SpellDefinition _selectedSpell;
@@ -752,7 +752,10 @@ namespace SevenBattles.Battle.Turn
 
             UpdateBoardHighlight();
             RebuildLegalMoveTilesForActiveUnit();
-            RebuildAttackableEnemyTiles();
+            if (_combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+            {
+                _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
+            }
 
             if (_hasActiveUnit && !IsActiveUnitPlayerControlledInternal())
             {
@@ -790,7 +793,8 @@ namespace SevenBattles.Battle.Turn
 
             // First check if we can do anything at all
             bool canMove = CanActiveUnitMove();
-            bool canAttack = CanActiveUnitAttack();
+            bool canAttack = _combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count
+                && _combatController.CanAttack(_units[_activeIndex].Stats, _activeUnitCurrentActionPoints, IsActiveUnitPlayerControlledInternal(), _movementAnimating, _attackAnimating);
 
             if (!canMove && !canAttack)
             {
@@ -829,7 +833,7 @@ namespace SevenBattles.Battle.Turn
             var hoveredTile = new Vector2Int(x, y);
 
             // PRIORITY 1: Attack input handling (takes priority over movement)
-            if (canAttack && IsAttackableEnemyTile(hoveredTile))
+            if (canAttack && _combatController != null && _combatController.IsAttackableEnemyTile(hoveredTile))
             {
                 // Show attack cursor and highlight
                 if (_cursorController != null)
@@ -840,11 +844,27 @@ namespace SevenBattles.Battle.Turn
                 }
                 _board.SetSecondaryHighlightVisible(true);
                 _board.MoveSecondaryHighlightToTile(hoveredTile.x, hoveredTile.y);
-                _board.SetSecondaryHighlightColor(_attackCursorColor);
+                _board.SetSecondaryHighlightColor(_combatController.AttackCursorColor);
 
-                if (Input.GetMouseButtonDown(0))
+                if (Input.GetMouseButtonDown(0) && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                 {
-                    TryExecuteAttack(hoveredTile);
+                    _combatController.TryExecuteAttack(
+                        hoveredTile,
+                        _units[_activeIndex],
+                        _units,
+                        u => u.Metadata,
+                        u => u.Stats,
+                        () => { _attackAnimating = true; },
+                        () => { ConsumeActiveUnitActionPoint(); },
+                        () => { 
+                            CompactUnits(); 
+                            if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                            {
+                                _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats); 
+                            }
+                        },
+                        () => { _attackAnimating = false; UpdateBoardHighlight(); }
+                    );
                 }
 
                 return;
@@ -1739,250 +1759,13 @@ namespace SevenBattles.Battle.Turn
             return u.Metadata != null && u.Metadata.IsPlayerControlled;
         }
 
-        // ===== ATTACK SYSTEM =====
-
-        private bool CanActiveUnitAttack()
-        {
-            if (!_hasActiveUnit) return false;
-            if (!IsActiveUnitPlayerControlledInternal()) return false;
-            if (_activeUnitCurrentActionPoints < 1) return false;
-            if (_activeUnitCurrentActionPoints < 1) return false;
-            if (_movementAnimating) return false;
-            if (_attackAnimating) return false;
-            if (_board == null) return false;
-
-            var u = _units[_activeIndex];
-            if (u.Stats == null) return false;
-            if (u.Stats.Attack <= 0) return false;
-
-            return true;
-        }
-
-        private bool IsAttackableEnemyTile(Vector2Int tile)
-        {
-            if (!CanActiveUnitAttack()) return false;
-            return _attackableEnemyTiles.Contains(tile);
-        }
-
+        // Helper to delegate to combat controller
         private void RebuildAttackableEnemyTiles()
         {
-            _attackableEnemyTiles.Clear();
-
-            if (!CanActiveUnitAttack()) return;
-
-            var u = _units[_activeIndex];
-            var meta = u.Metadata;
-            if (meta == null || !meta.HasTile) return;
-
-            var activeTile = meta.Tile;
-
-            // Check all four cardinal directions (N, S, E, W)
-            Vector2Int[] adjacentOffsets = new Vector2Int[]
+            if (_combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
             {
-                new Vector2Int(0, 1),   // North
-                new Vector2Int(0, -1),  // South
-                new Vector2Int(1, 0),   // East
-                new Vector2Int(-1, 0)   // West
-            };
-
-            foreach (var offset in adjacentOffsets)
-            {
-                var checkTile = activeTile + offset;
-
-                // Find if there's an enemy unit on this tile
-                for (int i = 0; i < _units.Count; i++)
-                {
-                    var targetMeta = _units[i].Metadata;
-                    if (targetMeta == null || !targetMeta.HasTile) continue;
-                    if (targetMeta.Tile != checkTile) continue;
-
-                    // Check if it's an enemy (different team)
-                    if (targetMeta.IsPlayerControlled != meta.IsPlayerControlled)
-                    {
-                        _attackableEnemyTiles.Add(checkTile);
-                        break; // Only one unit per tile
-                    }
-                }
+                _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
             }
-        }
-
-        private void TryExecuteAttack(Vector2Int targetTile)
-        {
-            if (!IsAttackableEnemyTile(targetTile)) return;
-
-            var attacker = _units[_activeIndex];
-            var attackerMeta = attacker.Metadata;
-            var attackerStats = attacker.Stats;
-
-            if (attackerMeta == null || attackerStats == null) return;
-
-            // Find the target unit on the target tile
-            TurnUnit? targetUnit = null;
-            for (int i = 0; i < _units.Count; i++)
-            {
-                var targetMeta = _units[i].Metadata;
-                if (targetMeta == null || !targetMeta.HasTile) continue;
-                if (targetMeta.Tile == targetTile)
-                {
-                    targetUnit = _units[i];
-                    break;
-                }
-            }
-
-            if (!targetUnit.HasValue) return;
-
-            var target = targetUnit.Value;
-            var targetStats = target.Stats;
-            if (targetStats == null) return;
-
-            // Calculate damage
-            int damage = CalculateDamage(attackerStats.Attack, targetStats.Defense);
-
-            // Apply damage
-            // Start the attack sequence coroutine
-            StartCoroutine(ExecuteAttackRoutine(attacker, targetUnit.Value, damage));
-        }
-
-        private System.Collections.IEnumerator ExecuteAttackRoutine(TurnUnit attacker, TurnUnit target, int damage)
-        {
-            _attackAnimating = true;
-            if (_cursorController != null)
-            {
-                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
-            } // Hide cursor during animation
-            if (_board != null) _board.SetSecondaryHighlightVisible(false);
-
-            var attackerMeta = attacker.Metadata;
-            var targetMeta = target.Metadata;
-            var targetStats = target.Stats;
-
-            // 1. Face both combatants towards each other
-            if (attackerMeta != null && targetMeta != null)
-            {
-                // Face attacker towards target
-                var dir = ComputeDirection(attackerMeta.Tile, targetMeta.Tile);
-                if (dir != Vector2.zero)
-                {
-                    UnitVisualUtil.SetDirectionIfCharacter4D(attackerMeta.gameObject, dir);
-                }
-
-                // Face target towards attacker
-                var reverseDir = ComputeDirection(targetMeta.Tile, attackerMeta.Tile);
-                if (reverseDir != Vector2.zero)
-                {
-                    UnitVisualUtil.SetDirectionIfCharacter4D(targetMeta.gameObject, reverseDir);
-                }
-            }
-
-            // 2. Play "Attack" on attacker (invokes Attack() method)
-            if (attackerMeta != null)
-            {
-                UnitVisualUtil.TryPlayAnimation(attackerMeta.gameObject, "Attack");
-            }
-
-            // 3. Wait for impact
-            yield return new WaitForSeconds(0.25f);
-
-            // 4. Play "Hit" on target (invokes Hit() method)
-            if (targetMeta != null)
-            {
-                UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Hit");
-            }
-
-            // 5. Apply damage/sound
-            bool targetDied = false;
-            if (targetStats != null)
-            {
-                targetStats.TakeDamage(damage);
-                targetDied = targetStats.Life <= 0;
-            }
-
-            // Show damage number above target
-            if (_visualFeedback != null && targetMeta != null)
-            {
-                Vector3 targetPosition = targetMeta.transform.position;
-                _visualFeedback.ShowDamageNumber(targetPosition, damage);
-            }
-
-            if (_attackHitClip != null)
-            {
-                AudioSource.PlayClipAtPoint(_attackHitClip, Vector3.zero, 1f);
-            }
-
-            // Raise events for UI update
-            ActiveUnitStatsChanged?.Invoke();
-
-            // Debug log
-            string attackerName = attackerMeta != null ? (attackerMeta.Definition != null ? attackerMeta.Definition.Id : attackerMeta.gameObject.name) : "Unknown";
-            string targetName = targetMeta != null ? (targetMeta.Definition != null ? targetMeta.Definition.Id : targetMeta.gameObject.name) : "Unknown";
-            Debug.Log($"[Combat] {attackerName} hit {targetName} for {damage} damage.");
-
-            // 6. Wait for completion
-            yield return new WaitForSeconds(0.5f);
-
-            // 7. Reset to "Idle" or play death, spawn VFX, and schedule removal from board
-            if (attackerMeta != null)
-            {
-                UnitVisualUtil.TryPlayAnimation(attackerMeta.gameObject, "Idle");
-            }
-            if (targetMeta != null)
-            {
-                if (targetDied)
-                {
-                    // Play Character4D death animation if available.
-                    UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Death");
-
-                    // Spawn optional death VFX at the unit's position.
-                    if (_deathVfxPrefab != null)
-                    {
-                        var vfxInstance = Instantiate(_deathVfxPrefab, targetMeta.transform.position, Quaternion.identity);
-                        if (_deathVfxLifetimeSeconds > 0f)
-                        {
-                            Destroy(vfxInstance, _deathVfxLifetimeSeconds);
-                        }
-                    }
-
-                    // Play optional per-unit death SFX defined on the unit type.
-                    var def = targetMeta.Definition;
-                    if (def != null && def.DeathSfx != null)
-                    {
-                        float volume = 1f;
-                        try
-                        {
-                            volume = Mathf.Clamp(def.DeathSfxVolume, 0f, 1.5f);
-                        }
-                        catch
-                        {
-                            // If older assets do not have the field yet, fall back to default volume.
-                            volume = 1f;
-                        }
-
-                        AudioSource.PlayClipAtPoint(def.DeathSfx, targetMeta.transform.position, volume);
-                    }
-
-                    // Defer logical removal and GameObject destruction until after the death animation has finished.
-                    StartCoroutine(HandleUnitDeathCleanup(targetMeta));
-                }
-                else
-                {
-                    UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Idle");
-                }
-            }
-
-            // Consume AP
-            ConsumeActiveUnitActionPoint();
-
-            // Remove dead units from the turn order before rebuilding attack tiles.
-            if (targetDied)
-            {
-                CompactUnits();
-            }
-
-            // Rebuild attack tiles
-            RebuildAttackableEnemyTiles();
-
-            _attackAnimating = false;
-            UpdateBoardHighlight();
         }
 
         private void ConsumeActiveUnitActionPoint()

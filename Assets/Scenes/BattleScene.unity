@@ -542,6 +542,8 @@ Transform:
   - {fileID: 346359281}
   - {fileID: 1825238185}
   - {fileID: 532915270}
+  - {fileID: 1691522222}
+  - {fileID: 2090167045}
   - {fileID: 1760860159}
   - {fileID: 985955652}
   - {fileID: 1354297972}
@@ -15472,6 +15474,50 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &1691522220
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1691522222}
+  - component: {fileID: 1691522221}
+  m_Layer: 0
+  m_Name: BattleCursorController
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1691522221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1691522220}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5884ab090ce84ac44a55a7b13fcf8247, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1691522222
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1691522220}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 83980595}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1701614941
 GameObject:
   m_ObjectHideFlags: 0
@@ -16633,8 +16679,8 @@ MonoBehaviour:
   _selectionCursorHotspot: {x: 16, y: 16}
   _attackCursorTexture: {fileID: 2800000, guid: b8c1794a68b668944828321a0c659a31, type: 3}
   _attackCursorHotspot: {x: 16, y: 16}
-  _attackHitClip: {fileID: 8300000, guid: af877ceadde522e4e92b10ac649af0ba, type: 3}
-  _attackCursorColor: {r: 1, g: 0.3, b: 0.3, a: 0.6}
+  _combatController: {fileID: 2090167046}
+  _cursorController: {fileID: 1691522221}
   _visualFeedback: {fileID: 346359280}
   _deathVfxPrefab: {fileID: 982679635660977018, guid: 96f3e8f1ae5f68745b62d093bb70a541, type: 3}
   _deathVfxLifetimeSeconds: 3
@@ -18622,6 +18668,57 @@ MonoBehaviour:
   _apCostFontSize: 40
   _selectedSpellDescriptionText: {fileID: 2109000002}
   _spellDescriptionTable: UI.Common
+--- !u!1 &2090167044
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2090167045}
+  - component: {fileID: 2090167046}
+  m_Layer: 0
+  m_Name: 'BattleCombatController '
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2090167045
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2090167044}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 83980595}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2090167046
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2090167044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 678a34ef6f70d3e4681346842b84486d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _attackHitClip: {fileID: 8300000, guid: af877ceadde522e4e92b10ac649af0ba, type: 3}
+  _attackCursorColor: {r: 1, g: 0.3, b: 0.3, a: 0.6}
+  _deathVfxPrefab: {fileID: 982679635660977018, guid: 96f3e8f1ae5f68745b62d093bb70a541, type: 3}
+  _deathVfxLifetimeSeconds: 2
+  _deathAnimationDurationSeconds: 1
+  _board: {fileID: 461991018}
+  _visualFeedback: {fileID: 346359280}
 --- !u!1 &2093901475
 GameObject:
   m_ObjectHideFlags: 0
