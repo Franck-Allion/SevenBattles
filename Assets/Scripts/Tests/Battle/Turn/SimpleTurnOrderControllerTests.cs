@@ -8,6 +8,7 @@ using SevenBattles.Core.Units;
 using SevenBattles.Core;
 using System.Collections;
 using UnityEngine.TestTools;
+using SevenBattles.Battle.Movement;
 
 namespace SevenBattles.Tests.Battle
 {
@@ -395,6 +396,112 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(playerGo);
             Object.DestroyImmediate(boardGo);
             Object.DestroyImmediate(playerDef);
+        }
+
+        [UnityTest]
+        public IEnumerator AiUnitMovesTowardNearestPlayer_WhenMovementPossible()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 6);
+            SetPrivate(board, "_rows", 6);
+            SetPrivate(board, "_topLeft", new Vector2(0, 6));
+            SetPrivate(board, "_topRight", new Vector2(6, 6));
+            SetPrivate(board, "_bottomRight", new Vector2(6, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var movement = ctrlGo.AddComponent<BattleMovementController>();
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            SetPrivate(movement, "_board", board);
+            SetPrivate(ctrl, "_board", board);
+            SetPrivate(ctrl, "_movementController", movement);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 2, Speed = 2, Initiative = 20 });
+            var enemyMeta = UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(4, 4));
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 2, Speed = 2, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(1, 1));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            var expectedTile = new Vector2Int(2, 4);
+            int frameBudget = 180;
+            while (!ctrl.IsActiveUnitPlayerControlled && frameBudget-- > 0)
+            {
+                yield return null;
+            }
+
+            Assert.Greater(frameBudget, 0, "AI turn should have ended after attempting to move.");
+            Assert.AreEqual(expectedTile, enemyMeta.Tile, "AI should move closer to the nearest player unit.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [UnityTest]
+        public IEnumerator AiUnitSkipsMovement_WhenNoActionPoints()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 5);
+            SetPrivate(board, "_rows", 5);
+            SetPrivate(board, "_topLeft", new Vector2(0, 5));
+            SetPrivate(board, "_topRight", new Vector2(5, 5));
+            SetPrivate(board, "_bottomRight", new Vector2(5, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var movement = ctrlGo.AddComponent<BattleMovementController>();
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            SetPrivate(movement, "_board", board);
+            SetPrivate(ctrl, "_board", board);
+            SetPrivate(ctrl, "_movementController", movement);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 0, Speed = 2, Initiative = 20 });
+            var enemyMeta = UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(3, 3));
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 2, Speed = 2, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(1, 1));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            var originalTile = enemyMeta.Tile;
+            int frameBudget = 120;
+            while (!ctrl.IsActiveUnitPlayerControlled && frameBudget-- > 0)
+            {
+                yield return null;
+            }
+
+            Assert.Greater(frameBudget, 0, "AI turn should end even when it cannot move.");
+            Assert.AreEqual(originalTile, enemyMeta.Tile, "Enemy should remain in place without AP.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(def);
         }
 
         private static void SetPrivate(object obj, string field, object value)

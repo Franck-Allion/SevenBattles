@@ -29,9 +29,8 @@ namespace SevenBattles.Battle.Movement
         /// <summary>
         /// Checks if the unit can perform movement.
         /// </summary>
-        public bool CanMove(UnitStats stats, int currentAP, bool hasAlreadyMoved, bool isPlayerControlled)
+        public bool CanMove(UnitStats stats, int currentAP, bool hasAlreadyMoved)
         {
-            if (!isPlayerControlled) return false;
             if (currentAP <= 0) return false;
             if (hasAlreadyMoved) return false;
             if (_board == null) return false;
@@ -174,6 +173,31 @@ namespace SevenBattles.Battle.Movement
                 _legalMoveTiles.Add(tile);
             }
             queue.Enqueue(tile);
+        }
+
+        /// <summary>
+        /// Copies the current set of legal move tiles into the provided buffer.
+        /// The buffer is cleared before tiles are appended.
+        /// </summary>
+        public void CopyLegalMoveTiles(List<Vector2Int> buffer)
+        {
+            if (buffer == null)
+            {
+                return;
+            }
+
+            buffer.Clear();
+            foreach (var tile in _legalMoveTiles)
+            {
+                buffer.Add(tile);
+            }
+
+            buffer.Sort((a, b) =>
+            {
+                int cmp = a.y.CompareTo(b.y);
+                if (cmp != 0) return cmp;
+                return a.x.CompareTo(b.x);
+            });
         }
 
         private List<Vector2Int> BuildMovePath(Vector2Int origin, Vector2Int destination)

@@ -401,6 +401,12 @@ For more details on the current save/load architecture and JSON format, see:
 - Turn-based overlays (e.g., "Turn X" banners) must use `TurnIndex` + `LocalizedString` smart strings, and must acquire/release `SetInteractionLocked` in a balanced way (no permanent locks).  
 - Any CanvasGroup-based overlay that blocks input must clear `blocksRaycasts` and restore related HUD `CanvasGroup.alpha` state when it hides.
 
+### AI Turn Decisions
+- `BattleAiTurnService` (`Assets/Scripts/Battle/AI/BattleAiTurnService.cs`) is the centralized surface for AI-controlled unit movement logic.
+- Future AI features (movement heuristics, destination selection, logging, etc.) must extend this service instead of bloating `SimpleTurnOrderController`.
+- Reuse the provided `Context` struct so AI logic always respects the same Action Point, Speed, and board occupancy invariants enforced by `BattleMovementController`.
+- Additional controllers/services needing AI movement choices should query `BattleAiTurnService` rather than rebuilding BFS or nearest-enemy logic.
+
 ### Battle Session Configuration
 - All battle initialization data (player squad, enemy squad, difficulty, etc.) must be encapsulated in a `BattleSessionConfig` and injected via `IBattleSessionService`.
 - Controllers in the Battle domain must never hold direct references to ScriptableObject squad data; they must query `IBattleSessionService.CurrentSession`.

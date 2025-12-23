@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Board;
+using SevenBattles.Battle.AI;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core;
 using SevenBattles.Battle.Spells;
@@ -83,7 +84,6 @@ namespace SevenBattles.Battle.Turn
         private readonly List<TurnUnit> _units = new List<TurnUnit>();
         private readonly HashSet<UnitStats> _healingSubscriptions = new HashSet<UnitStats>();
         private int _activeIndex = -1;
-        private float _pendingAiEndTime = -1f;
         private bool _advancing;
         private bool _hasActiveUnit;
         private int _interactionLockCount;
@@ -97,6 +97,11 @@ namespace SevenBattles.Battle.Turn
         private bool _spellAnimating;
         private bool _hasSelectedMoveTile;
         private Vector2Int _selectedMoveTile;
+        private bool _aiMovePendingCompletion;
+        private bool _aiDecisionInProgress;
+        [SerializeField, Tooltip("Service responsible for evaluating AI turns.")]
+        private BattleAiTurnService _aiTurnService;
+        private readonly List<UnitBattleMetadata> _aiAllUnitsBuffer = new List<UnitBattleMetadata>();
 
         // Cursor state is now managed by BattleCursorController
         private SpellDefinition _selectedSpell;
@@ -138,6 +143,20 @@ namespace SevenBattles.Battle.Turn
                 _highlightController = GetComponent<SevenBattles.Battle.Board.BattleBoardHighlightController>();
                 // Also try finding on _System if not adjacent, though strict component requirement preferred
                 if (_highlightController == null) _highlightController = FindObjectOfType<SevenBattles.Battle.Board.BattleBoardHighlightController>();
+            }
+
+            if (_aiTurnService == null)
+            {
+                _aiTurnService = GetComponent<BattleAiTurnService>();
+                if (_aiTurnService == null)
+                {
+                    _aiTurnService = gameObject.AddComponent<BattleAiTurnService>();
+                }
+            }
+
+            if (_aiTurnService != null && _movementController != null)
+            {
+                _aiTurnService.SetMovementController(_movementController);
             }
         }
 
@@ -285,17 +304,7 @@ namespace SevenBattles.Battle.Turn
                 return;
             }
 
-            if (_pendingAiEndTime < 0f) return;
-            if (_advancing) return;
-
-            if (Time.time >= _pendingAiEndTime)
-            {
-                if (_logTurns)
-                {
-                    Debug.Log("SimpleTurnOrderController: AI turn timeout reached, advancing.", this);
-                }
-                AdvanceToNextUnit();
-            }
+            BeginAiTurnForActiveUnit();
         }
 
         // Entry point for scene/placement flow when combat actually begins.
@@ -400,7 +409,6 @@ namespace SevenBattles.Battle.Turn
             ClearHealingSubscriptions();
             _units.Clear();
             _activeIndex = -1;
-            _pendingAiEndTime = -1f;
 
             var metas = UnityEngine.Object.FindObjectsByType<UnitBattleMetadata>(FindObjectsSortMode.None);
             for (int i = 0; i < metas.Length; i++)
@@ -755,9 +763,10 @@ namespace SevenBattles.Battle.Turn
         private void SetActiveIndex(int index)
         {
             _activeIndex = index;
-            _pendingAiEndTime = -1f;
             _activeUnitHasMoved = false;
             _hasSelectedMoveTile = false;
+            _aiMovePendingCompletion = false;
+            _aiDecisionInProgress = false;
 
             // Reset cursors when active unit changes
             if (_cursorController != null)
@@ -793,12 +802,6 @@ namespace SevenBattles.Battle.Turn
                 _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
             }
 
-            if (_hasActiveUnit && !IsActiveUnitPlayerControlledInternal())
-            {
-                float delay = Mathf.Max(0f, _aiTurnDelaySeconds);
-                _pendingAiEndTime = Time.time + delay;
-            }
-
             if (_logTurns)
             {
                 if (_hasActiveUnit)
@@ -817,7 +820,83 @@ namespace SevenBattles.Battle.Turn
             ActiveUnitChanged?.Invoke();
             ActiveUnitStatsChanged?.Invoke();
             ActiveUnitActionPointsChanged?.Invoke();
+
+            if (_hasActiveUnit && !IsActiveUnitPlayerControlledInternal())
+            {
+                BeginAiTurnForActiveUnit();
+            }
         }
+
+        private void BeginAiTurnForActiveUnit()
+        {
+            if (_battleEnded) return;
+            if (_aiMovePendingCompletion || _aiDecisionInProgress) return;
+            if (_advancing) return;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return;
+            if (IsActiveUnitPlayerControlledInternal()) return;
+            if (_movementAnimating || _attackAnimating || _spellAnimating) return;
+
+            if (_aiTurnService == null)
+            {
+                CompleteAiTurnAfterDecision();
+                return;
+            }
+
+            _aiDecisionInProgress = true;
+            RebuildLegalMoveTilesForActiveUnit();
+            var decision = _aiTurnService.EvaluateMovement(BuildAiContext());
+            _aiDecisionInProgress = false;
+
+            if (!string.IsNullOrEmpty(decision.LogMessage))
+            {
+                Debug.Log(decision.LogMessage, this);
+            }
+
+            if (decision.Type == BattleAiTurnService.DecisionType.Move)
+            {
+                _aiMovePendingCompletion = true;
+                TryExecuteActiveUnitMove(decision.Destination);
+            }
+            else
+            {
+                CompleteAiTurnAfterDecision();
+            }
+        }
+
+        private BattleAiTurnService.Context BuildAiContext()
+        {
+            _aiAllUnitsBuffer.Clear();
+            for (int i = 0; i < _units.Count; i++)
+            {
+                if (!IsUnitValid(_units[i])) continue;
+                if (_units[i].Metadata == null) continue;
+                _aiAllUnitsBuffer.Add(_units[i].Metadata);
+            }
+
+            var activeUnit = _units[_activeIndex];
+            return new BattleAiTurnService.Context
+            {
+                ActiveUnit = activeUnit.Metadata,
+                ActiveStats = activeUnit.Stats,
+                CurrentActionPoints = _activeUnitCurrentActionPoints,
+                HasMoved = _activeUnitHasMoved,
+                AllUnits = _aiAllUnitsBuffer
+            };
+        }
+
+        private void CompleteAiTurnAfterDecision()
+        {
+            _aiMovePendingCompletion = false;
+            _aiDecisionInProgress = false;
+
+            if (_battleEnded) return;
+            if (!_hasActiveUnit || IsActiveUnitPlayerControlledInternal()) return;
+            if (_movementAnimating || _attackAnimating || _spellAnimating) return;
+            if (_advancing) return;
+
+            AdvanceToNextUnit();
+        }
+
 
         private void UpdatePlayerTurnInput()
         {
@@ -1166,13 +1245,12 @@ namespace SevenBattles.Battle.Turn
 
         private bool CanActiveUnitMove()
         {
-            if (_movementController == null) return false;
-            // Provide data needed for validation, but do not pass full state if not needed
-            // But CanMove needs stats, AP, etc.
             if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
+            if (!IsActiveUnitPlayerControlledInternal()) return false;
+            if (_movementController == null) return false;
             var u = _units[_activeIndex];
             // We use the controller's validation but we also check local state references if needed
-            return _movementController.CanMove(u.Stats, _activeUnitCurrentActionPoints, _activeUnitHasMoved, IsActiveUnitPlayerControlledInternal());
+            return _movementController.CanMove(u.Stats, _activeUnitCurrentActionPoints, _activeUnitHasMoved);
         }
 
         private bool IsTileLegalMoveDestination(Vector2Int tile)
@@ -1228,8 +1306,20 @@ namespace SevenBattles.Battle.Turn
                     _movementAnimating = false;
                     UpdateBoardHighlight();
                     RebuildAttackableEnemyTiles();
+                    HandleAiMoveCompleted();
                 }
             );
+        }
+
+        private void HandleAiMoveCompleted()
+        {
+            if (!_aiMovePendingCompletion)
+            {
+                return;
+            }
+
+            _aiMovePendingCompletion = false;
+            CompleteAiTurnAfterDecision();
         }
 
         private void RebuildLegalMoveTilesForActiveUnit()
@@ -1263,37 +1353,29 @@ namespace SevenBattles.Battle.Turn
 
             var origin = meta.Tile;
             bool isPlayer = meta.IsPlayerControlled;
-
+            UnitBattleMetadata target = null;
             int bestDistance = int.MaxValue;
-            System.Collections.Generic.List<UnitBattleMetadata> nearest = null;
 
             for (int i = 0; i < _units.Count; i++)
             {
-                var unit = _units[i];
-                if (!IsUnitValid(unit)) continue;
-                var otherMeta = unit.Metadata;
+                var candidate = _units[i];
+                if (!IsUnitValid(candidate)) continue;
+                var otherMeta = candidate.Metadata;
                 if (otherMeta == null || !otherMeta.HasTile) continue;
                 if (otherMeta.IsPlayerControlled == isPlayer) continue;
 
-                var tile = otherMeta.Tile;
-                int dist = Mathf.Abs(tile.x - origin.x) + Mathf.Abs(tile.y - origin.y);
-                if (dist < bestDistance)
+                int dist = Mathf.Abs(otherMeta.Tile.x - origin.x) + Mathf.Abs(otherMeta.Tile.y - origin.y);
+                if (dist < bestDistance ||
+                    (dist == bestDistance && (otherMeta.Tile.y < target.Tile.y ||
+                                              (otherMeta.Tile.y == target.Tile.y && otherMeta.Tile.x < target.Tile.x))))
                 {
+                    target = otherMeta;
                     bestDistance = dist;
-                    if (nearest == null) nearest = new System.Collections.Generic.List<UnitBattleMetadata>();
-                    else nearest.Clear();
-                    nearest.Add(otherMeta);
-                }
-                else if (dist == bestDistance && dist != int.MaxValue)
-                {
-                    if (nearest == null) nearest = new System.Collections.Generic.List<UnitBattleMetadata>();
-                    nearest.Add(otherMeta);
                 }
             }
 
-            if (nearest == null || nearest.Count == 0) return;
+            if (target == null) return;
 
-            var target = nearest[nearest.Count == 1 ? 0 : UnityEngine.Random.Range(0, nearest.Count)];
             var direction = ComputeDirection(origin, target.Tile);
             if (direction == Vector2.zero) return;
 
