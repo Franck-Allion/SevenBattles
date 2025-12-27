@@ -31,6 +31,7 @@ namespace SevenBattles.Tests.UI
             public Sprite ActiveUnitPortrait { get; set; }
             public bool HasSpellPreview { get; set; }
             public SpellAmountPreview SpellPreview { get; set; }
+            public readonly System.Collections.Generic.HashSet<SpellDefinition> SpentSpells = new System.Collections.Generic.HashSet<SpellDefinition>();
 
             public event System.Action ActiveUnitChanged;
             public event System.Action ActiveUnitActionPointsChanged;
@@ -59,6 +60,11 @@ namespace SevenBattles.Tests.UI
                 return false;
             }
 
+            public bool IsActiveUnitSpellSpentThisTurn(SpellDefinition spell)
+            {
+                return spell != null && SpentSpells.Contains(spell);
+            }
+
             public void RequestEndTurn()
             {
             }
@@ -66,6 +72,11 @@ namespace SevenBattles.Tests.UI
             public void FireActiveUnitChanged()
             {
                 ActiveUnitChanged?.Invoke();
+            }
+
+            public void FireActionPointsChanged()
+            {
+                ActiveUnitActionPointsChanged?.Invoke();
             }
 
             public void FireActiveUnitStatsChanged()
@@ -411,6 +422,75 @@ namespace SevenBattles.Tests.UI
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(s1);
             Object.DestroyImmediate(sfxGo);
+        }
+
+        [Test]
+        public void SpellSlotInteractable_Disables_WhenSpellSpentThisTurn()
+        {
+            var hudGo = new GameObject("SpellHUD");
+            var hud = hudGo.AddComponent<BattleSpellsHUD>();
+
+            var containerGo = new GameObject("SpellsContainer", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            containerGo.transform.SetParent(hudGo.transform);
+            var containerRt = (RectTransform)containerGo.transform;
+
+            var slotGo = new GameObject("Spell0", typeof(RectTransform));
+            slotGo.transform.SetParent(containerRt, false);
+            slotGo.SetActive(false);
+
+            var btn = slotGo.AddComponent<Button>();
+            var bg = slotGo.AddComponent<Image>();
+            btn.targetGraphic = bg;
+
+            var iconGo = new GameObject("Icon", typeof(RectTransform));
+            iconGo.transform.SetParent(slotGo.transform, false);
+            var iconImg = iconGo.AddComponent<Image>();
+
+            var apGo = new GameObject("APCost", typeof(RectTransform));
+            apGo.transform.SetParent(slotGo.transform, false);
+            var apTmp = apGo.AddComponent<TextMeshProUGUI>();
+
+            var frameGo = new GameObject("Frame0");
+            frameGo.transform.SetParent(slotGo.transform, false);
+            frameGo.SetActive(false);
+
+            var view = slotGo.AddComponent<BattleSpellSlotView>();
+            SetPrivate(view, "_button", btn);
+            SetPrivate(view, "_icon", iconImg);
+            SetPrivate(view, "_apCost", apTmp);
+            SetPrivate(view, "_selectionFrame", frameGo);
+
+            var ctrlGo = new GameObject("Ctrl");
+            var ctrl = ctrlGo.AddComponent<FakeTurnController>();
+            ctrl.HasActiveUnit = true;
+            ctrl.IsActiveUnitPlayerControlled = true;
+            ctrl.ActiveUnitCurrentActionPoints = 1;
+
+            var spell = ScriptableObject.CreateInstance<SpellDefinition>();
+            spell.Id = "spell.firebolt";
+            spell.ActionPointCost = 2;
+            spell.Icon = MakeSprite();
+            ctrl.ActiveUnitSpells = new[] { spell };
+
+            SetPrivate(hud, "_controllerBehaviour", ctrl);
+            SetPrivate(hud, "_spellsContainer", containerRt);
+            SetPrivate(hud, "_useFixedSlots", true);
+            SetPrivate(hud, "_fixedSlotRoots", new[] { (RectTransform)slotGo.transform });
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            Assert.IsTrue(btn.interactable, "Slot should be enabled before the spell is spent.");
+
+            ctrl.SpentSpells.Add(spell);
+            CallPrivate(hud, "Refresh");
+            Assert.IsFalse(btn.interactable, "Slot should be disabled after the spell is spent.");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(containerGo);
+            Object.DestroyImmediate(slotGo);
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(spell);
         }
 
         [Test]

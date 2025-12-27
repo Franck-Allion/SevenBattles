@@ -46,6 +46,12 @@ namespace SevenBattles.Core
         /// </summary>
         bool TryGetActiveUnitSpellAmountPreview(SpellDefinition spell, out SpellAmountPreview preview);
 
+        /// <summary>
+        /// Returns true if the specified spell has already been cast by the active unit this turn.
+        /// Used by UI to disable spent spells for the remainder of the turn.
+        /// </summary>
+        bool IsActiveUnitSpellSpentThisTurn(SpellDefinition spell);
+
         void RequestEndTurn();
     }
 }

@@ -248,6 +248,8 @@ namespace SevenBattles.UI
                 }
 
                 var spell = spells[i];
+                int apCost = Mathf.Max(0, spell.ActionPointCost);
+                bool spent = _controller != null && _controller.IsActiveUnitSpellSpentThisTurn(spell);
 
                 if (slot.Icon != null)
                 {
@@ -262,12 +264,16 @@ namespace SevenBattles.UI
                 if (slot.ApCost != null)
                 {
                     slot.ApCost.gameObject.SetActive(true);
-                    var apCost = Mathf.Max(0, spell.ActionPointCost);
                     if (slot.LastApCost != apCost)
                     {
                         slot.LastApCost = apCost;
                         slot.ApCost.text = apCost.ToString();
                     }
+                }
+
+                if (slot.Button != null)
+                {
+                    slot.Button.interactable = !spent;
                 }
 
                 if (slot.SelectionFrame != null)

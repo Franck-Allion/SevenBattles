@@ -71,6 +71,11 @@ namespace SevenBattles.Tests.UI
                 return false;
             }
 
+            public bool IsActiveUnitSpellSpentThisTurn(SpellDefinition spell)
+            {
+                return false;
+            }
+
             public void StartBattle()
             {
             }

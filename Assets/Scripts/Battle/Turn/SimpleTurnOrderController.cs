@@ -106,6 +106,7 @@ namespace SevenBattles.Battle.Turn
         // Cursor state is now managed by BattleCursorController
         private SpellDefinition _selectedSpell;
         private SpellDefinition[] _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
+        private readonly HashSet<SpellDefinition> _spentActiveUnitSpells = new HashSet<SpellDefinition>();
         private bool _battleEnded;
         private BattleOutcome _battleOutcome = BattleOutcome.None;
 
@@ -250,6 +251,16 @@ namespace SevenBattles.Battle.Turn
             return _spellController.TryGetSpellAmountPreview(spell, unit.Metadata, unit.Stats, out preview);
         }
 
+        public bool IsActiveUnitSpellSpentThisTurn(SpellDefinition spell)
+        {
+            if (!_hasActiveUnit || spell == null)
+            {
+                return false;
+            }
+
+            return _spentActiveUnitSpells.Contains(spell);
+        }
+
         public event Action ActiveUnitChanged;
         public event Action ActiveUnitActionPointsChanged;
         public event Action ActiveUnitStatsChanged;
@@ -353,7 +364,7 @@ namespace SevenBattles.Battle.Turn
 
         public void SetSelectedSpell(SpellDefinition spell)
         {
-            if (spell != null && !IsSpellAvailableToActiveUnit(spell))
+            if (spell != null && (!IsSpellAvailableToActiveUnit(spell) || IsActiveUnitSpellSpentThisTurn(spell)))
             {
                 spell = null;
             }
@@ -763,6 +774,7 @@ namespace SevenBattles.Battle.Turn
             _aiMovePendingCompletion = false;
             _aiDecisionInProgress = false;
             _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
+            _spentActiveUnitSpells.Clear();
 
             // Reset cursors when active unit changes
             if (_cursorController != null)
@@ -1231,7 +1243,10 @@ namespace SevenBattles.Battle.Turn
         private void TryExecuteSpellCast(SpellDefinition spell, Vector2Int targetTile)
         {
             if (_spellController == null) return;
+            if (spell == null) return;
             if (_activeIndex < 0 || _activeIndex >= _units.Count) return;
+            if (IsActiveUnitSpellSpentThisTurn(spell)) return;
+            if (!CanActiveUnitCastSpell(spell)) return;
 
             var caster = _units[_activeIndex];
 
@@ -1241,6 +1256,7 @@ namespace SevenBattles.Battle.Turn
                 onStart: () =>
                 {
                     _spellAnimating = true;
+                    MarkSpellSpentThisTurn(spell);
                     if (_cursorController != null) _cursorController.SetSpellCursor(false, _selectedSpell);
                     if (_board != null) _board.SetSecondaryHighlightVisible(false);
                 },
@@ -1317,10 +1333,21 @@ namespace SevenBattles.Battle.Turn
             return false;
         }
 
+        private void MarkSpellSpentThisTurn(SpellDefinition spell)
+        {
+            if (spell == null)
+            {
+                return;
+            }
+
+            _spentActiveUnitSpells.Add(spell);
+        }
+
         private bool CanActiveUnitCastSpell(SpellDefinition spell)
         {
             if (spell == null) return false;
             if (!_hasActiveUnit) return false;
+            if (IsActiveUnitSpellSpentThisTurn(spell)) return false;
             if (!IsActiveUnitPlayerControlledInternal()) return false;
             if (_movementAnimating) return false;
             if (_attackAnimating) return false;

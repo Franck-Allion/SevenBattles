@@ -146,6 +146,65 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(playerDef);
         }
 
+        [Test]
+        public void TryExecuteSpellCast_DoesNotAllowRecastInSameTurn()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 6);
+            SetPrivate(board, "_rows", 6);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var spellCtrl = ctrlGo.AddComponent<BattleSpellController>();
+            SetPrivate(spellCtrl, "_board", board);
+
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var playerDef = ScriptableObject.CreateInstance<UnitDefinition>();
+            var enemyDef = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 3, Speed = 1, Initiative = 10, Spell = 0 });
+            UnitBattleMetadata.Ensure(playerGo, true, playerDef, new Vector2Int(2, 2));
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 1 });
+            UnitBattleMetadata.Ensure(enemyGo, false, enemyDef, new Vector2Int(4, 2));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            var spell = ScriptableObject.CreateInstance<SpellDefinition>();
+            spell.ActionPointCost = 1;
+            spell.TargetFilter = SpellTargetFilter.EnemyUnit;
+            spell.MinCastRange = 1;
+            spell.MaxCastRange = 4;
+            spell.PrimaryAmountKind = SpellPrimaryAmountKind.Damage;
+            spell.PrimaryBaseAmount = 3;
+            spell.PrimarySpellStatScaling = 0f;
+
+            CallPrivate(ctrl, "TryExecuteSpellCast", spell, new Vector2Int(4, 2));
+            int apAfterFirst = ctrl.ActiveUnitCurrentActionPoints;
+            int enemyLifeAfterFirst = enemyStats.Life;
+
+            CallPrivate(ctrl, "TryExecuteSpellCast", spell, new Vector2Int(4, 2));
+
+            Assert.AreEqual(apAfterFirst, ctrl.ActiveUnitCurrentActionPoints, "Second cast should not consume action points.");
+            Assert.AreEqual(enemyLifeAfterFirst, enemyStats.Life, "Second cast should not apply damage.");
+            Assert.IsTrue(ctrl.IsActiveUnitSpellSpentThisTurn(spell), "Spell should be marked spent after first cast.");
+
+            Object.DestroyImmediate(spell);
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(playerDef);
+            Object.DestroyImmediate(enemyDef);
+        }
+
         private static void SetPrivate(object obj, string field, object value)
         {
             var f = obj.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic);
