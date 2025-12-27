@@ -278,6 +278,9 @@ Assets/
 - Organize in functional string tables.  
 - Add FR (french) + EN (english) + ES (spanish) entries at minimum.  
 - Use Smart Strings with placeholders.
+- Spell description entries that use named placeholders (e.g., `{DamageNumber}`, `{PrimaryElementIcon}`) must be marked **Smart** in the Localization Tables.
+- Use named placeholders for readability in spell descriptions; do not introduce new `{0}`-style indexed placeholders for UI spell text.
+- Element icons in spell descriptions must be injected via TMP `<sprite=...>` tags using the `ElementsIcon` sprite asset and a single inspector-configurable index mapping (no hardcoded indices in multiple places).
 
 ---
 

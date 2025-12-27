@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
 using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 
@@ -61,6 +62,17 @@ namespace SevenBattles.UI
         private TMP_Text _selectedSpellDescriptionText;
         [SerializeField, Tooltip("Localization table used for spell descriptions (default: UI.Common).")]
         private string _spellDescriptionTable = "UI.Common";
+        [Header("Selected Spell Description Icons")]
+        [SerializeField, Tooltip("Sprite index for the nature element icon in the ElementsIcon TMP sprite asset.")]
+        private int _natureElementSpriteIndex = 0;
+        [SerializeField, Tooltip("Sprite index for the fire element icon in the ElementsIcon TMP sprite asset.")]
+        private int _fireElementSpriteIndex = 1;
+        [SerializeField, Tooltip("Sprite index for the physical element icon in the ElementsIcon TMP sprite asset.")]
+        private int _physicalElementSpriteIndex = 2;
+        [SerializeField, Tooltip("Sprite index for the water element icon in the ElementsIcon TMP sprite asset.")]
+        private int _waterElementSpriteIndex = 3;
+        [SerializeField, Tooltip("Sprite index for the electric element icon in the ElementsIcon TMP sprite asset.")]
+        private int _electricElementSpriteIndex = 4;
 
         private sealed class SlotView
         {
@@ -73,6 +85,18 @@ namespace SevenBattles.UI
             public Sprite LastIconSprite;
             public int LastApCost = int.MinValue;
             public UnityAction ClickAction;
+        }
+
+        private sealed class SpellDescriptionArgs
+        {
+            public string DamageNumber { get; }
+            public string PrimaryElementIcon { get; }
+
+            public SpellDescriptionArgs(string damageNumber, string primaryElementIcon)
+            {
+                DamageNumber = damageNumber ?? string.Empty;
+                PrimaryElementIcon = primaryElementIcon ?? string.Empty;
+            }
         }
 
         private readonly List<SlotView> _slots = new List<SlotView>(8);
@@ -563,6 +587,7 @@ namespace SevenBattles.UI
             var key = spell.DescriptionLocalizationKey;
             if (!string.IsNullOrWhiteSpace(_spellDescriptionTable) && !string.IsNullOrWhiteSpace(key))
             {
+                EnsureSpellDescriptionEntryIsSmart(key);
                 _selectedSpellDescriptionString = new LocalizedString(_spellDescriptionTable, key);
                 UpdateSelectedSpellDescriptionArgs(spell);
                 _selectedSpellDescriptionString.StringChanged += HandleSelectedSpellDescriptionChanged;
@@ -574,6 +599,27 @@ namespace SevenBattles.UI
             _selectedSpellDescriptionText.text = BuildFallbackSpellDescription(spell);
         }
 
+        private void EnsureSpellDescriptionEntryIsSmart(string key)
+        {
+            if (string.IsNullOrWhiteSpace(_spellDescriptionTable) || string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            var locale = LocalizationSettings.SelectedLocale;
+            var table = LocalizationSettings.StringDatabase.GetTable(_spellDescriptionTable, locale);
+            if (table == null)
+            {
+                return;
+            }
+
+            var entry = table.GetEntry(key);
+            if (entry != null && !entry.IsSmart)
+            {
+                entry.IsSmart = true;
+            }
+        }
+
         private void UpdateSelectedSpellDescriptionArgs(SpellDefinition spell)
         {
             if (_selectedSpellDescriptionString == null)
@@ -581,9 +627,11 @@ namespace SevenBattles.UI
                 return;
             }
 
+            var amount = BuildFormattedPrimaryAmount(spell);
+            var elementIcon = BuildPrimaryElementIconTag(spell);
             _selectedSpellDescriptionString.Arguments = new object[]
             {
-                BuildFormattedPrimaryAmount(spell)
+                new SpellDescriptionArgs(amount, elementIcon)
             };
         }
 
@@ -596,18 +644,30 @@ namespace SevenBattles.UI
             }
 
             var amount = BuildFormattedPrimaryAmount(spell);
+            var elementIcon = BuildPrimaryElementIconTag(spell);
+            var text = template;
 
-            if (template.Contains("{0}", StringComparison.Ordinal))
+            if (text.Contains("{DamageNumber}", StringComparison.Ordinal))
             {
-                return string.Format(CultureInfo.InvariantCulture, template, amount);
+                text = text.Replace("{DamageNumber}", amount);
             }
 
-            if (template.Contains("X", StringComparison.Ordinal))
+            if (text.Contains("{PrimaryElementIcon}", StringComparison.Ordinal))
             {
-                return template.Replace("X", amount);
+                text = text.Replace("{PrimaryElementIcon}", elementIcon);
             }
 
-            return template;
+            if (text.Contains("{0}", StringComparison.Ordinal))
+            {
+                return string.Format(CultureInfo.InvariantCulture, text, amount);
+            }
+
+            if (text.Contains("X", StringComparison.Ordinal))
+            {
+                return text.Replace("X", amount);
+            }
+
+            return text;
         }
 
         private string BuildFormattedPrimaryAmount(SpellDefinition spell)
@@ -632,6 +692,44 @@ namespace SevenBattles.UI
             }
 
             return "X";
+        }
+
+        private string BuildPrimaryElementIconTag(SpellDefinition spell)
+        {
+            if (spell == null)
+            {
+                return string.Empty;
+            }
+
+            if (spell.PrimaryAmountKind != SpellPrimaryAmountKind.Damage)
+            {
+                return string.Empty;
+            }
+
+            var element = spell.PrimaryDamageElement;
+            int spriteIndex;
+            switch (element)
+            {
+                case DamageElement.Fire:
+                    spriteIndex = _fireElementSpriteIndex;
+                    break;
+                case DamageElement.Frost:
+                    spriteIndex = _waterElementSpriteIndex;
+                    break;
+                case DamageElement.Lightning:
+                    spriteIndex = _electricElementSpriteIndex;
+                    break;
+                case DamageElement.Poison:
+                    spriteIndex = _natureElementSpriteIndex;
+                    break;
+                case DamageElement.None:
+                    spriteIndex = _physicalElementSpriteIndex;
+                    break;
+                default:
+                    return string.Empty;
+            }
+
+            return $" <sprite={spriteIndex}>";
         }
 
         private void HandleSelectedSpellDescriptionChanged(string value)

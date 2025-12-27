@@ -1,0 +1,1042 @@
+fileFormatVersion: 2
+guid: 24756fd56a59c594cbaf51aa63fc87d9
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -3269226641598493703
+    second: ManaCost_0
+  - first:
+      213: 3690901108724711615
+    second: ManaCost_1
+  - first:
+      213: -6610413132510608042
+    second: ManaCost_2
+  - first:
+      213: -7965317401266198688
+    second: ManaCost_3
+  - first:
+      213: 7819703932830306975
+    second: ManaCost_4
+  - first:
+      213: -3049516900562924638
+    second: ManaCost_5
+  - first:
+      213: -681180394704771373
+    second: ManaCost_6
+  - first:
+      213: -2545573753480631039
+    second: ManaCost_7
+  - first:
+      213: 1956437017360602554
+    second: ManaCost_8
+  - first:
+      213: -4056997890662316637
+    second: ManaCost_9
+  - first:
+      213: 1479835234217048857
+    second: ManaCost_10
+  - first:
+      213: -1793179393815031399
+    second: ManaCost_11
+  - first:
+      213: -772795743680346878
+    second: ManaCost_12
+  - first:
+      213: 3706962853963595583
+    second: ManaCost_13
+  - first:
+      213: 6288385734655524002
+    second: ManaCost_14
+  - first:
+      213: -2224356402006006621
+    second: ManaCost_15
+  - first:
+      213: -6334171335663024117
+    second: ManaCost_16
+  - first:
+      213: 7782691198981346530
+    second: ManaCost_17
+  - first:
+      213: 364354526311006047
+    second: ManaCost_18
+  - first:
+      213: 1462155228877313791
+    second: ManaCost_19
+  - first:
+      213: 1894330309422591974
+    second: ManaCost_20
+  - first:
+      213: -4614827792067842070
+    second: ManaCost_21
+  - first:
+      213: -4033916656292250465
+    second: ManaCost_22
+  - first:
+      213: -4988837268088556811
+    second: ManaCost_23
+  - first:
+      213: 5421276470545449766
+    second: ManaCost_24
+  - first:
+      213: 2231399423804262867
+    second: ManaCost_25
+  - first:
+      213: 9054848096458185845
+    second: ManaCost_26
+  - first:
+      213: 3605383451178540909
+    second: ManaCost_27
+  - first:
+      213: -1150920001428288478
+    second: ManaCost_28
+  - first:
+      213: -4951191756710766525
+    second: ManaCost_29
+  - first:
+      213: 5118420528668121741
+    second: ManaCost_30
+  - first:
+      213: 3799969368218592418
+    second: ManaCost_31
+  - first:
+      213: 9198587549268176897
+    second: ManaCost_32
+  - first:
+      213: 43455388464412222
+    second: ManaCost_33
+  - first:
+      213: -2399491096944034849
+    second: ManaCost_34
+  - first:
+      213: -6659836405386994563
+    second: ManaCost_35
+  - first:
+      213: -5183984796216068595
+    second: ManaCost_36
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: ManaCost_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 660
+        width: 81
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9fb4749c0bf51a2d0800000000000000
+      internalID: -3269226641598493703
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_1
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 550
+        width: 81
+        height: 111
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fb0c1aec007b83330800000000000000
+      internalID: 3690901108724711615
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_2
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 660
+        width: 81
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 655c02a87481344a0800000000000000
+      internalID: -6610413132510608042
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_3
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 550
+        width: 81
+        height: 111
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0676a4e8602857190800000000000000
+      internalID: -7965317401266198688
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_4
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 660
+        width: 81
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f92531ddb4b258c60800000000000000
+      internalID: 7819703932830306975
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_5
+      rect:
+        serializedVersion: 2
+        x: 162
+        y: 552
+        width: 79
+        height: 109
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2ab85653980fda5d0800000000000000
+      internalID: -3049516900562924638
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_6
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 660
+        width: 81
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d669a14a06fb86f0800000000000000
+      internalID: -681180394704771373
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_7
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 660
+        width: 81
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 10daa32882e4cacd0800000000000000
+      internalID: -2545573753480631039
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_8
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 660
+        width: 81
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ab514350a19a62b10800000000000000
+      internalID: 1956437017360602554
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_9
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 660
+        width: 80
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3a54090d9e5a2b7c0800000000000000
+      internalID: -4056997890662316637
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_10
+      rect:
+        serializedVersion: 2
+        x: 481
+        y: 552
+        width: 79
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 91b3d951e4e698410800000000000000
+      internalID: 1479835234217048857
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_11
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 549
+        width: 80
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 991da1d87d85d17e0800000000000000
+      internalID: -1793179393815031399
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_12
+      rect:
+        serializedVersion: 2
+        x: 319
+        y: 551
+        width: 81
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 205cff59d5a7645f0800000000000000
+      internalID: -772795743680346878
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_13
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 550
+        width: 80
+        height: 109
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f3f711a4317c17330800000000000000
+      internalID: 3706962853963595583
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_14
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 220
+        width: 80
+        height: 331
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2acb6c42285d44750800000000000000
+      internalID: 6288385734655524002
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_15
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 331
+        width: 81
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3a4e09433af7121e0800000000000000
+      internalID: -2224356402006006621
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_16
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 440
+        width: 79
+        height: 109
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b080857eab08818a0800000000000000
+      internalID: -6334171335663024117
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_17
+      rect:
+        serializedVersion: 2
+        x: 79
+        y: 441
+        width: 81
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2e497d7396ca10c60800000000000000
+      internalID: 7782691198981346530
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_18
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 330
+        width: 81
+        height: 111
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5fb211e2827e0500800000000000000
+      internalID: 364354526311006047
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_19
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 441
+        width: 80
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ff656bf0f6e9a4410800000000000000
+      internalID: 1462155228877313791
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_20
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 330
+        width: 81
+        height: 111
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6efa36c31630a4a10800000000000000
+      internalID: 1894330309422591974
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_21
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 330
+        width: 161
+        height: 219
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aef2232d296d4ffb0800000000000000
+      internalID: -4614827792067842070
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_22
+      rect:
+        serializedVersion: 2
+        x: 320
+        y: 441
+        width: 80
+        height: 109
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f9c3b287c26a408c0800000000000000
+      internalID: -4033916656292250465
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_23
+      rect:
+        serializedVersion: 2
+        x: 399
+        y: 441
+        width: 81
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5f2f959cfe614cab0800000000000000
+      internalID: -4988837268088556811
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_24
+      rect:
+        serializedVersion: 2
+        x: 400
+        y: 220
+        width: 81
+        height: 221
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6238b001a3e3c3b40800000000000000
+      internalID: 5421276470545449766
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_25
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 111
+        width: 161
+        height: 220
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3d94dd714f587fe10800000000000000
+      internalID: 2231399423804262867
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_26
+      rect:
+        serializedVersion: 2
+        x: 161
+        y: 219
+        width: 79
+        height: 112
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 57c138c7e5849ad70800000000000000
+      internalID: 9054848096458185845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_27
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 223
+        width: 80
+        height: 108
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6f919e8525e80230800000000000000
+      internalID: 3605383451178540909
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_28
+      rect:
+        serializedVersion: 2
+        x: 321
+        y: 220
+        width: 79
+        height: 111
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 22c89f54b5c1700f0800000000000000
+      internalID: -1150920001428288478
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_29
+      rect:
+        serializedVersion: 2
+        x: 160
+        y: 109
+        width: 80
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 348996e6455d94bb0800000000000000
+      internalID: -4951191756710766525
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_30
+      rect:
+        serializedVersion: 2
+        x: 240
+        y: 111
+        width: 80
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d8a945e2a58480740800000000000000
+      internalID: 5118420528668121741
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_31
+      rect:
+        serializedVersion: 2
+        x: 321
+        y: 109
+        width: 79
+        height: 110
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2a4e80ed1043cb430800000000000000
+      internalID: 3799969368218592418
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_32
+      rect:
+        serializedVersion: 2
+        x: 407
+        y: 112
+        width: 65
+        height: 101
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 100f57dc3a2f7af70800000000000000
+      internalID: 9198587549268176897
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_33
+      rect:
+        serializedVersion: 2
+        x: 486
+        y: 115
+        width: 68
+        height: 96
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e367ff012726a9000800000000000000
+      internalID: 43455388464412222
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_34
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 2
+        width: 72
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fdb30f47f8b43bed0800000000000000
+      internalID: -2399491096944034849
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_35
+      rect:
+        serializedVersion: 2
+        x: 87
+        y: 3
+        width: 67
+        height: 101
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d7c91ba13128393a0800000000000000
+      internalID: -6659836405386994563
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ManaCost_36
+      rect:
+        serializedVersion: 2
+        x: 162
+        y: 4
+        width: 77
+        height: 98
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d06f3843b49ce08b0800000000000000
+      internalID: -5183984796216068595
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable: {}
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
