@@ -22,7 +22,9 @@ namespace SevenBattles.Core.Save
 
             var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
 
-            if (playerSquad == null || playerSquad.Wizards == null || playerSquad.Wizards.Length == 0)
+            var loadouts = playerSquad != null ? playerSquad.GetLoadouts() : null;
+
+            if (playerSquad == null || loadouts == null || loadouts.Length == 0)
             {
                 data.PlayerSquad = new PlayerSquadSaveData
                 {
@@ -31,12 +33,11 @@ namespace SevenBattles.Core.Save
                 return;
             }
 
-            var wizards = playerSquad.Wizards;
-            var ids = new string[wizards.Length];
+            var ids = new string[loadouts.Length];
 
-            for (int i = 0; i < wizards.Length; i++)
+            for (int i = 0; i < loadouts.Length; i++)
             {
-                var def = wizards[i];
+                var def = loadouts[i] != null ? loadouts[i].Definition : null;
                 ids[i] = def != null ? def.Id : null;
             }
 
@@ -47,4 +48,3 @@ namespace SevenBattles.Core.Save
         }
     }
 }
-

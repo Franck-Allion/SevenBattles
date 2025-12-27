@@ -105,6 +105,7 @@ namespace SevenBattles.Battle.Turn
 
         // Cursor state is now managed by BattleCursorController
         private SpellDefinition _selectedSpell;
+        private SpellDefinition[] _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
         private bool _battleEnded;
         private BattleOutcome _battleOutcome = BattleOutcome.None;
 
@@ -181,14 +182,7 @@ namespace SevenBattles.Battle.Turn
         {
             get
             {
-                if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
-                {
-                    return Array.Empty<SpellDefinition>();
-                }
-
-                var meta = _units[_activeIndex].Metadata;
-                var spells = meta != null && meta.Definition != null ? meta.Definition.Spells : null;
-                return spells ?? Array.Empty<SpellDefinition>();
+                return _hasActiveUnit ? _activeUnitDrawnSpells ?? Array.Empty<SpellDefinition>() : Array.Empty<SpellDefinition>();
             }
         }
 
@@ -333,6 +327,7 @@ namespace SevenBattles.Battle.Turn
             _battleEnded = false;
             _battleOutcome = BattleOutcome.None;
             RebuildUnits();
+            ResetSpellDecksForBattle();
             _turnIndex = 0;
             ConfigureBoardForBattle();
             SelectFirstUnit();
@@ -767,6 +762,7 @@ namespace SevenBattles.Battle.Turn
             _hasSelectedMoveTile = false;
             _aiMovePendingCompletion = false;
             _aiDecisionInProgress = false;
+            _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
 
             // Reset cursors when active unit changes
             if (_cursorController != null)
@@ -802,6 +798,8 @@ namespace SevenBattles.Battle.Turn
                 _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
             }
 
+            DrawActiveUnitSpells();
+
             if (_logTurns)
             {
                 if (_hasActiveUnit)
@@ -825,6 +823,46 @@ namespace SevenBattles.Battle.Turn
             {
                 BeginAiTurnForActiveUnit();
             }
+        }
+
+        private void ResetSpellDecksForBattle()
+        {
+            for (int i = 0; i < _units.Count; i++)
+            {
+                var meta = _units[i].Metadata;
+                if (meta == null) continue;
+                var deck = meta.GetComponent<UnitSpellDeck>();
+                if (deck != null)
+                {
+                    deck.ResetDeckForBattle();
+                }
+            }
+        }
+
+        private void DrawActiveUnitSpells()
+        {
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
+            {
+                _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
+                return;
+            }
+
+            var unit = _units[_activeIndex];
+            var meta = unit.Metadata;
+            if (meta == null)
+            {
+                _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
+                return;
+            }
+
+            var deck = meta.GetComponent<UnitSpellDeck>();
+            if (deck == null)
+            {
+                _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
+                return;
+            }
+
+            _activeUnitDrawnSpells = deck.DrawForTurn();
         }
 
         private void BeginAiTurnForActiveUnit()
@@ -1188,9 +1226,8 @@ namespace SevenBattles.Battle.Turn
             if (spell == null) return false;
             if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
 
-            var meta = _units[_activeIndex].Metadata;
-            var spells = meta != null && meta.Definition != null ? meta.Definition.Spells : null;
-            if (spells == null) return false;
+            var spells = _activeUnitDrawnSpells;
+            if (spells == null || spells.Length == 0) return false;
 
             for (int i = 0; i < spells.Length; i++)
             {

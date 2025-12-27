@@ -25,7 +25,8 @@ namespace SevenBattles.Core.Units
         [Header("Base Stats")]
         public UnitStatsData BaseStats;
 
-        [Header("Spells")]
+        [Header("Spells (Legacy)")]
+        [Tooltip("Legacy default spells for this unit type. Runtime uses per-unit loadouts; only used as a fallback when no per-unit spells are assigned.")]
         public SpellDefinition[] Spells;
     }
 }

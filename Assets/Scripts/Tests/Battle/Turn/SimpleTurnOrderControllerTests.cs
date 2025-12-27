@@ -1,14 +1,17 @@
+using System;
 using NUnit.Framework;
 using UnityEngine;
 using SevenBattles.Battle.Turn;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Board;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 using SevenBattles.Core;
 using System.Collections;
 using UnityEngine.TestTools;
 using SevenBattles.Battle.Movement;
+using Object = UnityEngine.Object;
 
 namespace SevenBattles.Tests.Battle
 {
@@ -47,13 +50,12 @@ namespace SevenBattles.Tests.Battle
             var s2 = ScriptableObject.CreateInstance<SpellDefinition>();
             s2.Id = "spell.arcane_shield";
             s2.ActionPointCost = 2;
-            def.Spells = new[] { s1, s2 };
-
             // Active player unit (highest initiative)
             var playerGo = new GameObject("PlayerUnit");
             var playerStats = playerGo.AddComponent<UnitStats>();
-            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10, DeckCapacity = 4, DrawCapacity = 2 });
             UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+            UnitSpellDeck.Ensure(playerGo).Configure(new[] { s1, s2 }, playerStats.DeckCapacity, playerStats.DrawCapacity);
 
             // Enemy unit
             var enemyGo = new GameObject("EnemyUnit");
@@ -65,8 +67,8 @@ namespace SevenBattles.Tests.Battle
 
             var spells = ctrl.ActiveUnitSpells;
             Assert.AreEqual(2, spells.Length);
-            Assert.AreEqual(1, spells[0].ActionPointCost);
-            Assert.AreEqual(2, spells[1].ActionPointCost);
+            Assert.IsTrue(Array.Exists(spells, spell => spell != null && spell.ActionPointCost == 1));
+            Assert.IsTrue(Array.Exists(spells, spell => spell != null && spell.ActionPointCost == 2));
 
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(boardGo);

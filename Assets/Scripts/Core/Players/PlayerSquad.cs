@@ -1,13 +1,18 @@
+using System;
 using UnityEngine;
-using SevenBattles.Core.Units;
+using SevenBattles.Core.Battle;
 
 namespace SevenBattles.Core.Players
 {
     [CreateAssetMenu(menuName = "SevenBattles/Player Squad", fileName = "PlayerSquad")]
     public class PlayerSquad : ScriptableObject
     {
-        [Tooltip("1..8 wizard definitions that make up this player's squad.")]
-        public UnitDefinition[] Wizards = new UnitDefinition[3];
+        [Tooltip("Per-unit spell loadouts for this squad.")]
+        public UnitSpellLoadout[] UnitLoadouts = Array.Empty<UnitSpellLoadout>();
+
+        public UnitSpellLoadout[] GetLoadouts()
+        {
+            return UnitLoadouts ?? Array.Empty<UnitSpellLoadout>();
+        }
     }
 }
-

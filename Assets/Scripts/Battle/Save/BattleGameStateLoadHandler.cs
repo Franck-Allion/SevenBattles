@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Board;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Turn;
 using SevenBattles.Battle.Start;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
@@ -28,6 +30,10 @@ namespace SevenBattles.Battle.Save
         [SerializeField, Tooltip("Enemy squad used to resolve unit definitions by id.")]
         private PlayerSquad _enemySquad;
 
+        [Header("Spells")]
+        [SerializeField, Tooltip("Registry to resolve spell IDs to SpellDefinition ScriptableObjects.")]
+        private SpellDefinitionRegistry _spellRegistry;
+
         [Header("Turn Controller")]
         [SerializeField, Tooltip("Turn order controller whose state will be restored from BattleTurn save data.")]
         private SimpleTurnOrderController _turnController;
@@ -43,10 +49,12 @@ namespace SevenBattles.Battle.Save
         private bool _logLoadedUnits;
 
         private Dictionary<string, UnitDefinition> _definitions;
+        private readonly Dictionary<string, SpellDefinition> _spellLookup = new Dictionary<string, SpellDefinition>(System.StringComparer.Ordinal);
 
         private void Awake()
         {
             BuildDefinitionLookup();
+            _spellLookup.Clear();
         }
 
         private void BuildDefinitionLookup()
@@ -65,14 +73,20 @@ namespace SevenBattles.Battle.Save
 
         private void AddDefinitionsFromSquad(PlayerSquad squad)
         {
-            if (squad == null || squad.Wizards == null)
+            if (squad == null)
             {
                 return;
             }
 
-            for (int i = 0; i < squad.Wizards.Length; i++)
+            var loadouts = squad.GetLoadouts();
+            if (loadouts == null || loadouts.Length == 0)
             {
-                var def = squad.Wizards[i];
+                return;
+            }
+
+            for (int i = 0; i < loadouts.Length; i++)
+            {
+                var def = loadouts[i] != null ? loadouts[i].Definition : null;
                 if (def == null || string.IsNullOrEmpty(def.Id))
                 {
                     continue;
@@ -139,9 +153,13 @@ namespace SevenBattles.Battle.Save
                     placementController.ResetPlacementState();
                 }
 
-                if (_playerSquad != null && _playerSquad.Wizards != null)
+                if (_playerSquad != null)
                 {
-                    playerIndexUsed = new bool[_playerSquad.Wizards.Length];
+                    var loadouts = _playerSquad.GetLoadouts();
+                    if (loadouts != null)
+                    {
+                        playerIndexUsed = new bool[loadouts.Length];
+                    }
                 }
             }
 
@@ -246,6 +264,9 @@ namespace SevenBattles.Battle.Save
                         stats.ApplySaved(placement.Stats);
                     }
 
+                    var assignedSpells = ResolvePlacementSpells(placement, def);
+                    UnitSpellDeck.Ensure(go).Configure(assignedSpells, stats.DeckCapacity, stats.DrawCapacity);
+
                     int sortingOrder = ComputeSortingOrder(tile.x, tile.y, i);
                     UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, meta.Facing);
                     _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
@@ -308,15 +329,89 @@ namespace SevenBattles.Battle.Save
             return _definitions.TryGetValue(unitId, out var resolved) ? resolved : null;
         }
 
+        private SpellDefinition[] ResolvePlacementSpells(UnitPlacementSaveData placement, UnitDefinition def)
+        {
+            if (placement != null)
+            {
+                var resolved = ResolveSpells(placement.SpellIds);
+                if (resolved.Length > 0)
+                {
+                    return resolved;
+                }
+            }
+
+            return def != null ? (def.Spells ?? System.Array.Empty<SpellDefinition>()) : System.Array.Empty<SpellDefinition>();
+        }
+
+        private SpellDefinition[] ResolveSpells(string[] ids)
+        {
+            if (ids == null || ids.Length == 0)
+            {
+                return System.Array.Empty<SpellDefinition>();
+            }
+
+            var list = new List<SpellDefinition>(ids.Length);
+            for (int i = 0; i < ids.Length; i++)
+            {
+                var spell = ResolveSpellDefinition(ids[i]);
+                if (spell != null)
+                {
+                    list.Add(spell);
+                }
+            }
+
+            return list.ToArray();
+        }
+
+        private SpellDefinition ResolveSpellDefinition(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return null;
+            }
+
+            if (_spellRegistry != null)
+            {
+                return _spellRegistry.GetById(id);
+            }
+
+            if (_spellLookup.TryGetValue(id, out var cached))
+            {
+                return cached;
+            }
+
+            var allSpells = Resources.FindObjectsOfTypeAll<SpellDefinition>();
+            for (int i = 0; i < allSpells.Length; i++)
+            {
+                var spell = allSpells[i];
+                if (spell == null || string.IsNullOrEmpty(spell.Id))
+                {
+                    continue;
+                }
+
+                if (!_spellLookup.ContainsKey(spell.Id))
+                {
+                    _spellLookup.Add(spell.Id, spell);
+                }
+            }
+
+            return _spellLookup.TryGetValue(id, out var resolved) ? resolved : null;
+        }
+
         private int FindPlayerWizardIndexForUnitId(string unitId, bool[] usedIndices)
         {
-            if (string.IsNullOrEmpty(unitId) || _playerSquad == null || _playerSquad.Wizards == null)
+            if (string.IsNullOrEmpty(unitId) || _playerSquad == null)
             {
                 return -1;
             }
 
-            var wizards = _playerSquad.Wizards;
-            int length = wizards.Length;
+            var loadouts = _playerSquad.GetLoadouts();
+            if (loadouts == null)
+            {
+                return -1;
+            }
+
+            int length = loadouts.Length;
 
             for (int i = 0; i < length; i++)
             {
@@ -325,7 +420,7 @@ namespace SevenBattles.Battle.Save
                     continue;
                 }
 
-                var def = wizards[i];
+                var def = loadouts[i] != null ? loadouts[i].Definition : null;
                 if (def != null && string.Equals(def.Id, unitId, StringComparison.Ordinal))
                 {
                     if (usedIndices != null && i < usedIndices.Length)

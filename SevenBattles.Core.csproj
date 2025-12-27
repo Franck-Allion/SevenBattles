@@ -61,8 +61,10 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.39f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\Core\Battle\UnitSpellLoadout.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleOutcome.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinition.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\SpellDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\AssemblyInfo.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleTurnController.cs" />
     <Compile Include="Assets\Scripts\Core\Save\SaveGameService.cs" />

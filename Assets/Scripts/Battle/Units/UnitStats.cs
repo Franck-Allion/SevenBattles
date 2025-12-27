@@ -20,6 +20,8 @@ namespace SevenBattles.Battle.Units
         [SerializeField] private int _protection;
         [SerializeField] private int _initiative;
         [SerializeField] private int _morale;
+        [SerializeField] private int _deckCapacity;
+        [SerializeField] private int _drawCapacity;
 
         public int Life => _life;
         public int MaxLife => _maxLife;
@@ -32,6 +34,8 @@ namespace SevenBattles.Battle.Units
         public int Protection => _protection;
         public int Initiative => _initiative;
         public int Morale => _morale;
+        public int DeckCapacity => _deckCapacity;
+        public int DrawCapacity => _drawCapacity;
 
         // Backwards-compatible aliases for older tests/usages.
         public int MaxHP => _maxLife;
@@ -54,6 +58,8 @@ namespace SevenBattles.Battle.Units
             _protection = data.Protection;
             _initiative = data.Initiative;
             _morale = data.Morale;
+            _deckCapacity = Mathf.Max(0, data.DeckCapacity);
+            _drawCapacity = Mathf.Max(0, data.DrawCapacity);
         }
 
         public void ApplySaved(SevenBattles.Core.Save.UnitStatsSaveData data)
@@ -74,6 +80,14 @@ namespace SevenBattles.Battle.Units
             _protection = data.Protection;
             _initiative = data.Initiative;
             _morale = data.Morale;
+            if (data.DeckCapacity > 0)
+            {
+                _deckCapacity = data.DeckCapacity;
+            }
+            if (data.DrawCapacity > 0)
+            {
+                _drawCapacity = data.DrawCapacity;
+            }
         }
 
         /// <summary>

@@ -594,6 +594,7 @@ Transform:
   - {fileID: 273823725}
   - {fileID: 708095623}
   - {fileID: 33564209}
+  - {fileID: 679732683}
   - {fileID: 1760860159}
   - {fileID: 985955652}
   - {fileID: 1354297972}
@@ -3015,6 +3016,8 @@ MonoBehaviour:
   _healNumberPrefab: {fileID: 5898165573350529163, guid: f2df5a5b5c2d4f2fb4e364e583112f71, type: 3}
   _healNumberYOffset: 20
   _healNumberScale: 2
+  _healNumberSortingLayer: Characters
+  _healNumberSortingOrder: 32767
 --- !u!4 &346359281
 Transform:
   m_ObjectHideFlags: 0
@@ -5469,6 +5472,51 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &679732681
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 679732683}
+  - component: {fileID: 679732682}
+  m_Layer: 0
+  m_Name: BattleAiTurnService
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &679732682
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 679732681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d5e670ada344c0a9d1ac48d3bae9f4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _movementController: {fileID: 273823726}
+--- !u!4 &679732683
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 679732681}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 83980595}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &681284230
 GameObject:
   m_ObjectHideFlags: 0
@@ -16750,6 +16798,7 @@ MonoBehaviour:
   _autoStartOnPlay: 0
   _aiTurnDelaySeconds: 2
   _logTurns: 0
+  _aiTurnService: {fileID: 679732682}
 --- !u!1 &1787119069
 GameObject:
   m_ObjectHideFlags: 0

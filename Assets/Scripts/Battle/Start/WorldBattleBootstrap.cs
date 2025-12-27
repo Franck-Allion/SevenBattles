@@ -5,7 +5,6 @@ using SevenBattles.Battle.Turn;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
-using SevenBattles.Core.Units;
 
 namespace SevenBattles.Battle.Start
 {
@@ -103,8 +102,8 @@ namespace SevenBattles.Battle.Start
                 placementController = UnityEngine.Object.FindFirstObjectByType<WorldSquadPlacementController>();
             }
 
-            UnitDefinition[] playerSquad = null;
-            UnitDefinition[] enemySquad = null;
+            UnitSpellLoadout[] playerSquad = null;
+            UnitSpellLoadout[] enemySquad = null;
 
             // Extract player squad from placement controller's legacy field
             if (placementController != null)
@@ -114,9 +113,9 @@ namespace SevenBattles.Battle.Start
                 if (playerSquadField != null)
                 {
                     var playerSquadSO = playerSquadField.GetValue(placementController) as PlayerSquad;
-                    if (playerSquadSO != null && playerSquadSO.Wizards != null)
+                    if (playerSquadSO != null)
                     {
-                        playerSquad = playerSquadSO.Wizards;
+                        playerSquad = playerSquadSO.GetLoadouts();
                     }
                 }
             }
@@ -129,9 +128,9 @@ namespace SevenBattles.Battle.Start
                 if (enemySquadField != null)
                 {
                     var enemySquadSO = enemySquadField.GetValue(_enemy) as PlayerSquad;
-                    if (enemySquadSO != null && enemySquadSO.Wizards != null)
+                    if (enemySquadSO != null)
                     {
-                        enemySquad = enemySquadSO.Wizards;
+                        enemySquad = enemySquadSO.GetLoadouts();
                     }
                 }
             }
@@ -143,8 +142,8 @@ namespace SevenBattles.Battle.Start
             }
 
             return new BattleSessionConfig(
-                playerSquad ?? System.Array.Empty<UnitDefinition>(),
-                enemySquad ?? System.Array.Empty<UnitDefinition>(),
+                playerSquad ?? System.Array.Empty<UnitSpellLoadout>(),
+                enemySquad ?? System.Array.Empty<UnitSpellLoadout>(),
                 "legacy",
                 0
             );

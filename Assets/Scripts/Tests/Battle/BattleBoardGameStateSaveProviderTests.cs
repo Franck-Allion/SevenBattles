@@ -2,6 +2,8 @@ using NUnit.Framework;
 using UnityEngine;
 using SevenBattles.Battle.Save;
 using SevenBattles.Battle.Units;
+using SevenBattles.Battle.Spells;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
 
@@ -30,7 +32,13 @@ namespace SevenBattles.Tests.Battle
             var enemyMeta = UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(3, 4));
 
             var enemyStats = enemyGo.AddComponent<UnitStats>();
-            enemyStats.ApplyBase(new UnitStatsData { Life = 10 });
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, DeckCapacity = 2, DrawCapacity = 1 });
+
+            var spellA = ScriptableObject.CreateInstance<SpellDefinition>();
+            spellA.Id = "spell.a";
+            var spellB = ScriptableObject.CreateInstance<SpellDefinition>();
+            spellB.Id = "spell.b";
+            UnitSpellDeck.Ensure(enemyGo).Configure(new[] { spellA, spellB }, enemyStats.DeckCapacity, enemyStats.DrawCapacity);
 
             var providerGo = new GameObject("Provider");
             var provider = providerGo.AddComponent<BattleBoardGameStateSaveProvider>();
@@ -71,6 +79,10 @@ namespace SevenBattles.Tests.Battle
             Assert.IsNotNull(enemyPlacement.Stats, "Enemy stats should be populated.");
             Assert.AreEqual(10, enemyPlacement.Stats.Life);
             Assert.AreEqual(enemyStats.MaxLife, enemyPlacement.Stats.MaxLife);
+            Assert.AreEqual(2, enemyPlacement.Stats.DeckCapacity);
+            Assert.AreEqual(1, enemyPlacement.Stats.DrawCapacity);
+            Assert.IsNotNull(enemyPlacement.SpellIds);
+            Assert.AreEqual(2, enemyPlacement.SpellIds.Length);
             Assert.IsTrue(
                 enemyPlacement.Facing == "up" ||
                 enemyPlacement.Facing == "down" ||
@@ -82,6 +94,8 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(playerGo);
             Object.DestroyImmediate(enemyGo);
             Object.DestroyImmediate(def);
+            Object.DestroyImmediate(spellA);
+            Object.DestroyImmediate(spellB);
         }
 
         [Test]

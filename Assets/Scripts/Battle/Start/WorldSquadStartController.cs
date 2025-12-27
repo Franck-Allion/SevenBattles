@@ -1,6 +1,8 @@
 using UnityEngine;
 using SevenBattles.Battle.Board;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Core.Players;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 
 namespace SevenBattles.Battle.Start
@@ -50,18 +52,19 @@ namespace SevenBattles.Battle.Start
             }
 
             var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
-            var defs = playerSquad != null ? playerSquad.Wizards : null;
-            if ((defs == null || defs.Length == 0) && (_wizardPrefabs == null || _wizardPrefabs.Length == 0))
+            var loadouts = playerSquad != null ? playerSquad.GetLoadouts() : null;
+            if ((loadouts == null || loadouts.Length == 0) && (_wizardPrefabs == null || _wizardPrefabs.Length == 0))
             {
                 Debug.LogWarning("WorldSquadStartController: No wizard prefabs configured.");
                 return;
             }
 
-            if (defs != null && defs.Length > 0)
+            if (loadouts != null && loadouts.Length > 0)
             {
-                for (int i = 0; i < defs.Length; i++)
+                for (int i = 0; i < loadouts.Length; i++)
                 {
-                    var def = defs[i];
+                    var loadout = loadouts[i];
+                    var def = loadout != null ? loadout.Definition : null;
                     if (def == null || def.Prefab == null) continue;
                     int tileX = GetTileXForIndex(i);
                     var go = Object.Instantiate(def.Prefab);
@@ -75,6 +78,8 @@ namespace SevenBattles.Battle.Start
                     }
                     SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
                     _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
+                    ApplyStatsIfAny(go, def);
+                    ApplySpellsIfAny(go, loadout);
                 }
             }
             else
@@ -99,6 +104,23 @@ namespace SevenBattles.Battle.Start
                 return _tileXs[index];
             // Default to first three columns: 0,1,2,...
             return index;
+        }
+
+        private void ApplyStatsIfAny(GameObject go, UnitDefinition def)
+        {
+            if (go == null || def == null) return;
+            var stats = go.GetComponent<SevenBattles.Battle.Units.UnitStats>();
+            if (stats == null) stats = go.AddComponent<SevenBattles.Battle.Units.UnitStats>();
+            stats.ApplyBase(def.BaseStats);
+        }
+
+        private void ApplySpellsIfAny(GameObject go, UnitSpellLoadout loadout)
+        {
+            if (go == null || loadout == null) return;
+            var stats = go.GetComponent<SevenBattles.Battle.Units.UnitStats>();
+            int deckCapacity = stats != null ? stats.DeckCapacity : 0;
+            int drawCapacity = stats != null ? stats.DrawCapacity : 0;
+            UnitSpellDeck.Ensure(go).Configure(loadout.Spells, deckCapacity, drawCapacity);
         }
 
         private enum DirectionFacing { Front, Back, Left, Right, Up = Back, Down = Front }

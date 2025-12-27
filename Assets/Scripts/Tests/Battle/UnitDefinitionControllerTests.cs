@@ -2,6 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Start;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
 using SevenBattles.Battle.Units;
@@ -38,7 +39,14 @@ namespace SevenBattles.Tests.Battle
             var ctrl = ctrlGo.AddComponent<WorldSquadPlacementController>();
             SetPrivate(ctrl, "_board", board);
             var squad = ScriptableObject.CreateInstance<PlayerSquad>();
-            squad.Wizards = new UnitDefinition[] { def };
+            squad.UnitLoadouts = new[]
+            {
+                new UnitSpellLoadout
+                {
+                    Definition = def,
+                    Spells = System.Array.Empty<SpellDefinition>()
+                }
+            };
             SetPrivate(ctrl, "_playerSquad", squad);
             SetPrivate(ctrl, "_playerRows", 2);
 

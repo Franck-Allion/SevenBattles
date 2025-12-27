@@ -34,8 +34,8 @@ namespace SevenBattles.Core
         bool TryGetActiveUnitStats(out UnitStatsViewData stats);
 
         /// <summary>
-        /// Spells available to the active unit (data-driven). Returns an empty array when there is no active unit
-        /// or the unit has no configured spells.
+        /// Spells available to the active unit for the current turn (drawn from its deck).
+        /// Returns an empty array when there is no active unit or the unit has no drawn spells.
         /// </summary>
         SpellDefinition[] ActiveUnitSpells { get; }
 

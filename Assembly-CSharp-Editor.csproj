@@ -65,6 +65,7 @@
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\SpriteCollectionRefresh.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\FirearmMuzzleResolver.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\PackageFeedback.cs" />
+    <Compile Include="Assets\Hovl Studio\HSFiles\Scripts\Editor\ShaderChanger.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\IconCollectionEditor.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\TransformHelper.cs" />
     <Compile Include="Assets\HeroEditor4D\Common\Scripts\Editor\SpriteCollectionEditor.cs" />

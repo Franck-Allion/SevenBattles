@@ -4,6 +4,7 @@ using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Save;
 using SevenBattles.Battle.Turn;
 using SevenBattles.Battle.Units;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
@@ -34,7 +35,14 @@ namespace SevenBattles.Tests.Battle
             def.BaseStats = new UnitStatsData { Life = 10, ActionPoints = 2, Speed = 2, Initiative = 5 };
 
             var squad = ScriptableObject.CreateInstance<PlayerSquad>();
-            squad.Wizards = new[] { def };
+            squad.UnitLoadouts = new[]
+            {
+                new UnitSpellLoadout
+                {
+                    Definition = def,
+                    Spells = System.Array.Empty<SpellDefinition>()
+                }
+            };
 
             var ctrlGo = new GameObject("TurnController");
             var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
@@ -181,4 +189,3 @@ namespace SevenBattles.Tests.Battle
         }
     }
 }
-

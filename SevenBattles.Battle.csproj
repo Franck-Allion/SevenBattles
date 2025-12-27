@@ -81,6 +81,7 @@
     <Compile Include="Assets\Scripts\Battle\Start\SquadPlacementModel.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleSessionLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Battle\AI\BattleAiTurnService.cs" />
+    <Compile Include="Assets\Scripts\Battle\Spells\UnitSpellDeck.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldSquadStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\BattleVisualFeedbackService.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\BattleBoardHighlightController.cs" />

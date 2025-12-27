@@ -75,6 +75,8 @@ namespace SevenBattles.Core.Save
         public int Protection;
         public int Initiative;
         public int Morale;
+        public int DeckCapacity;
+        public int DrawCapacity;
     }
 
     [Serializable]
@@ -82,6 +84,7 @@ namespace SevenBattles.Core.Save
     {
         public string UnitId;
         public string InstanceId;
+        public string[] SpellIds;
         public string Team;
         public int X;
         public int Y;
@@ -104,10 +107,19 @@ namespace SevenBattles.Core.Save
     }
 
     [Serializable]
+    public sealed class UnitSpellLoadoutSaveData
+    {
+        public string UnitId;
+        public string[] SpellIds;
+    }
+
+    [Serializable]
     public sealed class BattleSessionSaveData
     {
         public string[] PlayerSquadIds;
         public string[] EnemySquadIds;
+        public UnitSpellLoadoutSaveData[] PlayerSquadUnits;
+        public UnitSpellLoadoutSaveData[] EnemySquadUnits;
         public string BattleType;
         public int Difficulty;
         public string CampaignMissionId;

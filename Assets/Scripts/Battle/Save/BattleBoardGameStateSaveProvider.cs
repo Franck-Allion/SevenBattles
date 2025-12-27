@@ -69,7 +69,9 @@ namespace SevenBattles.Battle.Save
                         Defense = stats.Defense,
                         Protection = stats.Protection,
                         Initiative = stats.Initiative,
-                        Morale = stats.Morale
+                        Morale = stats.Morale,
+                        DeckCapacity = stats.DeckCapacity,
+                        DrawCapacity = stats.DrawCapacity
                     };
                 }
 
@@ -86,6 +88,7 @@ namespace SevenBattles.Battle.Save
                 {
                     UnitId = unitId,
                     InstanceId = instanceId,
+                    SpellIds = ResolveSpellIds(meta),
                     Team = team,
                     X = x,
                     Y = y,
@@ -124,6 +127,38 @@ namespace SevenBattles.Battle.Save
 
             // Vertical dominates.
             return facing.y >= 0f ? "up" : "down";
+        }
+
+        private static string[] ResolveSpellIds(UnitBattleMetadata meta)
+        {
+            if (meta == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            var deck = meta.GetComponent<SevenBattles.Battle.Spells.UnitSpellDeck>();
+            var spells = deck != null ? deck.AssignedSpells : null;
+            if (spells == null || spells.Length == 0)
+            {
+                spells = meta.Definition != null ? meta.Definition.Spells : null;
+            }
+
+            if (spells == null || spells.Length == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            var list = new List<string>(spells.Length);
+            for (int i = 0; i < spells.Length; i++)
+            {
+                var spell = spells[i];
+                if (spell != null && !string.IsNullOrEmpty(spell.Id))
+                {
+                    list.Add(spell.Id);
+                }
+            }
+
+            return list.ToArray();
         }
     }
 }

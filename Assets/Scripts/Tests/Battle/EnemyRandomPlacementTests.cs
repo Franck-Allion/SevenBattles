@@ -2,6 +2,7 @@ using NUnit.Framework;
 using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Start;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
 using System.Reflection;
@@ -36,7 +37,16 @@ namespace SevenBattles.Tests.Battle
                 defs.Add(def);
             }
             var squad = ScriptableObject.CreateInstance<PlayerSquad>();
-            squad.Wizards = defs.ToArray();
+            var loadouts = new UnitSpellLoadout[defs.Count];
+            for (int i = 0; i < defs.Count; i++)
+            {
+                loadouts[i] = new UnitSpellLoadout
+                {
+                    Definition = defs[i],
+                    Spells = System.Array.Empty<SpellDefinition>()
+                };
+            }
+            squad.UnitLoadouts = loadouts;
 
             // Controller
             var ctrlGo = new GameObject("EnemyStartController");
@@ -108,4 +118,3 @@ namespace SevenBattles.Tests.Battle
         }
     }
 }
-

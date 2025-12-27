@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using SevenBattles.Core.Units;
 
 namespace SevenBattles.Core.Battle
 {
@@ -14,14 +13,14 @@ namespace SevenBattles.Core.Battle
     public sealed class BattleSessionConfig
     {
         /// <summary>
-        /// Player squad composition (1-8 wizard definitions).
+        /// Player squad composition (1-8 unit loadouts).
         /// </summary>
-        public UnitDefinition[] PlayerSquad;
+        public UnitSpellLoadout[] PlayerSquad;
 
         /// <summary>
-        /// Enemy squad composition (1-8 wizard definitions).
+        /// Enemy squad composition (1-8 unit loadouts).
         /// </summary>
-        public UnitDefinition[] EnemySquad;
+        public UnitSpellLoadout[] EnemySquad;
 
         /// <summary>
         /// Battle type identifier (e.g., "campaign", "arena", "tutorial").
@@ -52,8 +51,8 @@ namespace SevenBattles.Core.Battle
         /// </summary>
         public BattleSessionConfig()
         {
-            PlayerSquad = Array.Empty<UnitDefinition>();
-            EnemySquad = Array.Empty<UnitDefinition>();
+            PlayerSquad = Array.Empty<UnitSpellLoadout>();
+            EnemySquad = Array.Empty<UnitSpellLoadout>();
             BattleType = "unknown";
             Difficulty = 0;
             CampaignMissionId = null;
@@ -63,10 +62,10 @@ namespace SevenBattles.Core.Battle
         /// <summary>
         /// Creates a battle session config with specified squads.
         /// </summary>
-        public BattleSessionConfig(UnitDefinition[] playerSquad, UnitDefinition[] enemySquad, string battleType = "unknown", int difficulty = 0)
+        public BattleSessionConfig(UnitSpellLoadout[] playerSquad, UnitSpellLoadout[] enemySquad, string battleType = "unknown", int difficulty = 0)
         {
-            PlayerSquad = playerSquad ?? Array.Empty<UnitDefinition>();
-            EnemySquad = enemySquad ?? Array.Empty<UnitDefinition>();
+            PlayerSquad = playerSquad ?? Array.Empty<UnitSpellLoadout>();
+            EnemySquad = enemySquad ?? Array.Empty<UnitSpellLoadout>();
             BattleType = battleType;
             Difficulty = difficulty;
             CampaignMissionId = null;

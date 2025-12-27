@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 using SevenBattles.Battle.Board;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
-using SevenBattles.Core.Units;
 
 namespace SevenBattles.Battle.Start
 {
@@ -23,7 +24,7 @@ namespace SevenBattles.Battle.Start
         private MonoBehaviour _sessionServiceBehaviour;
 
         [Header("Legacy Squad Data (DEPRECATED)")]
-        [Tooltip("DEPRECATED: Player squad asset (1..8 wizard definitions). Only used as fallback if session service is not available.")]
+        [Tooltip("DEPRECATED: Player squad asset (1..8 unit loadouts). Only used as fallback if session service is not available.")]
         [SerializeField] private PlayerSquad _playerSquad;
 
         [Header("Placement Rules")]
@@ -189,6 +190,7 @@ namespace SevenBattles.Battle.Start
             SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
             _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
             ApplyStatsIfAny(go, index);
+            ApplySpellsIfAny(go, index);
             _instances[index] = go;
             Play(_placeClip);
             OnWizardPlaced?.Invoke(index);
@@ -249,9 +251,12 @@ namespace SevenBattles.Battle.Start
 
         public Sprite GetPortrait(int index)
         {
-            var squad = GetPlayerSquad();
+            var squad = GetPlayerSquadLoadouts();
             if (squad != null && index >= 0 && index < squad.Length)
-                return squad[index] != null ? squad[index].Portrait : null;
+            {
+                var def = squad[index] != null ? squad[index].Definition : null;
+                return def != null ? def.Portrait : null;
+            }
             return null;
         }
 
@@ -271,7 +276,7 @@ namespace SevenBattles.Battle.Start
 
         private int GetSquadSizeInternal()
         {
-            var squad = GetPlayerSquad();
+            var squad = GetPlayerSquadLoadouts();
             int defCount = squad != null ? squad.Length : 0;
             return Mathf.Clamp(defCount, 0, 8);
         }
@@ -279,7 +284,7 @@ namespace SevenBattles.Battle.Start
         /// <summary>
         /// Resolves the player squad from the session service, or falls back to the legacy ScriptableObject reference.
         /// </summary>
-        private UnitDefinition[] GetPlayerSquad()
+        private UnitSpellLoadout[] GetPlayerSquadLoadouts()
         {
             // Prefer session service
             if (_sessionService?.CurrentSession?.PlayerSquad != null)
@@ -288,9 +293,9 @@ namespace SevenBattles.Battle.Start
             }
 
             // Fallback to legacy ScriptableObject reference
-            if (_playerSquad != null && _playerSquad.Wizards != null)
+            if (_playerSquad != null)
             {
-                return _playerSquad.Wizards;
+                return _playerSquad.GetLoadouts();
             }
 
             return null;
@@ -336,31 +341,46 @@ namespace SevenBattles.Battle.Start
 
         private GameObject ResolvePrefab(int index)
         {
-            var squad = GetPlayerSquad();
+            var squad = GetPlayerSquadLoadouts();
             if (squad == null) return null;
             if (index < 0 || index >= squad.Length) return null;
-            var def = squad[index];
+            var def = squad[index] != null ? squad[index].Definition : null;
             return def != null ? def.Prefab : null;
         }
 
         private void ApplyStatsIfAny(GameObject go, int index)
         {
-            var squad = GetPlayerSquad();
+            var squad = GetPlayerSquadLoadouts();
             if (squad == null) return;
             if (index < 0 || index >= squad.Length) return;
-            var def = squad[index];
+            var def = squad[index] != null ? squad[index].Definition : null;
             if (def == null) return;
             var stats = go.GetComponent<UnitStats>();
             if (stats == null) stats = go.AddComponent<UnitStats>();
             stats.ApplyBase(def.BaseStats);
         }
 
+        private void ApplySpellsIfAny(GameObject go, int index)
+        {
+            if (go == null) return;
+            var squad = GetPlayerSquadLoadouts();
+            if (squad == null) return;
+            if (index < 0 || index >= squad.Length) return;
+            var loadout = squad[index];
+            if (loadout == null) return;
+
+            var stats = go.GetComponent<UnitStats>();
+            int deckCapacity = stats != null ? stats.DeckCapacity : 0;
+            int drawCapacity = stats != null ? stats.DrawCapacity : 0;
+            UnitSpellDeck.Ensure(go).Configure(loadout.Spells, deckCapacity, drawCapacity);
+        }
+
         private UnitBattleMetadata ApplyMetadataIfAny(GameObject go, int index, Vector2Int tile)
         {
-            var squad = GetPlayerSquad();
+            var squad = GetPlayerSquadLoadouts();
             if (squad == null) return null;
             if (index < 0 || index >= squad.Length) return null;
-            var def = squad[index];
+            var def = squad[index] != null ? squad[index].Definition : null;
             if (def == null) return null;
             return UnitBattleMetadata.Ensure(go, true, def, tile);
         }
@@ -368,14 +388,14 @@ namespace SevenBattles.Battle.Start
         private void OnValidate()
         {
             if (_playerRows < 1) _playerRows = 1;
-            var squad = GetPlayerSquad();
+            var squad = GetPlayerSquadLoadouts();
             if (squad != null && squad.Length > 8)
             {
-                Debug.LogWarning("WorldSquadPlacementController: Only first 8 WizardDefinitions will be used.", this);
+                Debug.LogWarning("WorldSquadPlacementController: Only first 8 UnitLoadouts will be used.", this);
             }
             if (squad == null || squad.Length == 0)
             {
-                Debug.LogWarning("WorldSquadPlacementController: Assign a PlayerSquad with 1..8 WizardDefinitions or ensure BattleSessionService is configured.", this);
+                Debug.LogWarning("WorldSquadPlacementController: Assign a PlayerSquad with 1..8 UnitLoadouts or ensure BattleSessionService is configured.", this);
             }
         }
     }

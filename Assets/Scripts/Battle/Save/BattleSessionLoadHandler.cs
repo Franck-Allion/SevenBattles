@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using SevenBattles.Core;
@@ -20,7 +21,12 @@ namespace SevenBattles.Battle.Save
         [SerializeField, Tooltip("Registry to resolve unit IDs to UnitDefinition ScriptableObjects.")]
         private UnitDefinitionRegistry _unitRegistry;
 
+        [SerializeField, Tooltip("Registry to resolve spell IDs to SpellDefinition ScriptableObjects.")]
+        private SpellDefinitionRegistry _spellRegistry;
+
         private IBattleSessionService _sessionService;
+        private readonly Dictionary<string, SpellDefinition> _spellLookup = new Dictionary<string, SpellDefinition>(System.StringComparer.Ordinal);
+        private bool _warnedMissingUnitRegistry;
 
         private void Awake()
         {
@@ -59,10 +65,11 @@ namespace SevenBattles.Battle.Save
                 return;
             }
 
+            _spellLookup.Clear();
             var config = new BattleSessionConfig
             {
-                PlayerSquad = ResolveUnits(data.BattleSession.PlayerSquadIds),
-                EnemySquad = ResolveUnits(data.BattleSession.EnemySquadIds),
+                PlayerSquad = ResolveLoadouts(data.BattleSession.PlayerSquadUnits, data.BattleSession.PlayerSquadIds),
+                EnemySquad = ResolveLoadouts(data.BattleSession.EnemySquadUnits, data.BattleSession.EnemySquadIds),
                 BattleType = data.BattleSession.BattleType ?? "unknown",
                 Difficulty = data.BattleSession.Difficulty,
                 CampaignMissionId = data.BattleSession.CampaignMissionId
@@ -70,6 +77,136 @@ namespace SevenBattles.Battle.Save
 
             _sessionService.InitializeSession(config);
             Debug.Log($"BattleSessionLoadHandler: Restored session with {config.PlayerSquad.Length} player units, {config.EnemySquad.Length} enemy units.");
+        }
+
+        private UnitSpellLoadout[] ResolveLoadouts(UnitSpellLoadoutSaveData[] savedUnits, string[] legacyIds)
+        {
+            if (savedUnits != null && savedUnits.Length > 0)
+            {
+                var resolved = ResolveUnitSaveData(savedUnits);
+                if (resolved.Length > 0)
+                {
+                    return resolved;
+                }
+            }
+
+            var legacyUnits = ResolveUnits(legacyIds);
+            if (legacyUnits.Length == 0)
+            {
+                return System.Array.Empty<UnitSpellLoadout>();
+            }
+
+            var fallback = new UnitSpellLoadout[legacyUnits.Length];
+            for (int i = 0; i < legacyUnits.Length; i++)
+            {
+                var def = legacyUnits[i];
+                fallback[i] = new UnitSpellLoadout
+                {
+                    Definition = def,
+                    Spells = def != null ? def.Spells : System.Array.Empty<SpellDefinition>()
+                };
+            }
+
+            return fallback;
+        }
+
+        private UnitSpellLoadout[] ResolveUnitSaveData(UnitSpellLoadoutSaveData[] savedUnits)
+        {
+            var results = new List<UnitSpellLoadout>(savedUnits.Length);
+            for (int i = 0; i < savedUnits.Length; i++)
+            {
+                var saved = savedUnits[i];
+                if (saved == null || string.IsNullOrEmpty(saved.UnitId))
+                {
+                    continue;
+                }
+
+                var def = ResolveUnitDefinition(saved.UnitId);
+                if (def == null)
+                {
+                    continue;
+                }
+
+                var spells = ResolveSpells(saved.SpellIds);
+                results.Add(new UnitSpellLoadout
+                {
+                    Definition = def,
+                    Spells = spells
+                });
+            }
+
+            return results.ToArray();
+        }
+
+        private UnitDefinition ResolveUnitDefinition(string id)
+        {
+            if (string.IsNullOrEmpty(id) || _unitRegistry == null)
+            {
+                if (_unitRegistry == null && !_warnedMissingUnitRegistry)
+                {
+                    _warnedMissingUnitRegistry = true;
+                    Debug.LogWarning("BattleSessionLoadHandler: No UnitDefinitionRegistry assigned. Cannot resolve unit IDs.");
+                }
+
+                return null;
+            }
+
+            return _unitRegistry.GetById(id);
+        }
+
+        private SpellDefinition[] ResolveSpells(string[] ids)
+        {
+            if (ids == null || ids.Length == 0)
+            {
+                return System.Array.Empty<SpellDefinition>();
+            }
+
+            var list = new List<SpellDefinition>(ids.Length);
+            for (int i = 0; i < ids.Length; i++)
+            {
+                var spell = ResolveSpellDefinition(ids[i]);
+                if (spell != null)
+                {
+                    list.Add(spell);
+                }
+            }
+
+            return list.ToArray();
+        }
+
+        private SpellDefinition ResolveSpellDefinition(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return null;
+            }
+
+            if (_spellRegistry != null)
+            {
+                return _spellRegistry.GetById(id);
+            }
+
+            if (_spellLookup.TryGetValue(id, out var cached))
+            {
+                return cached;
+            }
+
+            var allSpells = Resources.FindObjectsOfTypeAll<SpellDefinition>();
+            for (int i = 0; i < allSpells.Length; i++)
+            {
+                var spell = allSpells[i];
+                if (spell == null || string.IsNullOrEmpty(spell.Id))
+                {
+                    continue;
+                }
+
+                if (!_spellLookup.ContainsKey(spell.Id))
+                {
+                    _spellLookup.Add(spell.Id, spell);
+                }
+            }
+
+            return _spellLookup.TryGetValue(id, out var resolved) ? resolved : null;
         }
 
         private UnitDefinition[] ResolveUnits(string[] ids)

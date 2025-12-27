@@ -20,6 +20,8 @@ namespace SevenBattles.Core.Units
         public int Morale;
         [FormerlySerializedAs("ActionPoints")]
         public int ActionPoints;
+        public int DeckCapacity;
+        public int DrawCapacity;
 
         // Backwards-compatible accessors so existing code/tests using old names keep working.
         public int MaxHP

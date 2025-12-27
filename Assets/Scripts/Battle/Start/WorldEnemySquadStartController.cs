@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Board;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
 
@@ -22,7 +24,7 @@ namespace SevenBattles.Battle.Start
         private MonoBehaviour _sessionServiceBehaviour;
 
         [Header("Legacy Squad Data (DEPRECATED)")]
-        [Tooltip("DEPRECATED: Enemy squad (reuses PlayerSquad as a list of WizardDefinitions). Only used as fallback if session service is not available.")]
+        [Tooltip("DEPRECATED: Enemy squad (reuses PlayerSquad as a list of unit loadouts). Only used as fallback if session service is not available.")]
         [SerializeField] private PlayerSquad _enemySquad;
 
         [Header("Placement Rules")]
@@ -86,7 +88,7 @@ namespace SevenBattles.Battle.Start
                 return;
             }
 
-            var defs = GetEnemySquad();
+            var defs = GetEnemySquadLoadouts();
             if (defs == null || defs.Length == 0)
             {
                 Debug.LogWarning("WorldEnemySquadStartController: No enemy wizard definitions configured.");
@@ -108,7 +110,8 @@ namespace SevenBattles.Battle.Start
             int toSpawn = Mathf.Min(defs.Length, validTiles.Count);
             for (int i = 0; i < toSpawn; i++)
             {
-                var def = defs[i];
+                var loadout = defs[i];
+                var def = loadout != null ? loadout.Definition : null;
                 if (def == null || def.Prefab == null) continue;
                 var tile = validTiles[i];
 
@@ -125,6 +128,7 @@ namespace SevenBattles.Battle.Start
                 UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.down);
                 _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
                 ApplyStatsIfAny(go, def);
+                ApplySpellsIfAny(go, loadout);
                 if (_ignoreRaycast) TrySetIgnoreRaycast(go);
             }
         }
@@ -162,6 +166,15 @@ namespace SevenBattles.Battle.Start
             stats.ApplyBase(def.BaseStats);
         }
 
+        private void ApplySpellsIfAny(GameObject go, UnitSpellLoadout loadout)
+        {
+            if (go == null || loadout == null) return;
+            var stats = go.GetComponent<UnitStats>();
+            int deckCapacity = stats != null ? stats.DeckCapacity : 0;
+            int drawCapacity = stats != null ? stats.DrawCapacity : 0;
+            UnitSpellDeck.Ensure(go).Configure(loadout.Spells, deckCapacity, drawCapacity);
+        }
+
         private void TrySetIgnoreRaycast(GameObject go)
         {
             int layer = LayerMask.NameToLayer("Ignore Raycast");
@@ -181,7 +194,7 @@ namespace SevenBattles.Battle.Start
         /// <summary>
         /// Resolves the enemy squad from the session service, or falls back to the legacy ScriptableObject reference.
         /// </summary>
-        private UnitDefinition[] GetEnemySquad()
+        private UnitSpellLoadout[] GetEnemySquadLoadouts()
         {
             // Prefer session service
             if (_sessionService?.CurrentSession?.EnemySquad != null)
@@ -190,9 +203,9 @@ namespace SevenBattles.Battle.Start
             }
 
             // Fallback to legacy ScriptableObject reference
-            if (_enemySquad != null && _enemySquad.Wizards != null)
+            if (_enemySquad != null)
             {
-                return _enemySquad.Wizards;
+                return _enemySquad.GetLoadouts();
             }
 
             return null;
@@ -203,10 +216,10 @@ namespace SevenBattles.Battle.Start
             if (_enemyRowsFromBack < 1) _enemyRowsFromBack = 1;
             if (_scaleMultiplier <= 0f) _scaleMultiplier = 1f;
             if (_sortingOrderFloor < 0) _sortingOrderFloor = 0;
-            var squad = GetEnemySquad();
+            var squad = GetEnemySquadLoadouts();
             if (squad == null || squad.Length == 0)
             {
-                Debug.LogWarning("WorldEnemySquadStartController: Assign an enemy squad with 1..8 WizardDefinitions or ensure BattleSessionService is configured.", this);
+                Debug.LogWarning("WorldEnemySquadStartController: Assign an enemy squad with 1..8 UnitLoadouts or ensure BattleSessionService is configured.", this);
             }
         }
     }
