@@ -406,6 +406,8 @@ For more details on the current save/load architecture and JSON format, see:
 - Future AI features (movement heuristics, destination selection, logging, etc.) must extend this service instead of bloating `SimpleTurnOrderController`.
 - Reuse the provided `Context` struct so AI logic always respects the same Action Point, Speed, and board occupancy invariants enforced by `BattleMovementController`.
 - Additional controllers/services needing AI movement choices should query `BattleAiTurnService` rather than rebuilding BFS or nearest-enemy logic.
+- AI turns must attempt a single adjacent melee attack (via `BattleCombatController`) before movement if an attackable enemy is already in range and the unit has enough AP.
+- After AI movement completes, if the unit still has AP and an attackable enemy is now adjacent, it must attempt one melee attack (via `BattleCombatController`) before ending its turn.
 
 ### Battle Session Configuration
 - All battle initialization data (player squad, enemy squad, difficulty, etc.) must be encapsulated in a `BattleSessionConfig` and injected via `IBattleSessionService`.

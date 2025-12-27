@@ -874,6 +874,11 @@ namespace SevenBattles.Battle.Turn
             if (IsActiveUnitPlayerControlledInternal()) return;
             if (_movementAnimating || _attackAnimating || _spellAnimating) return;
 
+            if (TryExecuteAiAttack())
+            {
+                return;
+            }
+
             if (_aiTurnService == null)
             {
                 CompleteAiTurnAfterDecision();
@@ -899,6 +904,78 @@ namespace SevenBattles.Battle.Turn
             {
                 CompleteAiTurnAfterDecision();
             }
+        }
+
+        private bool TryExecuteAiAttack()
+        {
+            if (_combatController == null) return false;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
+            if (_movementAnimating || _attackAnimating || _spellAnimating) return false;
+            if (_activeUnitCurrentActionPoints <= 0) return false;
+
+            var activeUnit = _units[_activeIndex];
+            var stats = activeUnit.Stats;
+            if (stats == null || stats.Attack <= 0) return false;
+
+            _combatController.RebuildAttackableEnemyTiles(activeUnit, _units, u => u.Metadata, u => u.Stats);
+            if (!TryGetAttackableEnemyTile(activeUnit, out var targetTile)) return false;
+
+            _combatController.TryExecuteAttack(
+                targetTile,
+                activeUnit,
+                _units,
+                u => u.Metadata,
+                u => u.Stats,
+                () => { _attackAnimating = true; },
+                () => { ConsumeActiveUnitActionPoint(); },
+                () =>
+                {
+                    CompactUnits();
+                    if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                    {
+                        _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
+                    }
+                },
+                () =>
+                {
+                    _attackAnimating = false;
+                    UpdateBoardHighlight();
+                    CompleteAiTurnAfterDecision();
+                }
+            );
+
+            return true;
+        }
+
+        private bool TryGetAttackableEnemyTile(TurnUnit activeUnit, out Vector2Int targetTile)
+        {
+            targetTile = default;
+
+            if (_combatController == null) return false;
+
+            var meta = activeUnit.Metadata;
+            if (meta == null || !meta.HasTile) return false;
+
+            var origin = meta.Tile;
+            Vector2Int[] offsets =
+            {
+                new Vector2Int(0, 1),
+                new Vector2Int(0, -1),
+                new Vector2Int(1, 0),
+                new Vector2Int(-1, 0)
+            };
+
+            for (int i = 0; i < offsets.Length; i++)
+            {
+                var candidate = origin + offsets[i];
+                if (_combatController.IsAttackableEnemyTile(candidate))
+                {
+                    targetTile = candidate;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private BattleAiTurnService.Context BuildAiContext()
@@ -1356,6 +1433,12 @@ namespace SevenBattles.Battle.Turn
             }
 
             _aiMovePendingCompletion = false;
+
+            if (TryExecuteAiAttack())
+            {
+                return;
+            }
+
             CompleteAiTurnAfterDecision();
         }
 

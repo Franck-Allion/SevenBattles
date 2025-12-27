@@ -10,6 +10,7 @@ using SevenBattles.Core.Units;
 using SevenBattles.Core;
 using System.Collections;
 using UnityEngine.TestTools;
+using SevenBattles.Battle.Combat;
 using SevenBattles.Battle.Movement;
 using Object = UnityEngine.Object;
 
@@ -498,6 +499,120 @@ namespace SevenBattles.Tests.Battle
 
             Assert.Greater(frameBudget, 0, "AI turn should end even when it cannot move.");
             Assert.AreEqual(originalTile, enemyMeta.Tile, "Enemy should remain in place without AP.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [UnityTest]
+        public IEnumerator AiUnitAttacksAdjacentPlayerAndEndsTurn()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 5);
+            SetPrivate(board, "_rows", 5);
+            SetPrivate(board, "_topLeft", new Vector2(0, 5));
+            SetPrivate(board, "_topRight", new Vector2(5, 5));
+            SetPrivate(board, "_bottomRight", new Vector2(5, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var movement = ctrlGo.AddComponent<BattleMovementController>();
+            var combat = ctrlGo.AddComponent<BattleCombatController>();
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            SetPrivate(movement, "_board", board);
+            SetPrivate(combat, "_board", board);
+            SetPrivate(ctrl, "_board", board);
+            SetPrivate(ctrl, "_movementController", movement);
+            SetPrivate(ctrl, "_combatController", combat);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 20, Attack = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(2, 2));
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10, Defense = 0 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(2, 3));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            int initialLife = playerStats.Life;
+            int frameBudget = 240;
+            while (!ctrl.IsActiveUnitPlayerControlled && frameBudget-- > 0)
+            {
+                yield return null;
+            }
+
+            Assert.Greater(frameBudget, 0, "AI turn should end after attacking.");
+            Assert.Less(playerStats.Life, initialLife, "AI attack should reduce player life.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [UnityTest]
+        public IEnumerator AiUnitMovesThenAttacks_WhenEnoughActionPoints()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 6);
+            SetPrivate(board, "_rows", 6);
+            SetPrivate(board, "_topLeft", new Vector2(0, 6));
+            SetPrivate(board, "_topRight", new Vector2(6, 6));
+            SetPrivate(board, "_bottomRight", new Vector2(6, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var movement = ctrlGo.AddComponent<BattleMovementController>();
+            var combat = ctrlGo.AddComponent<BattleCombatController>();
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            SetPrivate(movement, "_board", board);
+            SetPrivate(movement, "_moveDurationSeconds", 0.01f);
+            SetPrivate(combat, "_board", board);
+            SetPrivate(ctrl, "_board", board);
+            SetPrivate(ctrl, "_movementController", movement);
+            SetPrivate(ctrl, "_combatController", combat);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 2, Speed = 1, Initiative = 20, Attack = 5 });
+            var enemyMeta = UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(2, 2));
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10, Defense = 0 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(2, 4));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            int initialLife = playerStats.Life;
+            int frameBudget = 300;
+            while (!ctrl.IsActiveUnitPlayerControlled && frameBudget-- > 0)
+            {
+                yield return null;
+            }
+
+            Assert.Greater(frameBudget, 0, "AI turn should end after moving and attacking.");
+            Assert.AreEqual(new Vector2Int(2, 3), enemyMeta.Tile, "AI should move adjacent before attacking.");
+            Assert.Less(playerStats.Life, initialLife, "AI should attack after moving when AP remains.");
 
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(boardGo);
