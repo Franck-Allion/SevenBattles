@@ -385,6 +385,10 @@ namespace SevenBattles.Battle.Turn
             ResetSpellDecksForBattle();
             _turnIndex = 0;
             ConfigureBoardForBattle();
+            if (_cursorController != null)
+            {
+                _cursorController.ApplyDefaultCursor();
+            }
             SelectFirstUnit();
         }
 

@@ -12,15 +12,36 @@ namespace SevenBattles.Battle.Cursors
         private enum CursorKind
         {
             None = 0,
-            Move = 1,
-            Selection = 2,
-            Attack = 3,
-            Spell = 4
+            Default = 1,
+            Move = 2,
+            Selection = 3,
+            Attack = 4,
+            Spell = 5
         }
+
+        [Header("Default Cursor")]
+        [SerializeField, Tooltip("Cursor texture used by default during battle when no specific cursor is active.")]
+        private Texture2D _defaultCursorTexture;
+        [SerializeField, Tooltip("Hotspot offset for the default battle cursor (typically center of the texture).")]
+        private Vector2 _defaultCursorHotspot = new Vector2(16f, 16f);
 
         private CursorKind _cursorKind;
         private Texture2D _cursorTexture;
         private Vector2 _cursorHotspot;
+        private ICursorBackend _cursorBackend = new UnityCursorBackend();
+
+        private void OnEnable()
+        {
+            if (_cursorKind == CursorKind.None)
+            {
+                ResetToDefaultOrSystem();
+            }
+        }
+
+        internal void SetCursorBackendForTests(ICursorBackend backend)
+        {
+            _cursorBackend = backend ?? new UnityCursorBackend();
+        }
 
         /// <summary>
         /// Sets the move cursor (displayed when hovering over legal movement tiles).
@@ -81,18 +102,33 @@ namespace SevenBattles.Battle.Cursors
         }
 
         /// <summary>
-        /// Clears all cursors and resets to the default system cursor.
+        /// Clears all cursors and resets to the default battle cursor (or system cursor if none configured).
         /// </summary>
         public void ClearAll()
         {
             _cursorKind = CursorKind.None;
             _cursorTexture = null;
             _cursorHotspot = Vector2.zero;
-            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            ResetToDefaultOrSystem();
+        }
+
+        /// <summary>
+        /// Applies the configured default cursor for battle, or falls back to the system cursor.
+        /// </summary>
+        public void ApplyDefaultCursor()
+        {
+            ResetToDefaultOrSystem();
         }
 
         private void ApplyCursor(CursorKind kind, Texture2D texture, Vector2 hotspot)
         {
+            if (texture == null && _defaultCursorTexture != null)
+            {
+                kind = CursorKind.Default;
+                texture = _defaultCursorTexture;
+                hotspot = _defaultCursorHotspot;
+            }
+
             // Avoid redundant SetCursor calls
             if (_cursorKind == kind && ReferenceEquals(_cursorTexture, texture) && _cursorHotspot == hotspot)
             {
@@ -105,11 +141,11 @@ namespace SevenBattles.Battle.Cursors
 
             if (texture != null)
             {
-                Cursor.SetCursor(texture, hotspot, CursorMode.Auto);
+                _cursorBackend.SetCursor(texture, hotspot, CursorMode.Auto);
             }
             else
             {
-                Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+                _cursorBackend.SetCursor(null, Vector2.zero, CursorMode.Auto);
             }
         }
 
@@ -120,7 +156,34 @@ namespace SevenBattles.Battle.Cursors
                 return;
             }
 
-            ClearAll();
+            ResetToDefaultOrSystem();
+        }
+
+        private void ResetToDefaultOrSystem()
+        {
+            if (_defaultCursorTexture != null)
+            {
+                ApplyCursor(CursorKind.Default, _defaultCursorTexture, _defaultCursorHotspot);
+                return;
+            }
+
+            _cursorKind = CursorKind.None;
+            _cursorTexture = null;
+            _cursorHotspot = Vector2.zero;
+            _cursorBackend.SetCursor(null, Vector2.zero, CursorMode.Auto);
+        }
+
+        internal interface ICursorBackend
+        {
+            void SetCursor(Texture2D texture, Vector2 hotspot, CursorMode mode);
+        }
+
+        private sealed class UnityCursorBackend : ICursorBackend
+        {
+            public void SetCursor(Texture2D texture, Vector2 hotspot, CursorMode mode)
+            {
+                Cursor.SetCursor(texture, hotspot, mode);
+            }
         }
     }
 }

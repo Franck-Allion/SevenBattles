@@ -15621,6 +15621,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5884ab090ce84ac44a55a7b13fcf8247, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _defaultCursorTexture: {fileID: 0}
+  _defaultCursorHotspot: {x: 16, y: 16}
 --- !u!4 &1691522222
 Transform:
   m_ObjectHideFlags: 0
@@ -18781,6 +18783,11 @@ MonoBehaviour:
   _apCostFontSize: 40
   _selectedSpellDescriptionText: {fileID: 2109000002}
   _spellDescriptionTable: UI.Common
+  _natureElementSpriteIndex: 0
+  _fireElementSpriteIndex: 1
+  _physicalElementSpriteIndex: 2
+  _waterElementSpriteIndex: 3
+  _electricElementSpriteIndex: 4
 --- !u!1 &2090167044
 GameObject:
   m_ObjectHideFlags: 0
@@ -18983,7 +18990,7 @@ MonoBehaviour:
     bottomLeft: {r: 1, g: 1, b: 1, a: 1}
     bottomRight: {r: 1, g: 1, b: 1, a: 1}
   m_fontColorGradientPreset: {fileID: 0}
-  m_spriteAsset: {fileID: 0}
+  m_spriteAsset: {fileID: 11400000, guid: 1d7b61b40d914964691cbcef97e7c20d, type: 2}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
   m_TextStyleHashCode: -1183493901

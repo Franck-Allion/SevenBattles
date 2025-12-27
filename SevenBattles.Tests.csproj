@@ -64,6 +64,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\WorldBattleBootstrapTransitionTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleBoardGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\TurnOrderControllerTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\BattleCursorControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitDefinitionControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\TurnOrderHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SpellAmountPreviewTests.cs" />
