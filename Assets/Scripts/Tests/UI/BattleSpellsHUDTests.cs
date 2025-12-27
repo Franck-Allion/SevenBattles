@@ -731,6 +731,95 @@ namespace SevenBattles.Tests.UI
             Object.DestroyImmediate(spell);
         }
 
+        [Test]
+        public void SelectedSpellDescription_FormatsRangePlaceholders_FromSpellDefinition()
+        {
+            var hudGo = new GameObject("SpellHUD");
+            var hud = hudGo.AddComponent<BattleSpellsHUD>();
+
+            var containerGo = new GameObject("SpellsContainer", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            containerGo.transform.SetParent(hudGo.transform);
+            var containerRt = (RectTransform)containerGo.transform;
+
+            var slotGo = new GameObject("Spell0", typeof(RectTransform));
+            slotGo.transform.SetParent(containerRt, false);
+            slotGo.SetActive(false);
+            var btn = slotGo.AddComponent<Button>();
+            var bg = slotGo.AddComponent<Image>();
+            btn.targetGraphic = bg;
+
+            var iconGo = new GameObject("Icon", typeof(RectTransform));
+            iconGo.transform.SetParent(slotGo.transform, false);
+            var iconImg = iconGo.AddComponent<Image>();
+
+            var apGo = new GameObject("APCost", typeof(RectTransform));
+            apGo.transform.SetParent(slotGo.transform, false);
+            var apTmp = apGo.AddComponent<TextMeshProUGUI>();
+
+            var frameGo = new GameObject("Frame0");
+            frameGo.transform.SetParent(slotGo.transform, false);
+            frameGo.SetActive(false);
+
+            var view = slotGo.AddComponent<BattleSpellSlotView>();
+            SetPrivate(view, "_button", btn);
+            SetPrivate(view, "_icon", iconImg);
+            SetPrivate(view, "_apCost", apTmp);
+            SetPrivate(view, "_selectionFrame", frameGo);
+
+            var descGo = new GameObject("Desc", typeof(RectTransform));
+            descGo.transform.SetParent(hudGo.transform, false);
+            var descText = descGo.AddComponent<TextMeshProUGUI>();
+
+            var ctrlGo = new GameObject("Ctrl");
+            var ctrl = ctrlGo.AddComponent<FakeTurnController>();
+            ctrl.HasActiveUnit = true;
+            ctrl.IsActiveUnitPlayerControlled = true;
+
+            var spell = ScriptableObject.CreateInstance<SpellDefinition>();
+            spell.Id = "spell.range_test";
+            spell.ActionPointCost = 1;
+            spell.Icon = MakeSprite();
+            spell.DescriptionLocalizationKey = string.Empty;
+            spell.Description = "Range {RangeMin}-{RangeMax} ({RangeTiles})";
+            spell.MinCastRange = 1;
+            spell.MaxCastRange = 3;
+            ctrl.ActiveUnitSpells = new[] { spell };
+
+            SetPrivate(hud, "_controllerBehaviour", ctrl);
+            SetPrivate(hud, "_spellsContainer", containerRt);
+            SetPrivate(hud, "_useFixedSlots", true);
+            SetPrivate(hud, "_fixedSlotRoots", new[] { (RectTransform)slotGo.transform });
+            SetPrivate(hud, "_selectedSpellDescriptionText", descText);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            btn.onClick.Invoke();
+            Assert.AreEqual("Range 1-3 (1-3)", descText.text);
+
+            spell.MinCastRange = 2;
+            spell.MaxCastRange = 2;
+            ctrl.FireActiveUnitStatsChanged();
+            Assert.AreEqual("Range 2-2 (2)", descText.text);
+
+            spell.MinCastRange = 0;
+            spell.MaxCastRange = 3;
+            ctrl.FireActiveUnitStatsChanged();
+            Assert.AreEqual("Range 0-3 (0-3)", descText.text);
+
+            spell.MinCastRange = 4;
+            spell.MaxCastRange = 2;
+            ctrl.FireActiveUnitStatsChanged();
+            Assert.AreEqual("Range 4-4 (4)", descText.text);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(containerGo);
+            Object.DestroyImmediate(slotGo);
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(descGo);
+            Object.DestroyImmediate(spell);
+        }
+
         private static void AssertSlot(Transform slotRoot, string expectedApCost, Sprite expectedSprite)
         {
             var iconTf = slotRoot.Find("Icon");

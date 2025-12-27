@@ -91,11 +91,17 @@ namespace SevenBattles.UI
         {
             public string DamageNumber { get; }
             public string PrimaryElementIcon { get; }
+            public string RangeMin { get; }
+            public string RangeMax { get; }
+            public string RangeTiles { get; }
 
-            public SpellDescriptionArgs(string damageNumber, string primaryElementIcon)
+            public SpellDescriptionArgs(string damageNumber, string primaryElementIcon, string rangeMin, string rangeMax, string rangeTiles)
             {
                 DamageNumber = damageNumber ?? string.Empty;
                 PrimaryElementIcon = primaryElementIcon ?? string.Empty;
+                RangeMin = rangeMin ?? string.Empty;
+                RangeMax = rangeMax ?? string.Empty;
+                RangeTiles = rangeTiles ?? string.Empty;
             }
         }
 
@@ -629,9 +635,10 @@ namespace SevenBattles.UI
 
             var amount = BuildFormattedPrimaryAmount(spell);
             var elementIcon = BuildPrimaryElementIconTag(spell);
+            BuildSpellRangeStrings(spell, out var rangeMin, out var rangeMax, out var rangeTiles);
             _selectedSpellDescriptionString.Arguments = new object[]
             {
-                new SpellDescriptionArgs(amount, elementIcon)
+                new SpellDescriptionArgs(amount, elementIcon, rangeMin, rangeMax, rangeTiles)
             };
         }
 
@@ -645,6 +652,7 @@ namespace SevenBattles.UI
 
             var amount = BuildFormattedPrimaryAmount(spell);
             var elementIcon = BuildPrimaryElementIconTag(spell);
+            BuildSpellRangeStrings(spell, out var rangeMin, out var rangeMax, out var rangeTiles);
             var text = template;
 
             if (text.Contains("{DamageNumber}", StringComparison.Ordinal))
@@ -655,6 +663,21 @@ namespace SevenBattles.UI
             if (text.Contains("{PrimaryElementIcon}", StringComparison.Ordinal))
             {
                 text = text.Replace("{PrimaryElementIcon}", elementIcon);
+            }
+
+            if (text.Contains("{RangeMin}", StringComparison.Ordinal))
+            {
+                text = text.Replace("{RangeMin}", rangeMin);
+            }
+
+            if (text.Contains("{RangeMax}", StringComparison.Ordinal))
+            {
+                text = text.Replace("{RangeMax}", rangeMax);
+            }
+
+            if (text.Contains("{RangeTiles}", StringComparison.Ordinal))
+            {
+                text = text.Replace("{RangeTiles}", rangeTiles);
             }
 
             if (text.Contains("{0}", StringComparison.Ordinal))
@@ -692,6 +715,25 @@ namespace SevenBattles.UI
             }
 
             return "X";
+        }
+
+        private void BuildSpellRangeStrings(SpellDefinition spell, out string rangeMin, out string rangeMax, out string rangeTiles)
+        {
+            if (spell == null)
+            {
+                rangeMin = string.Empty;
+                rangeMax = string.Empty;
+                rangeTiles = string.Empty;
+                return;
+            }
+
+            int minRange = Mathf.Max(0, spell.MinCastRange);
+            int maxRange = Mathf.Max(0, spell.MaxCastRange);
+            if (maxRange < minRange) maxRange = minRange;
+
+            rangeMin = minRange.ToString(CultureInfo.InvariantCulture);
+            rangeMax = maxRange.ToString(CultureInfo.InvariantCulture);
+            rangeTiles = minRange == maxRange ? rangeMin : $"{rangeMin}-{rangeMax}";
         }
 
         private string BuildPrimaryElementIconTag(SpellDefinition spell)
