@@ -14,7 +14,7 @@ namespace SevenBattles.Battle.Turn
     // Basic initiative-based turn controller for wizards.
     // Discovers UnitBattleMetadata instances at battle start, sorts by UnitStats.Initiative,
     // and advances turns for player and AI units.
-    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController, ISpellSelectionController
+    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController, ISpellSelectionController, IUnitInspectionController
     {
         [Header("Board Highlight (delegated)")]
         [SerializeField] private WorldPerspectiveBoard _board; // Kept for other initialization if needed, or remove if unused. Checking usage needed. 
@@ -83,6 +83,9 @@ namespace SevenBattles.Battle.Turn
 
         private readonly List<TurnUnit> _units = new List<TurnUnit>();
         private readonly HashSet<UnitStats> _healingSubscriptions = new HashSet<UnitStats>();
+        private TurnUnit _inspectedUnit;
+        private bool _hasInspectedUnit;
+        private UnitStats _inspectedStatsSubscription;
         private int _activeIndex = -1;
         private bool _advancing;
         private bool _hasActiveUnit;
@@ -165,6 +168,7 @@ namespace SevenBattles.Battle.Turn
         private void OnDisable()
         {
             ClearHealingSubscriptions();
+            ClearInspectedEnemyInternal(false);
         }
 
         public bool HasActiveUnit => _hasActiveUnit;
@@ -217,20 +221,58 @@ namespace SevenBattles.Battle.Turn
                 return false;
             }
 
-            // Map runtime stats to the UI view model using the full unit stat surface.
-            stats.Life = u.Stats.Life;
-            stats.MaxLife = u.Stats.MaxLife;
-            stats.Force = u.Stats.Attack;
-            stats.Shoot = u.Stats.Shoot;
-            stats.Spell = u.Stats.Spell;
-            stats.Speed = u.Stats.Speed;
-            stats.Luck = u.Stats.Luck;
-            stats.Defense = u.Stats.Defense;
-            stats.Protection = u.Stats.Protection;
-            stats.Initiative = u.Stats.Initiative;
-            stats.Morale = u.Stats.Morale;
-
+            stats = BuildStatsViewData(u.Stats);
             return true;
+        }
+
+        public bool HasInspectedEnemy => _hasInspectedUnit;
+
+        public Sprite InspectedEnemyPortrait
+        {
+            get
+            {
+                if (!_hasInspectedUnit || _inspectedUnit.Metadata == null)
+                {
+                    return null;
+                }
+
+                return _inspectedUnit.Metadata.Portrait;
+            }
+        }
+
+        public bool TryGetInspectedEnemyStats(out UnitStatsViewData stats)
+        {
+            stats = default;
+            if (!_hasInspectedUnit || _inspectedUnit.Stats == null)
+            {
+                return false;
+            }
+
+            stats = BuildStatsViewData(_inspectedUnit.Stats);
+            return true;
+        }
+
+        public void ClearInspectedEnemy()
+        {
+            ClearInspectedEnemyInternal(true);
+        }
+
+        private static UnitStatsViewData BuildStatsViewData(UnitStats stats)
+        {
+            return new UnitStatsViewData
+            {
+                Life = stats.Life,
+                MaxLife = stats.MaxLife,
+                Force = stats.Attack,
+                Shoot = stats.Shoot,
+                Spell = stats.Spell,
+                Speed = stats.Speed,
+                Luck = stats.Luck,
+                Defense = stats.Defense,
+                Protection = stats.Protection,
+                Initiative = stats.Initiative,
+                Morale = stats.Morale
+            };
         }
 
         public bool TryGetActiveUnitSpellAmountPreview(SpellDefinition spell, out SpellAmountPreview preview)
@@ -266,6 +308,8 @@ namespace SevenBattles.Battle.Turn
         public event Action ActiveUnitStatsChanged;
         public event Action<BattleOutcome> BattleEnded;
         public event Action SelectedSpellChanged;
+        public event Action InspectedUnitChanged;
+        public event Action InspectedUnitStatsChanged;
 
         public int ActiveUnitCurrentActionPoints => _hasActiveUnit ? _activeUnitCurrentActionPoints : 0;
         public int ActiveUnitMaxActionPoints => _hasActiveUnit ? _activeUnitMaxActionPoints : 0;
@@ -563,6 +607,62 @@ namespace SevenBattles.Battle.Turn
             }
         }
 
+        private void SetInspectedEnemy(TurnUnit unit)
+        {
+            if (unit.Metadata == null || unit.Metadata.IsPlayerControlled)
+            {
+                return;
+            }
+
+            if (_hasInspectedUnit && _inspectedUnit.Metadata == unit.Metadata)
+            {
+                return;
+            }
+
+            ClearInspectedEnemyInternal(false);
+            _inspectedUnit = unit;
+            _hasInspectedUnit = true;
+            SubscribeToInspectedStats(unit.Stats);
+            InspectedUnitChanged?.Invoke();
+        }
+
+        private void SubscribeToInspectedStats(UnitStats stats)
+        {
+            if (stats == null)
+            {
+                return;
+            }
+
+            _inspectedStatsSubscription = stats;
+            stats.Changed += HandleInspectedUnitStatsChanged;
+        }
+
+        private void ClearInspectedEnemyInternal(bool notify)
+        {
+            if (_inspectedStatsSubscription != null)
+            {
+                _inspectedStatsSubscription.Changed -= HandleInspectedUnitStatsChanged;
+                _inspectedStatsSubscription = null;
+            }
+
+            bool wasInspecting = _hasInspectedUnit;
+            _hasInspectedUnit = false;
+            _inspectedUnit = default;
+
+            if (notify && wasInspecting)
+            {
+                InspectedUnitChanged?.Invoke();
+            }
+        }
+
+        private void HandleInspectedUnitStatsChanged()
+        {
+            if (_hasInspectedUnit)
+            {
+                InspectedUnitStatsChanged?.Invoke();
+            }
+        }
+
         private void HandleUnitHealed(UnitStats stats, int effectiveHealAmount)
         {
             if (_visualFeedback == null || stats == null)
@@ -768,6 +868,7 @@ namespace SevenBattles.Battle.Turn
 
         private void SetActiveIndex(int index)
         {
+            ClearInspectedEnemyInternal(true);
             _activeIndex = index;
             _activeUnitHasMoved = false;
             _hasSelectedMoveTile = false;
@@ -1033,6 +1134,16 @@ namespace SevenBattles.Battle.Turn
                 return;
             }
 
+            if (_board == null) return;
+
+            if (Input.GetMouseButtonDown(1))
+            {
+                if (TryInspectEnemyAtScreenPosition(Input.mousePosition))
+                {
+                    return;
+                }
+            }
+
             // First check if we can do anything at all
             bool canMove = CanActiveUnitMove();
             bool canAttack = _combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count
@@ -1054,8 +1165,6 @@ namespace SevenBattles.Battle.Turn
                 UpdateBoardHighlight();
                 return;
             }
-
-            if (_board == null) return;
 
             if (!_board.TryScreenToTile(Input.mousePosition, out var x, out var y))
             {
@@ -1188,6 +1297,37 @@ namespace SevenBattles.Battle.Turn
                 _hasSelectedMoveTile = true;
                 _selectedMoveTile = hoveredTile;
             }
+        }
+
+        private bool TryInspectEnemyAtScreenPosition(Vector2 screenPosition)
+        {
+            if (_board == null)
+            {
+                return false;
+            }
+
+            if (!_board.TryScreenToTile(screenPosition, out var x, out var y))
+            {
+                return false;
+            }
+
+            return TryInspectEnemyAtTile(new Vector2Int(x, y));
+        }
+
+        private bool TryInspectEnemyAtTile(Vector2Int tile)
+        {
+            if (!TryGetValidUnitAtTile(tile, out var unit))
+            {
+                return false;
+            }
+
+            if (unit.Metadata == null || unit.Metadata.IsPlayerControlled)
+            {
+                return false;
+            }
+
+            SetInspectedEnemy(unit);
+            return true;
         }
 
         private void UpdateSpellTargetingInput(SpellDefinition spell)

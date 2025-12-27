@@ -17,7 +17,7 @@ namespace SevenBattles.Tests.UI
             public float Value { get; set; }
         }
 
-        private class FakeTurnController : MonoBehaviour, IBattleTurnController
+        private class FakeTurnController : MonoBehaviour, IBattleTurnController, IUnitInspectionController
         {
             public bool HasActiveUnit { get; set; }
             public bool IsActiveUnitPlayerControlled { get; set; }
@@ -27,11 +27,16 @@ namespace SevenBattles.Tests.UI
             public event System.Action ActiveUnitChanged;
             public event System.Action ActiveUnitActionPointsChanged;
             public event System.Action ActiveUnitStatsChanged;
+            public event System.Action InspectedUnitChanged;
+            public event System.Action InspectedUnitStatsChanged;
 
             public bool EndTurnRequested { get; private set; }
             public UnitStatsViewData ActiveStats;
             public int ActiveUnitCurrentActionPoints { get; set; }
             public int ActiveUnitMaxActionPoints { get; set; }
+            public bool HasInspectedEnemy { get; set; }
+            public Sprite InspectedEnemyPortrait { get; set; }
+            public UnitStatsViewData InspectedStats;
             public bool IsInteractionLocked { get; private set; }
             public int TurnIndex { get; set; }
             public bool HasBattleEnded { get; set; }
@@ -59,6 +64,16 @@ namespace SevenBattles.Tests.UI
                 ActiveUnitStatsChanged?.Invoke();
             }
 
+            public void FireInspectedChanged()
+            {
+                InspectedUnitChanged?.Invoke();
+            }
+
+            public void FireInspectedStatsChanged()
+            {
+                InspectedUnitStatsChanged?.Invoke();
+            }
+
             public bool TryGetActiveUnitStats(out UnitStatsViewData stats)
             {
                 stats = ActiveStats;
@@ -83,6 +98,18 @@ namespace SevenBattles.Tests.UI
             public void SetInteractionLocked(bool locked)
             {
                 IsInteractionLocked = locked;
+            }
+
+            public bool TryGetInspectedEnemyStats(out UnitStatsViewData stats)
+            {
+                stats = InspectedStats;
+                return HasInspectedEnemy;
+            }
+
+            public void ClearInspectedEnemy()
+            {
+                HasInspectedEnemy = false;
+                InspectedUnitChanged?.Invoke();
             }
         }
 
@@ -674,6 +701,137 @@ namespace SevenBattles.Tests.UI
 
             Assert.IsTrue(healthBarGo.activeSelf, "Health bar should be visible for a dead active unit still in turn order.");
             Assert.That(healthBar.Value, Is.EqualTo(0f).Within(1e-4f), "Health bar value should be 0 for a dead unit.");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void InspectedEnemy_OpensStatsPanel_AndUpdatesValues()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var statsRootGo = new GameObject("StatsPanel", typeof(RectTransform));
+            statsRootGo.transform.SetParent(hudGo.transform);
+            var statsRoot = statsRootGo.GetComponent<RectTransform>();
+            statsRoot.anchoredPosition = Vector2.zero;
+
+            var lifeText = new GameObject("LifeText").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(statsRootGo.transform);
+
+            var portraitGo = new GameObject("Portrait");
+            portraitGo.transform.SetParent(hudGo.transform);
+            var portraitImg = portraitGo.AddComponent<Image>();
+            var portraitButton = portraitGo.AddComponent<Button>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_statsPanelRoot", statsRoot);
+            SetPrivate(hud, "_lifeText", lifeText);
+            SetPrivate(hud, "_activePortraitImage", portraitImg);
+            SetPrivate(hud, "_portraitButton", portraitButton);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            fake.HasInspectedEnemy = true;
+            fake.InspectedStats = new UnitStatsViewData { Life = 5, MaxLife = 10 };
+            fake.FireInspectedChanged();
+
+            Assert.IsTrue(statsRootGo.activeSelf, "Stats panel should open when inspecting an enemy.");
+            Assert.AreEqual("5 / 10", lifeText.text);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void PortraitClick_WhenShowingInspectedEnemy_SwitchesToActiveStats()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var statsRootGo = new GameObject("StatsPanel", typeof(RectTransform));
+            statsRootGo.transform.SetParent(hudGo.transform);
+            var statsRoot = statsRootGo.GetComponent<RectTransform>();
+            statsRoot.anchoredPosition = Vector2.zero;
+
+            var lifeText = new GameObject("LifeText").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(statsRootGo.transform);
+
+            var portraitGo = new GameObject("Portrait");
+            portraitGo.transform.SetParent(hudGo.transform);
+            var portraitImg = portraitGo.AddComponent<Image>();
+            var portraitButton = portraitGo.AddComponent<Button>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 9, MaxLife = 9 };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_statsPanelRoot", statsRoot);
+            SetPrivate(hud, "_lifeText", lifeText);
+            SetPrivate(hud, "_activePortraitImage", portraitImg);
+            SetPrivate(hud, "_portraitButton", portraitButton);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            fake.HasInspectedEnemy = true;
+            fake.InspectedStats = new UnitStatsViewData { Life = 2, MaxLife = 10 };
+            fake.FireInspectedChanged();
+
+            portraitButton.onClick.Invoke();
+
+            Assert.IsFalse(fake.HasInspectedEnemy, "Inspection should be cleared when switching back to active stats.");
+            Assert.IsTrue(statsRootGo.activeSelf, "Stats panel should remain open after switching to active stats.");
+            Assert.AreEqual("9 / 9", lifeText.text);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void ActiveUnitChanged_ClosesInspectedPanel()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var statsRootGo = new GameObject("StatsPanel", typeof(RectTransform));
+            statsRootGo.transform.SetParent(hudGo.transform);
+            var statsRoot = statsRootGo.GetComponent<RectTransform>();
+            statsRoot.anchoredPosition = Vector2.zero;
+
+            var lifeText = new GameObject("LifeText").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(statsRootGo.transform);
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Life = 9, MaxLife = 9 };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_statsPanelRoot", statsRoot);
+            SetPrivate(hud, "_lifeText", lifeText);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            fake.HasInspectedEnemy = true;
+            fake.InspectedStats = new UnitStatsViewData { Life = 2, MaxLife = 10 };
+            fake.FireInspectedChanged();
+
+            fake.FireChanged();
+
+            Assert.IsFalse(statsRootGo.activeSelf, "Stats panel should close when the active unit changes.");
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);

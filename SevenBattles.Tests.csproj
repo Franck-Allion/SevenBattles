@@ -83,6 +83,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\BattleGameStateLoadHandlerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleVisualFeedbackServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsDeckCapacityTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsChangedTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitAttackTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />

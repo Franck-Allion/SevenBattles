@@ -13,6 +13,7 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Reference to a MonoBehaviour that implements ITurnOrderController.")]
         private MonoBehaviour _controllerBehaviour;
         private ITurnOrderController _controller;
+        private IUnitInspectionController _inspectionController;
 
         [Header("Portrait")]
         [SerializeField, Tooltip("Image used to display the active unit portrait.")]
@@ -48,6 +49,8 @@ namespace SevenBattles.UI
         private float _statsPanelOffscreenOffset = 400f;
         [SerializeField, Tooltip("Optional full-screen Button that detects clicks outside the stats panel to close it. Typically a transparent overlay behind the panel.")]
         private Button _statsPanelBackgroundButton;
+        [SerializeField, Tooltip("Optional Button on the stats panel root to close the panel when clicked.")]
+        private Button _statsPanelButton;
 
         [Header("Stats Text (TMP)")]
         [SerializeField] private TMP_Text _lifeText;
@@ -122,6 +125,7 @@ namespace SevenBattles.UI
         private Vector2 _statsPanelShownPosition;
         private Vector2 _statsPanelHiddenPosition;
         private System.Collections.IEnumerator _statsPanelRoutine;
+        private bool _showingInspectedEnemy;
 
         private IBattleTurnController _battleTurnController;
         private int _lastKnownTurnIndex;
@@ -133,6 +137,7 @@ namespace SevenBattles.UI
         {
             EnsureController();
             EnsureBattleTurnController();
+            EnsureInspectionController();
             WireEndTurnButton();
             EnsureEndTurnCanvasGroup();
             SetupEndTurnLocalization();
@@ -148,10 +153,16 @@ namespace SevenBattles.UI
         {
             EnsureController();
             EnsureBattleTurnController();
+            EnsureInspectionController();
             if (_controller == null) return;
             _controller.ActiveUnitChanged += HandleActiveUnitChanged;
             _controller.ActiveUnitActionPointsChanged += HandleActiveUnitActionPointsChanged;
             _controller.ActiveUnitStatsChanged += HandleActiveUnitStatsChanged;
+            if (_inspectionController != null)
+            {
+                _inspectionController.InspectedUnitChanged += HandleInspectedUnitChanged;
+                _inspectionController.InspectedUnitStatsChanged += HandleInspectedUnitStatsChanged;
+            }
             _lastKnownTurnIndex = 0;
             HideTurnStartImmediate();
             HandleActiveUnitChanged();
@@ -169,11 +180,17 @@ namespace SevenBattles.UI
                 _controller.ActiveUnitActionPointsChanged -= HandleActiveUnitActionPointsChanged;
                 _controller.ActiveUnitStatsChanged -= HandleActiveUnitStatsChanged;
             }
+            if (_inspectionController != null)
+            {
+                _inspectionController.InspectedUnitChanged -= HandleInspectedUnitChanged;
+                _inspectionController.InspectedUnitStatsChanged -= HandleInspectedUnitStatsChanged;
+            }
 
             TeardownEndTurnLocalization();
             TeardownStatsLabelLocalization();
             TeardownTurnStartBanner();
             CloseStatsPanelImmediate();
+            _showingInspectedEnemy = false;
 
             if (_portraitButton != null)
             {
@@ -183,6 +200,10 @@ namespace SevenBattles.UI
             if (_statsPanelBackgroundButton != null)
             {
                 _statsPanelBackgroundButton.onClick.RemoveListener(HandleStatsBackgroundClicked);
+            }
+            if (_statsPanelButton != null)
+            {
+                _statsPanelButton.onClick.RemoveListener(HandleStatsPanelClicked);
             }
         }
 
@@ -229,6 +250,11 @@ namespace SevenBattles.UI
             }
 
             _battleTurnController = _controller as IBattleTurnController;
+        }
+
+        private void EnsureInspectionController()
+        {
+            _inspectionController = _controller as IUnitInspectionController;
         }
 
         private void WireEndTurnButton()
@@ -603,6 +629,16 @@ namespace SevenBattles.UI
                 _statsPanelBackgroundButton.gameObject.SetActive(false);
             }
 
+            if (_statsPanelButton == null)
+            {
+                _statsPanelButton = _statsPanelRoot.GetComponent<Button>();
+            }
+            if (_statsPanelButton != null)
+            {
+                _statsPanelButton.onClick.RemoveAllListeners();
+                _statsPanelButton.onClick.AddListener(HandleStatsPanelClicked);
+            }
+
             _statsPanelVisible = false;
             _statsPanelAnimating = false;
         }
@@ -682,7 +718,13 @@ namespace SevenBattles.UI
         {
             if (_controller == null) return;
 
-            bool wasStatsPanelVisible = _statsPanelVisible;
+            bool wasStatsPanelVisible = _statsPanelVisible && !_showingInspectedEnemy;
+
+            if (_showingInspectedEnemy)
+            {
+                _showingInspectedEnemy = false;
+                HideStatsPanel();
+            }
 
             bool hasActiveUnit = _controller.HasActiveUnit;
 
@@ -736,10 +778,63 @@ namespace SevenBattles.UI
             RefreshHealthBar();
         }
 
+        private void HandleInspectedUnitChanged()
+        {
+            if (_inspectionController == null)
+            {
+                return;
+            }
+
+            if (!_inspectionController.HasInspectedEnemy)
+            {
+                if (_showingInspectedEnemy)
+                {
+                    _showingInspectedEnemy = false;
+                    HideStatsPanel();
+                }
+                return;
+            }
+
+            if (_inspectionController.TryGetInspectedEnemyStats(out var stats))
+            {
+                ApplyStatsToUI(stats);
+                _showingInspectedEnemy = true;
+                ShowStatsPanel();
+            }
+        }
+
+        private void HandleInspectedUnitStatsChanged()
+        {
+            if (!_showingInspectedEnemy || _inspectionController == null)
+            {
+                return;
+            }
+
+            if (_inspectionController.TryGetInspectedEnemyStats(out var stats))
+            {
+                ApplyStatsToUI(stats);
+            }
+        }
+
         private void HandlePortraitClicked()
         {
             if (_controller == null || !_controller.HasActiveUnit)
             {
+                return;
+            }
+
+            if (_showingInspectedEnemy)
+            {
+                _showingInspectedEnemy = false;
+                _inspectionController?.ClearInspectedEnemy();
+                if (_controller.TryGetActiveUnitStats(out var activeStats))
+                {
+                    ApplyStatsToUI(activeStats);
+                    if (!_statsPanelVisible)
+                    {
+                        ShowStatsPanel();
+                    }
+                }
                 return;
             }
 
@@ -749,14 +844,19 @@ namespace SevenBattles.UI
                 return;
             }
 
-            if (_controller.TryGetActiveUnitStats(out var stats))
+            if (_controller.TryGetActiveUnitStats(out var activeStatsAfterToggle))
             {
-                ApplyStatsToUI(stats);
+                ApplyStatsToUI(activeStatsAfterToggle);
                 ShowStatsPanel();
             }
         }
 
         private void HandleStatsBackgroundClicked()
+        {
+            HideStatsPanel();
+        }
+
+        private void HandleStatsPanelClicked()
         {
             HideStatsPanel();
         }

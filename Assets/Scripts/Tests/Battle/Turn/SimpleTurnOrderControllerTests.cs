@@ -563,6 +563,121 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(def);
         }
 
+        [Test]
+        public void InspectEnemyAtTile_SetsInspectedEnemyStats()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 3);
+            SetPrivate(board, "_rows", 3);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 7, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(1, 0));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            bool inspected = (bool)CallPrivate(ctrl, "TryInspectEnemyAtTile", new Vector2Int(1, 0));
+
+            Assert.IsTrue(inspected, "Inspecting an enemy tile should return true.");
+            Assert.IsTrue(ctrl.HasInspectedEnemy, "Controller should report inspected enemy.");
+            Assert.IsTrue(ctrl.TryGetInspectedEnemyStats(out var stats));
+            Assert.AreEqual(7, stats.Life);
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [Test]
+        public void InspectEnemyAtTile_IgnoresPlayerUnits()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 3);
+            SetPrivate(board, "_rows", 3);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            bool inspected = (bool)CallPrivate(ctrl, "TryInspectEnemyAtTile", new Vector2Int(0, 0));
+
+            Assert.IsFalse(inspected, "Inspecting a player tile should return false.");
+            Assert.IsFalse(ctrl.HasInspectedEnemy);
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [Test]
+        public void ActiveUnitChange_ClearsInspectedEnemy()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 3);
+            SetPrivate(board, "_rows", 3);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 7, ActionPoints = 1, Speed = 1, Initiative = 5 });
+            UnitBattleMetadata.Ensure(enemyGo, false, def, new Vector2Int(1, 0));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            CallPrivate(ctrl, "TryInspectEnemyAtTile", new Vector2Int(1, 0));
+            Assert.IsTrue(ctrl.HasInspectedEnemy);
+
+            CallPrivate(ctrl, "SetActiveIndex", 1);
+
+            Assert.IsFalse(ctrl.HasInspectedEnemy, "Inspected enemy should be cleared when active unit changes.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(def);
+        }
+
         [UnityTest]
         public IEnumerator AiUnitMovesThenAttacks_WhenEnoughActionPoints()
         {

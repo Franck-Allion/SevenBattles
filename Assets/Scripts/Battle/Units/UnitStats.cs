@@ -41,6 +41,7 @@ namespace SevenBattles.Battle.Units
         public int MaxHP => _maxLife;
         public int ActionPoints => _actionPoints;
 
+        public event Action Changed;
         public event Action<UnitStats, int> Healed;
 
         public void ApplyBase(UnitStatsData data)
@@ -60,6 +61,7 @@ namespace SevenBattles.Battle.Units
             _morale = data.Morale;
             _deckCapacity = Mathf.Max(0, data.DeckCapacity);
             _drawCapacity = Mathf.Max(0, data.DrawCapacity);
+            NotifyChanged();
         }
 
         public void ApplySaved(SevenBattles.Core.Save.UnitStatsSaveData data)
@@ -88,6 +90,7 @@ namespace SevenBattles.Battle.Units
             {
                 _drawCapacity = data.DrawCapacity;
             }
+            NotifyChanged();
         }
 
         /// <summary>
@@ -103,7 +106,12 @@ namespace SevenBattles.Battle.Units
                 return;
             }
 
+            int previous = _life;
             _life = Mathf.Max(0, _life - damage);
+            if (_life != previous)
+            {
+                NotifyChanged();
+            }
         }
 
         public int Heal(int amount)
@@ -120,7 +128,16 @@ namespace SevenBattles.Battle.Units
 
             int effectiveHeal = _life - previousLife;
             Healed?.Invoke(this, effectiveHeal);
+            if (effectiveHeal != 0)
+            {
+                NotifyChanged();
+            }
             return effectiveHeal;
+        }
+
+        private void NotifyChanged()
+        {
+            Changed?.Invoke();
         }
     }
 }

@@ -336,6 +336,16 @@ For more details on the current save/load architecture and JSON format, see:
 - Confirmation-style overlays must expose a single reusable API accepting `LocalizedString` title/message/button labels and per-call callbacks, instead of hardcoded or duplicated UI flows.  
 - For confirmation flows in the UI domain (Quit, Load, delete save, reset settings, etc.), agents must first consider reusing or extending `SevenBattles.UI.ConfirmationMessageBoxHUD` before introducing any new confirmation UI component.
 
+---
+
+## 15. ENEMY INSPECTION HUD INVARIANTS
+
+- UI must access enemy inspection data only via the Core interface `IUnitInspectionController` (no direct references to Battle domain types from UI).  
+- Right-clicking an enemy inspects it only when spell targeting is not active; RMB must still cancel spell targeting first.  
+- The stats panel used for enemy inspection is the same `TurnOrderHUD` stats panel and must close when the user clicks on the panel itself or the panel background.  
+- Inspecting a different enemy replaces the inspected target; changing the active unit clears the inspected target and closes the panel.  
+- Live inspection updates must use `UnitStats.Changed` -> `IUnitInspectionController.InspectedUnitStatsChanged` rather than polling.
+
 
 - All blocking overlays (pause menus, confirmation dialogs, turn banners, etc.) must be driven by a `CanvasGroup` that controls both `alpha` and `blocksRaycasts`.  
 - While visible, modal overlays must use `blocksRaycasts = true` to prevent clicks on underlying HUD or world UI; when hidden, they must restore `blocksRaycasts = false` and any related HUD `CanvasGroup.alpha` state.  
