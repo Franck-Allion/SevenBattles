@@ -8,6 +8,7 @@ using SevenBattles.Core;
 using SevenBattles.Battle.Spells;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
+using SevenBattles.Battle.Tiles;
 
 namespace SevenBattles.Battle.Turn
 {
@@ -20,6 +21,9 @@ namespace SevenBattles.Battle.Turn
         [SerializeField] private WorldPerspectiveBoard _board; // Kept for other initialization if needed, or remove if unused. Checking usage needed. 
         [SerializeField, Tooltip("Service managing board highlights.")]
         private SevenBattles.Battle.Board.BattleBoardHighlightController _highlightController;
+        [Header("Battlefield (optional)")]
+        [SerializeField, Tooltip("Optional battlefield service used to resolve tile bonuses. If null, will be auto-found at runtime.")]
+        private MonoBehaviour _battlefieldServiceBehaviour;
         [Header("Movement")]
         [Header("Movement")]
         [SerializeField, Tooltip("Duration in seconds for the active unit movement animation between tiles.")]
@@ -83,6 +87,8 @@ namespace SevenBattles.Battle.Turn
 
         private readonly List<TurnUnit> _units = new List<TurnUnit>();
         private readonly HashSet<UnitStats> _healingSubscriptions = new HashSet<UnitStats>();
+        private readonly Dictionary<UnitStats, TileStatBonus> _tileStatBonuses = new Dictionary<UnitStats, TileStatBonus>();
+        private IBattlefieldService _battlefieldService;
         private TurnUnit _inspectedUnit;
         private bool _hasInspectedUnit;
         private UnitStats _inspectedStatsSubscription;
@@ -163,12 +169,27 @@ namespace SevenBattles.Battle.Turn
             {
                 _aiTurnService.SetMovementController(_movementController);
             }
+
+            ResolveBattlefieldService();
+        }
+
+        private void OnEnable()
+        {
+            ResolveBattlefieldService();
+            if (_battlefieldService != null)
+            {
+                _battlefieldService.BattlefieldChanged += HandleBattlefieldChanged;
+            }
         }
 
         private void OnDisable()
         {
             ClearHealingSubscriptions();
             ClearInspectedEnemyInternal(false);
+            if (_battlefieldService != null)
+            {
+                _battlefieldService.BattlefieldChanged -= HandleBattlefieldChanged;
+            }
         }
 
         public bool HasActiveUnit => _hasActiveUnit;
@@ -221,7 +242,7 @@ namespace SevenBattles.Battle.Turn
                 return false;
             }
 
-            stats = BuildStatsViewData(u.Stats);
+            stats = BuildStatsViewData(u.Stats, GetTileStatBonus(u.Stats));
             return true;
         }
 
@@ -248,7 +269,7 @@ namespace SevenBattles.Battle.Turn
                 return false;
             }
 
-            stats = BuildStatsViewData(_inspectedUnit.Stats);
+            stats = BuildStatsViewData(_inspectedUnit.Stats, GetTileStatBonus(_inspectedUnit.Stats));
             return true;
         }
 
@@ -257,7 +278,7 @@ namespace SevenBattles.Battle.Turn
             ClearInspectedEnemyInternal(true);
         }
 
-        private static UnitStatsViewData BuildStatsViewData(UnitStats stats)
+        private UnitStatsViewData BuildStatsViewData(UnitStats stats, TileStatBonus bonus)
         {
             return new UnitStatsViewData
             {
@@ -271,7 +292,17 @@ namespace SevenBattles.Battle.Turn
                 Defense = stats.Defense,
                 Protection = stats.Protection,
                 Initiative = stats.Initiative,
-                Morale = stats.Morale
+                Morale = stats.Morale,
+                BonusLife = bonus.Life,
+                BonusForce = bonus.Attack,
+                BonusShoot = bonus.Shoot,
+                BonusSpell = bonus.Spell,
+                BonusSpeed = bonus.Speed,
+                BonusLuck = bonus.Luck,
+                BonusDefense = bonus.Defense,
+                BonusProtection = bonus.Protection,
+                BonusInitiative = bonus.Initiative,
+                BonusMorale = bonus.Morale
             };
         }
 
@@ -382,6 +413,7 @@ namespace SevenBattles.Battle.Turn
             _battleEnded = false;
             _battleOutcome = BattleOutcome.None;
             RebuildUnits();
+            ApplyTileStatBonusesForAllUnits();
             ResetSpellDecksForBattle();
             _turnIndex = 0;
             ConfigureBoardForBattle();
@@ -458,11 +490,44 @@ namespace SevenBattles.Battle.Turn
             }
         }
 
+        private void ResolveBattlefieldService()
+        {
+            if (_battlefieldService != null)
+            {
+                return;
+            }
+
+            if (_battlefieldServiceBehaviour != null)
+            {
+                _battlefieldService = _battlefieldServiceBehaviour as IBattlefieldService;
+            }
+
+            if (_battlefieldService == null)
+            {
+                var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is IBattlefieldService service)
+                    {
+                        _battlefieldService = service;
+                        _battlefieldServiceBehaviour = behaviours[i];
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void HandleBattlefieldChanged(BattlefieldDefinition battlefield)
+        {
+            ApplyTileStatBonusesForAllUnits();
+        }
+
         private void RebuildUnits()
         {
             ClearHealingSubscriptions();
             _units.Clear();
             _activeIndex = -1;
+            _tileStatBonuses.Clear();
 
             var metas = UnityEngine.Object.FindObjectsByType<UnitBattleMetadata>(FindObjectsSortMode.None);
             for (int i = 0; i < metas.Length; i++)
@@ -498,6 +563,85 @@ namespace SevenBattles.Battle.Turn
             }
         }
 
+        private void ApplyTileStatBonusesForAllUnits()
+        {
+            ResolveBattlefieldService();
+            bool activeChanged = false;
+            for (int i = 0; i < _units.Count; i++)
+            {
+                if (ApplyTileStatBonusForUnit(_units[i]))
+                {
+                    activeChanged = true;
+                }
+            }
+
+            if (activeChanged)
+            {
+                RebuildLegalMoveTilesForActiveUnit();
+                RebuildAttackableEnemyTiles();
+            }
+        }
+
+        private bool ApplyTileStatBonusForUnit(TurnUnit unit)
+        {
+            ResolveBattlefieldService();
+            var stats = unit.Stats;
+            if (stats == null)
+            {
+                return false;
+            }
+
+            _tileStatBonuses.TryGetValue(stats, out var previousBonus);
+
+            var currentBonus = default(TileStatBonus);
+            if (BattleTileEffectRules.TryGetTileColor(_battlefieldService, unit.Metadata, out var color))
+            {
+                currentBonus = BattleTileEffectRules.GetStatBonus(color);
+            }
+
+            var delta = TileStatBonus.Subtract(currentBonus, previousBonus);
+            bool changed = !delta.IsZero;
+            if (!delta.IsZero)
+            {
+                stats.ApplyStatDelta(delta);
+            }
+
+            _tileStatBonuses[stats] = currentBonus;
+
+            if (changed && IsActiveUnitStats(stats))
+            {
+                ActiveUnitStatsChanged?.Invoke();
+                return true;
+            }
+
+            return false;
+        }
+
+        private TileStatBonus GetTileStatBonus(UnitStats stats)
+        {
+            if (stats == null)
+            {
+                return default;
+            }
+
+            if (_tileStatBonuses.TryGetValue(stats, out var bonus))
+            {
+                return bonus;
+            }
+
+            return default;
+        }
+
+        private bool IsActiveUnitStats(UnitStats stats)
+        {
+            if (stats == null || !_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
+            {
+                return false;
+            }
+
+            return _units[_activeIndex].Stats == stats;
+        }
+
         private void SelectFirstUnit()
         {
             if (_units.Count == 0)
@@ -529,6 +673,7 @@ namespace SevenBattles.Battle.Turn
                 if (!IsUnitValid(_units[i]))
                 {
                     UnsubscribeFromHealing(_units[i].Stats);
+                    _tileStatBonuses.Remove(_units[i].Stats);
                     _units.RemoveAt(i);
                     if (i <= _activeIndex)
                     {
@@ -800,6 +945,7 @@ namespace SevenBattles.Battle.Turn
             }
 
             RebuildUnits();
+            ApplyTileStatBonusesForAllUnits();
             _turnIndex = Mathf.Max(0, battleTurn.TurnIndex);
 
             if (_units.Count == 0)
@@ -906,6 +1052,7 @@ namespace SevenBattles.Battle.Turn
                 baseAp = Mathf.Max(0, baseAp);
                 _activeUnitMaxActionPoints = baseAp;
                 _activeUnitCurrentActionPoints = baseAp;
+                ApplyTileStatBonusForUnit(u);
             }
 
             UpdateBoardHighlight();
@@ -1590,6 +1737,7 @@ namespace SevenBattles.Battle.Turn
                     _activeUnitHasMoved = true;
                     _movementAnimating = false;
                     UpdateBoardHighlight();
+                    ApplyTileStatBonusForUnit(u);
                     RebuildAttackableEnemyTiles();
                     HandleAiMoveCompleted();
                 }

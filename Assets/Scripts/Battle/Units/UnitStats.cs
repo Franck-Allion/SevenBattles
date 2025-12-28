@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using SevenBattles.Core.Units;
+using SevenBattles.Battle.Tiles;
 
 namespace SevenBattles.Battle.Units
 {
@@ -90,6 +91,28 @@ namespace SevenBattles.Battle.Units
             {
                 _drawCapacity = data.DrawCapacity;
             }
+            NotifyChanged();
+        }
+
+        public void ApplyStatDelta(TileStatBonus delta)
+        {
+            if (delta.IsZero)
+            {
+                return;
+            }
+
+            _maxLife = Mathf.Max(0, _maxLife + delta.Life);
+            _life = Mathf.Clamp(_life + delta.Life, 0, _maxLife);
+            _attack = Mathf.Max(0, _attack + delta.Attack);
+            _shoot = Mathf.Max(0, _shoot + delta.Shoot);
+            _spell = Mathf.Max(0, _spell + delta.Spell);
+            _speed = Mathf.Max(0, _speed + delta.Speed);
+            _luck = Mathf.Max(0, _luck + delta.Luck);
+            _defense = Mathf.Max(0, _defense + delta.Defense);
+            _protection = Mathf.Max(0, _protection + delta.Protection);
+            _initiative = Mathf.Max(0, _initiative + delta.Initiative);
+            _morale = Mathf.Max(0, _morale + delta.Morale);
+
             NotifyChanged();
         }
 

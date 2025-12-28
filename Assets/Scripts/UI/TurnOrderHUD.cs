@@ -867,22 +867,35 @@ namespace SevenBattles.UI
             {
                 if (stats.MaxLife > 0)
                 {
-                    _lifeText.text = $"{stats.Life} / {stats.MaxLife}";
+                    var current = FormatStatWithBonus(stats.Life, stats.BonusLife);
+                    var max = FormatStatWithBonus(stats.MaxLife, stats.BonusLife);
+                    _lifeText.text = $"{current} / {max}";
                 }
                 else
                 {
-                    _lifeText.text = stats.Life.ToString();
+                    _lifeText.text = FormatStatWithBonus(stats.Life, stats.BonusLife);
                 }
             }
-            if (_forceText != null) _forceText.text = stats.Force.ToString();
-            if (_shootText != null) _shootText.text = stats.Shoot.ToString();
-            if (_spellText != null) _spellText.text = stats.Spell.ToString();
-            if (_speedText != null) _speedText.text = stats.Speed.ToString();
-            if (_luckText != null) _luckText.text = stats.Luck.ToString();
-            if (_defenseText != null) _defenseText.text = stats.Defense.ToString();
-            if (_protectionText != null) _protectionText.text = stats.Protection.ToString();
-            if (_initiativeText != null) _initiativeText.text = stats.Initiative.ToString();
-            if (_moraleText != null) _moraleText.text = stats.Morale.ToString();
+            if (_forceText != null) _forceText.text = FormatStatWithBonus(stats.Force, stats.BonusForce);
+            if (_shootText != null) _shootText.text = FormatStatWithBonus(stats.Shoot, stats.BonusShoot);
+            if (_spellText != null) _spellText.text = FormatStatWithBonus(stats.Spell, stats.BonusSpell);
+            if (_speedText != null) _speedText.text = FormatStatWithBonus(stats.Speed, stats.BonusSpeed);
+            if (_luckText != null) _luckText.text = FormatStatWithBonus(stats.Luck, stats.BonusLuck);
+            if (_defenseText != null) _defenseText.text = FormatStatWithBonus(stats.Defense, stats.BonusDefense);
+            if (_protectionText != null) _protectionText.text = FormatStatWithBonus(stats.Protection, stats.BonusProtection);
+            if (_initiativeText != null) _initiativeText.text = FormatStatWithBonus(stats.Initiative, stats.BonusInitiative);
+            if (_moraleText != null) _moraleText.text = FormatStatWithBonus(stats.Morale, stats.BonusMorale);
+        }
+
+        private static string FormatStatWithBonus(int value, int bonus)
+        {
+            if (bonus == 0)
+            {
+                return value.ToString();
+            }
+
+            string sign = bonus > 0 ? "+" : string.Empty;
+            return $"{value} ({sign}{bonus})";
         }
 
         private void RefreshHealthBar()

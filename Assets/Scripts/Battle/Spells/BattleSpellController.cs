@@ -5,6 +5,8 @@ using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Cursors;
 using SevenBattles.Battle.Units;
+using SevenBattles.Battle.Tiles;
+using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 using SevenBattles.Battle.Combat;
@@ -26,6 +28,11 @@ namespace SevenBattles.Battle.Spells
 
         [SerializeField, Tooltip("Service dealing with cursor states (to reset cursors on cast).")]
         private BattleCursorController _cursorController;
+        
+        [Header("Battlefield (optional)")]
+        [SerializeField, Tooltip("Optional battlefield service used to resolve tile bonuses. If null, will be auto-found at runtime.")]
+        private MonoBehaviour _battlefieldServiceBehaviour;
+        private IBattlefieldService _battlefieldService;
 
         // Auto-wire dependencies on awake
         private void Awake()
@@ -43,6 +50,8 @@ namespace SevenBattles.Battle.Spells
             {
                 _cursorController = FindObjectOfType<BattleCursorController>();
             }
+
+            ResolveBattlefieldService();
         }
 
         #region Targeting Logic
@@ -214,6 +223,7 @@ namespace SevenBattles.Battle.Spells
                 CasterSpellStat = casterStats.Spell
             };
 
+            ApplyTileSpellAmountBonus(casterMeta, ref context);
             ApplySpellAmountModifiers(casterStats.gameObject, spell, ref context);
 
             context.Amount = Mathf.Max(0, context.Amount);
@@ -248,6 +258,53 @@ namespace SevenBattles.Battle.Spells
                 catch (Exception ex)
                 {
                     Debug.LogWarning($"BattleSpellController: Spell amount modifier threw an exception and was ignored: {ex.Message}", behaviours[i]);
+                }
+            }
+        }
+
+        private void ApplyTileSpellAmountBonus(UnitBattleMetadata casterMeta, ref SpellAmountCalculationContext context)
+        {
+            int bonus = GetTileSpellAmountBonus(casterMeta, context.Element);
+            if (bonus != 0)
+            {
+                context.Amount += bonus;
+            }
+        }
+
+        private int GetTileSpellAmountBonus(UnitBattleMetadata casterMeta, DamageElement element)
+        {
+            ResolveBattlefieldService();
+            if (!BattleTileEffectRules.TryGetTileColor(_battlefieldService, casterMeta, out var color))
+            {
+                return 0;
+            }
+
+            return BattleTileEffectRules.GetSpellAmountBonus(color, element);
+        }
+
+        private void ResolveBattlefieldService()
+        {
+            if (_battlefieldService != null)
+            {
+                return;
+            }
+
+            if (_battlefieldServiceBehaviour != null)
+            {
+                _battlefieldService = _battlefieldServiceBehaviour as IBattlefieldService;
+            }
+
+            if (_battlefieldService == null)
+            {
+                var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is IBattlefieldService service)
+                    {
+                        _battlefieldService = service;
+                        _battlefieldServiceBehaviour = behaviours[i];
+                        break;
+                    }
                 }
             }
         }
@@ -337,14 +394,15 @@ namespace SevenBattles.Battle.Spells
                     else
                     {
                         // Fallback logic if preview failed
-                         int baseAmount = Mathf.Max(0, spell.PrimaryBaseAmount);
+                        int baseAmount = Mathf.Max(0, spell.PrimaryBaseAmount);
                         float scaling = spell.PrimarySpellStatScaling;
                         int scaledAmount = baseAmount;
                         if (!Mathf.Approximately(scaling, 0f))
                         {
                             scaledAmount += Mathf.RoundToInt(casterStats.Spell * scaling);
                         }
-                        amount = Mathf.Max(0, scaledAmount);
+                        int tileBonus = GetTileSpellAmountBonus(casterMeta, spell.PrimaryDamageElement);
+                        amount = Mathf.Max(0, scaledAmount + tileBonus);
                     }
                 }
 

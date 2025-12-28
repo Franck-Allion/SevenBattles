@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Units;
+using SevenBattles.Battle.Tiles;
+using SevenBattles.Core;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 
 namespace SevenBattles.Battle.Save
@@ -14,6 +17,9 @@ namespace SevenBattles.Battle.Save
     {
         [SerializeField, Tooltip("Optional: log captured unit placements for debugging.")]
         private bool _logCapturedUnits;
+        [SerializeField, Tooltip("Optional battlefield service used to strip transient tile bonuses from saved stats.")]
+        private MonoBehaviour _battlefieldServiceBehaviour;
+        private IBattlefieldService _battlefieldService;
 
         public void PopulateGameState(SaveGameData data)
         {
@@ -22,6 +28,7 @@ namespace SevenBattles.Battle.Save
                 throw new ArgumentNullException(nameof(data));
             }
 
+            ResolveBattlefieldService();
             var metas = UnityEngine.Object.FindObjectsByType<UnitBattleMetadata>(FindObjectsSortMode.None);
             var placements = new List<UnitPlacementSaveData>(metas.Length);
 
@@ -56,20 +63,26 @@ namespace SevenBattles.Battle.Save
                 var stats = meta.GetComponent<UnitStats>();
                 if (stats != null)
                 {
+                    var tileBonus = default(TileStatBonus);
+                    if (meta.HasTile && _battlefieldService != null && _battlefieldService.TryGetTileColor(meta.Tile, out var color))
+                    {
+                        tileBonus = BattleTileEffectRules.GetStatBonus(color);
+                    }
+
                     dead = stats.Life <= 0;
                     statsSave = new UnitStatsSaveData
                     {
-                        Life = stats.Life,
-                        MaxLife = stats.MaxLife,
-                        Attack = stats.Attack,
-                        Shoot = stats.Shoot,
-                        Spell = stats.Spell,
-                        Speed = stats.Speed,
-                        Luck = stats.Luck,
-                        Defense = stats.Defense,
-                        Protection = stats.Protection,
-                        Initiative = stats.Initiative,
-                        Morale = stats.Morale,
+                        Life = Mathf.Max(0, stats.Life - tileBonus.Life),
+                        MaxLife = Mathf.Max(0, stats.MaxLife - tileBonus.Life),
+                        Attack = Mathf.Max(0, stats.Attack - tileBonus.Attack),
+                        Shoot = Mathf.Max(0, stats.Shoot - tileBonus.Shoot),
+                        Spell = Mathf.Max(0, stats.Spell - tileBonus.Spell),
+                        Speed = Mathf.Max(0, stats.Speed - tileBonus.Speed),
+                        Luck = Mathf.Max(0, stats.Luck - tileBonus.Luck),
+                        Defense = Mathf.Max(0, stats.Defense - tileBonus.Defense),
+                        Protection = Mathf.Max(0, stats.Protection - tileBonus.Protection),
+                        Initiative = Mathf.Max(0, stats.Initiative - tileBonus.Initiative),
+                        Morale = Mathf.Max(0, stats.Morale - tileBonus.Morale),
                         DeckCapacity = stats.DeckCapacity,
                         DrawCapacity = stats.DrawCapacity
                     };
@@ -106,6 +119,33 @@ namespace SevenBattles.Battle.Save
             }
 
             data.UnitPlacements = placements.ToArray();
+        }
+
+        private void ResolveBattlefieldService()
+        {
+            if (_battlefieldService != null)
+            {
+                return;
+            }
+
+            if (_battlefieldServiceBehaviour != null)
+            {
+                _battlefieldService = _battlefieldServiceBehaviour as IBattlefieldService;
+            }
+
+            if (_battlefieldService == null)
+            {
+                var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is IBattlefieldService service)
+                    {
+                        _battlefieldService = service;
+                        _battlefieldServiceBehaviour = behaviours[i];
+                        break;
+                    }
+                }
+            }
         }
 
         private static string QuantizeFacing(Vector2 facing)

@@ -20,5 +20,15 @@ namespace SevenBattles.Core
         public int Protection;
         public int Initiative;
         public int Morale;
+        public int BonusLife;
+        public int BonusForce;
+        public int BonusShoot;
+        public int BonusSpell;
+        public int BonusSpeed;
+        public int BonusLuck;
+        public int BonusDefense;
+        public int BonusProtection;
+        public int BonusInitiative;
+        public int BonusMorale;
     }
 }

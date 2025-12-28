@@ -86,6 +86,7 @@
     <Compile Include="Assets\Scripts\Battle\Spells\UnitSpellDeck.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldSquadStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\BattleVisualFeedbackService.cs" />
+    <Compile Include="Assets\Scripts\Battle\Tiles\BattleTileEffectRules.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\BattleBoardHighlightController.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleGameStateLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Battle\AssemblyInfo.cs" />
