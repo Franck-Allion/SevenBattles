@@ -62,7 +62,8 @@ namespace SevenBattles.Battle.Save
                 EnemySquadUnits = BuildUnitLoadoutSaveData(enemyLoadouts),
                 BattleType = session.BattleType,
                 Difficulty = session.Difficulty,
-                CampaignMissionId = session.CampaignMissionId
+                CampaignMissionId = session.CampaignMissionId,
+                BattlefieldId = ResolveBattlefieldId(session)
             };
 
             Debug.Log($"BattleSessionSaveProvider: Saved session with {data.BattleSession.PlayerSquadIds.Length} player units, {data.BattleSession.EnemySquadIds.Length} enemy units.");
@@ -96,6 +97,21 @@ namespace SevenBattles.Battle.Save
             }
 
             return list.ToArray();
+        }
+
+        private static string ResolveBattlefieldId(BattleSessionConfig session)
+        {
+            if (session == null)
+            {
+                return null;
+            }
+
+            if (session.Battlefield != null && !string.IsNullOrEmpty(session.Battlefield.Id))
+            {
+                return session.Battlefield.Id;
+            }
+
+            return string.IsNullOrEmpty(session.BattlefieldId) ? null : session.BattlefieldId;
         }
     }
 }

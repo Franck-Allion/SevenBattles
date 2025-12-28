@@ -47,6 +47,16 @@ namespace SevenBattles.Core.Battle
         public Dictionary<string, object> CustomData;
 
         /// <summary>
+        /// Optional battlefield definition. If set, takes precedence over BattlefieldId.
+        /// </summary>
+        public BattlefieldDefinition Battlefield;
+
+        /// <summary>
+        /// Optional battlefield identifier (resolved via BattlefieldDefinitionRegistry).
+        /// </summary>
+        public string BattlefieldId;
+
+        /// <summary>
         /// Creates a default battle session config with empty squads.
         /// </summary>
         public BattleSessionConfig()
@@ -57,6 +67,8 @@ namespace SevenBattles.Core.Battle
             Difficulty = 0;
             CampaignMissionId = null;
             CustomData = new Dictionary<string, object>();
+            Battlefield = null;
+            BattlefieldId = null;
         }
 
         /// <summary>
@@ -70,6 +82,8 @@ namespace SevenBattles.Core.Battle
             Difficulty = difficulty;
             CampaignMissionId = null;
             CustomData = new Dictionary<string, object>();
+            Battlefield = null;
+            BattlefieldId = null;
         }
     }
 }

@@ -72,6 +72,7 @@
     <Compile Include="Assets\Scripts\Tests\UI\SaveLoadHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleTurnGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsHealTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\BattlefieldDefinitionTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridQuadTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerSpellTargetingTests.cs" />
@@ -87,6 +88,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsChangedTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitAttackTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\BattlefieldServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Spells\UnitSpellDeckTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattlePauseHUDTests.cs" />

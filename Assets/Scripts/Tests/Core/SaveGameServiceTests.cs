@@ -13,6 +13,7 @@ namespace SevenBattles.Tests.Core
         private sealed class FakeGameStateProvider : IGameStateSaveProvider
         {
             public string[] WizardIds;
+            public string BattlefieldId;
 
             public void PopulateGameState(SaveGameData data)
             {
@@ -20,6 +21,14 @@ namespace SevenBattles.Tests.Core
                 {
                     WizardIds = WizardIds ?? Array.Empty<string>()
                 };
+
+                if (!string.IsNullOrEmpty(BattlefieldId))
+                {
+                    data.BattleSession = new BattleSessionSaveData
+                    {
+                        BattlefieldId = BattlefieldId
+                    };
+                }
             }
         }
 
@@ -124,6 +133,31 @@ namespace SevenBattles.Tests.Core
             Assert.IsNotNull(data.PlayerSquad, "PlayerSquad should be populated by provider.");
             Assert.IsNotNull(data.UnitPlacements, "UnitPlacements should be initialized even if provider left it null.");
             Assert.IsNotNull(data.BattleTurn, "BattleTurn should be initialized even if provider left it null.");
+        }
+
+        [Test]
+        public async Task Save_IncludesBattlefieldId_WhenProvided()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "WizA" },
+                BattlefieldId = "battlefield.test"
+            };
+
+            var service = new SaveGameService(provider, dir);
+            await service.SaveSlotAsync(1);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            Assert.IsTrue(File.Exists(path), "Save file should exist after saving.");
+
+            string json = File.ReadAllText(path);
+            var data = JsonUtility.FromJson<SaveGameData>(json);
+            Assert.IsNotNull(data.BattleSession, "BattleSession should be populated when provider supplies it.");
+            Assert.AreEqual("battlefield.test", data.BattleSession.BattlefieldId);
         }
 
         [Test]

@@ -72,7 +72,8 @@ namespace SevenBattles.Battle.Save
                 EnemySquad = ResolveLoadouts(data.BattleSession.EnemySquadUnits, data.BattleSession.EnemySquadIds),
                 BattleType = data.BattleSession.BattleType ?? "unknown",
                 Difficulty = data.BattleSession.Difficulty,
-                CampaignMissionId = data.BattleSession.CampaignMissionId
+                CampaignMissionId = data.BattleSession.CampaignMissionId,
+                BattlefieldId = string.IsNullOrEmpty(data.BattleSession.BattlefieldId) ? null : data.BattleSession.BattlefieldId
             };
 
             _sessionService.InitializeSession(config);

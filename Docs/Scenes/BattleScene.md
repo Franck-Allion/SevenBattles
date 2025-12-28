@@ -19,6 +19,7 @@
   - `_System`
     - `WorldBattleBootstrap` (`WorldBattleBootstrap`) - Entry point for battle initialization.
     - `BattleSessionService` (`BattleSessionService`) - Holds current battle session configuration (player/enemy squads, difficulty).
+    - `BattlefieldService` (`BattlefieldService`) - Resolves the active battlefield definition for the scene.
     - `BattleVisualFeedbackService` (`BattleVisualFeedbackService`) - Manages battle visual effects (damage numbers, healing, buffs).
     - `SimpleTurnOrderController` (`SimpleTurnOrderController`) - Manages turn order and unit activation.
     - `WorldSquadPlacementController` (`WorldSquadPlacementController`) - Handles pre-battle squad placement.
@@ -31,6 +32,7 @@
       - `CompositeGameStateProvider` (`CompositeGameStateSaveProvider`) - Aggregates save providers.
   - `World`
     - World/board representation (`WorldPerspectiveBoard`, tiles, highlights, etc.)
+    - Background sprite driver (`BattlefieldBackgroundRenderer`) sets the board image at battle start
     - Camera rigs and controllers
   - `BattleHUD`
     - `TurnOrderHUD` (`TurnOrderHUD`) - Shows active unit stats, health, action points, and End Turn button

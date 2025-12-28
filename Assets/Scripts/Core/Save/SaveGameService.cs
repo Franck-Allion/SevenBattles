@@ -123,6 +123,7 @@ namespace SevenBattles.Core.Save
         public string BattleType;
         public int Difficulty;
         public string CampaignMissionId;
+        public string BattlefieldId;
     }
 
     [Serializable]

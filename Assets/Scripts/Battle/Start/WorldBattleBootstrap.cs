@@ -25,6 +25,10 @@ namespace SevenBattles.Battle.Start
         [SerializeField, Tooltip("Turn order controller. If not assigned, will be auto-found at runtime.")]
         private SimpleTurnOrderController _turnControllerBehaviour;
 
+        [Header("Battlefield (legacy fallback)")]
+        [SerializeField, Tooltip("Default battlefield used when no session is injected (press Play in BattleScene).")]
+        private BattlefieldDefinition _defaultBattlefield;
+
         [Header("UI Transition")]
         [SerializeField, Tooltip("Optional full-screen CanvasGroup used for fade-out/fade-in between placement and battle.")]
         private CanvasGroup _fadeCanvasGroup;
@@ -146,7 +150,11 @@ namespace SevenBattles.Battle.Start
                 enemySquad ?? System.Array.Empty<UnitSpellLoadout>(),
                 "legacy",
                 0
-            );
+            )
+            {
+                Battlefield = _defaultBattlefield,
+                BattlefieldId = _defaultBattlefield != null ? _defaultBattlefield.Id : null
+            };
         }
 
         private void OnDestroy()
