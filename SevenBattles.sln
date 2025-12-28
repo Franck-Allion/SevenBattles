@@ -135,6 +135,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KinoBloom.Runtime", "KinoBl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.Profiling.Core", "Unity.Profiling.Core.csproj", "{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenBattles.Battle.Editor", "SevenBattles.Battle.Editor.csproj", "{C5A5488D-0622-18A5-243C-DC3EAC584ADA}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.2D.Common.Runtime", "Unity.2D.Common.Runtime.csproj", "{F865A40B-1AF1-8EC5-A48F-336B2DECC99C}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ToonyColorsPro.Demo.Editor", "ToonyColorsPro.Demo.Editor.csproj", "{7B62943D-02CC-43BE-CC4D-D9260AE14EF1}"
@@ -144,8 +146,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.InputSystem.DocCodeSamples", "Unity.InputSystem.DocCodeSamples.csproj", "{3873B546-2870-67B4-326C-0C80CAF975E1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScriptablePacker", "ScriptablePacker.csproj", "{78CA0533-F981-D50F-117E-0741A3490122}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenBattles.Battle.Editor", "SevenBattles.Battle.Editor.csproj", "{C5A5488D-0622-18A5-243C-DC3EAC584ADA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.ScriptableBuildPipeline", "Unity.ScriptableBuildPipeline.csproj", "{A5DFC8CF-F476-F664-3738-A184122F66BA}"
 EndProject
@@ -427,6 +427,10 @@ Global
 		{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F865A40B-1AF1-8EC5-A48F-336B2DECC99C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F865A40B-1AF1-8EC5-A48F-336B2DECC99C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F865A40B-1AF1-8EC5-A48F-336B2DECC99C}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -447,10 +451,6 @@ Global
 		{78CA0533-F981-D50F-117E-0741A3490122}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{78CA0533-F981-D50F-117E-0741A3490122}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{78CA0533-F981-D50F-117E-0741A3490122}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A5DFC8CF-F476-F664-3738-A184122F66BA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A5DFC8CF-F476-F664-3738-A184122F66BA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A5DFC8CF-F476-F664-3738-A184122F66BA}.Release|Any CPU.ActiveCfg = Release|Any CPU

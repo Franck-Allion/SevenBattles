@@ -55,6 +55,11 @@ namespace SevenBattles.Tests.UI
                 return false;
             }
 
+            public bool CanActiveUnitCastSpell(SpellDefinition spell)
+            {
+                return true;
+            }
+
             public void StartBattle()
             {
             }

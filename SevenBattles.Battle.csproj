@@ -69,6 +69,8 @@
     <Compile Include="Assets\Scripts\Battle\BattlefieldService.cs" />
     <Compile Include="Assets\Scripts\Battle\Spells\BattleSpellController.cs" />
     <Compile Include="Assets\Scripts\Battle\Spells\SpellProjectileImpactRelay.cs" />
+    <Compile Include="Assets\Scripts\Battle\Board\EnchantmentQuadAuthoring.cs" />
+    <Compile Include="Assets\Scripts\Battle\Spells\BattleEnchantmentController.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleBoardGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiTileHighlightGraphic.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleSessionSaveProvider.cs" />
@@ -80,6 +82,7 @@
     <Compile Include="Assets\Scripts\Battle\Start\WorldBattleStartController.cs" />
     <Compile Include="Assets\Scripts\Battle\Input\BattleCursorController.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\SquadPlacementModel.cs" />
+    <Compile Include="Assets\Scripts\Battle\Save\BattleEnchantmentGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleSessionLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\BattlefieldBackgroundRenderer.cs" />
     <Compile Include="Assets\Scripts\Battle\AI\BattleAiTurnService.cs" />

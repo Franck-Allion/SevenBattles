@@ -20,6 +20,7 @@ It reflects the current **Save + Load** implementation.
 - **Battle domain**
   - `BattleBoardGameStateSaveProvider`: captures unit placements (player + enemy) and per‑unit stats.
   - `BattleTurnGameStateSaveProvider`: captures phase (placement/battle), turn index, active unit identity, AP, and whether the active unit has already moved this turn.
+  - `BattleEnchantmentGameStateSaveProvider`: captures active battlefield enchantments (spell id, quad index, caster identity).
 
 - **Players domain**
   - `PlayerSquadGameStateSaveProvider`: captures the player squad composition (which wizards are in the squad).
@@ -278,6 +279,29 @@ public sealed class BattleSessionSaveData {
 
 **Purpose**: This captures the original battle configuration, not just the current unit placements. This allows complete battle reconstruction when loading a save, including the ability to restart the battle with the same squads.
 
+### 3.7 Battle Enchantment Provider (Active Enchantments)
+
+File: `Assets/Scripts/Battle/Save/BattleEnchantmentGameStateSaveProvider.cs`
+
+- Captures active enchantments from `BattleEnchantmentController`:
+  - `SpellId`
+  - `QuadIndex`
+  - `CasterInstanceId`
+  - `CasterUnitId`
+  - `CasterTeam`
+
+DTO:
+
+```csharp
+public sealed class BattleEnchantmentSaveData {
+    public string SpellId;
+    public int QuadIndex;
+    public string CasterInstanceId;
+    public string CasterUnitId;
+    public string CasterTeam;
+}
+```
+
 ---
 
 ## 4. JSON File Format
@@ -334,6 +358,15 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
     "ActiveUnitCurrentActionPoints": 1,
     "ActiveUnitMaxActionPoints": 2
   },
+  "BattleEnchantments": [
+    {
+      "SpellId": "spell.enchant.attack",
+      "QuadIndex": 0,
+      "CasterInstanceId": "unit_42",
+      "CasterUnitId": "WizardA",
+      "CasterTeam": "player"
+    }
+  ],
   "BattleSession": {
     "PlayerSquadIds": ["WizardA", "WizardB", "WizardC"],
     "EnemySquadIds": ["WizardEnemy1", "WizardEnemy2"],
@@ -420,3 +453,10 @@ When you add a new persistent game‑state feature, answer these questions (see 
      - Ensures bad JSON does not crash and falls back to a safe state.
 
 Keeping these invariants in mind will ensure the save format remains robust, debuggable, and easy to extend as SevenBattles grows.
+
+
+
+
+
+
+

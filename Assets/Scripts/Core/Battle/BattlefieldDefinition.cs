@@ -34,6 +34,9 @@ namespace SevenBattles.Core.Battle
         [Header("Tile Colors (row-major, columns x rows)")]
         [SerializeField] private BattlefieldTileColor[] _tileColors = new BattlefieldTileColor[DefaultColumns * DefaultRows];
 
+        [Header("Enchantment Quads (local, in this transform's plane)")]
+        [SerializeField] private EnchantmentQuadDefinition[] _enchantmentQuads = new EnchantmentQuadDefinition[0];
+
         public Sprite BackgroundSprite => _backgroundSprite;
         public int Columns => _columns <= 0 ? DefaultColumns : _columns;
         public int Rows => _rows <= 0 ? DefaultRows : _rows;
@@ -45,6 +48,7 @@ namespace SevenBattles.Core.Battle
         public Vector2 BottomRight => _bottomRight;
         public Vector2 BottomLeft => _bottomLeft;
         public float TileHighlightInset01 => Mathf.Clamp(_tileHighlightInset01, 0f, 0.45f);
+        public EnchantmentQuadDefinition[] EnchantmentQuads => _enchantmentQuads ?? Array.Empty<EnchantmentQuadDefinition>();
 
         public bool TryGetTileColor(Vector2Int tile, out BattlefieldTileColor color)
         {
@@ -88,11 +92,13 @@ namespace SevenBattles.Core.Battle
         private void OnValidate()
         {
             EnsureTileArraySize();
+            EnsureEnchantmentQuads();
         }
 
         private void OnEnable()
         {
             EnsureTileArraySize();
+            EnsureEnchantmentQuads();
         }
 
         private void EnsureTileArraySize()
@@ -114,6 +120,25 @@ namespace SevenBattles.Core.Battle
             }
 
             _tileColors = resized;
+        }
+
+        private void EnsureEnchantmentQuads()
+        {
+            if (_enchantmentQuads == null)
+            {
+                _enchantmentQuads = Array.Empty<EnchantmentQuadDefinition>();
+                return;
+            }
+
+            for (int i = 0; i < _enchantmentQuads.Length; i++)
+            {
+                var quad = _enchantmentQuads[i];
+                if (quad.Scale <= 0f)
+                {
+                    quad.Scale = 1f;
+                    _enchantmentQuads[i] = quad;
+                }
+            }
         }
     }
 }

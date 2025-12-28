@@ -108,6 +108,16 @@ namespace SevenBattles.Core.Save
     }
 
     [Serializable]
+    public sealed class BattleEnchantmentSaveData
+    {
+        public string SpellId;
+        public int QuadIndex;
+        public string CasterInstanceId;
+        public string CasterUnitId;
+        public string CasterTeam;
+    }
+
+    [Serializable]
     public sealed class UnitSpellLoadoutSaveData
     {
         public string UnitId;
@@ -137,6 +147,7 @@ namespace SevenBattles.Core.Save
         public UnitPlacementSaveData[] UnitPlacements;
         public BattleTurnSaveData BattleTurn;
         public BattleSessionSaveData BattleSession; // NEW: Original battle configuration
+        public BattleEnchantmentSaveData[] BattleEnchantments;
     }
 
     public sealed class SaveGameService : ISaveGameService
@@ -287,6 +298,11 @@ namespace SevenBattles.Core.Save
                             ActiveUnitMaxActionPoints = 0,
                             ActiveUnitHasMoved = false
                         };
+                    }
+
+                    if (data.BattleEnchantments == null)
+                    {
+                        data.BattleEnchantments = Array.Empty<BattleEnchantmentSaveData>();
                     }
 
                     return data;
@@ -464,6 +480,11 @@ namespace SevenBattles.Core.Save
                     ActiveUnitMaxActionPoints = 0,
                     ActiveUnitHasMoved = false
                 };
+            }
+
+            if (data.BattleEnchantments == null)
+            {
+                data.BattleEnchantments = Array.Empty<BattleEnchantmentSaveData>();
             }
 
             return data;

@@ -34,6 +34,10 @@ namespace SevenBattles.Battle.Save
         [SerializeField, Tooltip("Registry to resolve spell IDs to SpellDefinition ScriptableObjects.")]
         private SpellDefinitionRegistry _spellRegistry;
 
+        [Header("Enchantments")]
+        [SerializeField, Tooltip("Enchantment controller used to restore active enchantments on load.")]
+        private BattleEnchantmentController _enchantmentController;
+
         [Header("Turn Controller")]
         [SerializeField, Tooltip("Turn order controller whose state will be restored from BattleTurn save data.")]
         private SimpleTurnOrderController _turnController;
@@ -284,6 +288,8 @@ namespace SevenBattles.Battle.Save
             var metasAfter = UnityEngine.Object.FindObjectsByType<UnitBattleMetadata>(FindObjectsSortMode.None);
             Debug.Log($"BattleGameStateLoadHandler: After ApplyLoadedGame, UnitBattleMetadata count={metasAfter.Length}.", this);
 
+            RestoreEnchantments(data, metasAfter);
+
             if (data.BattleTurn != null && _turnController != null && isBattlePhase)
             {
                 var placementCtrl = placementController ?? UnityEngine.Object.FindFirstObjectByType<WorldSquadPlacementController>();
@@ -461,6 +467,115 @@ namespace SevenBattles.Battle.Save
             }
 
             return _board.ComputeSortingOrder(x, y, _baseSortingOrder, rowStride: 10, intraRowOffset: index % 10);
+        }
+
+        private void RestoreEnchantments(SaveGameData data, UnitBattleMetadata[] metas)
+        {
+            if (data == null || data.BattleEnchantments == null || data.BattleEnchantments.Length == 0)
+            {
+                return;
+            }
+
+            if (_enchantmentController == null)
+            {
+                _enchantmentController = UnityEngine.Object.FindFirstObjectByType<BattleEnchantmentController>();
+            }
+
+            if (_enchantmentController == null)
+            {
+                return;
+            }
+
+            _enchantmentController.ResetForBattle();
+
+            var metaByInstance = new Dictionary<string, UnitBattleMetadata>(StringComparer.Ordinal);
+            if (metas != null)
+            {
+                for (int i = 0; i < metas.Length; i++)
+                {
+                    var meta = metas[i];
+                    if (meta == null || string.IsNullOrEmpty(meta.SaveInstanceId))
+                    {
+                        continue;
+                    }
+
+                    if (!metaByInstance.ContainsKey(meta.SaveInstanceId))
+                    {
+                        metaByInstance.Add(meta.SaveInstanceId, meta);
+                    }
+                }
+            }
+
+            for (int i = 0; i < data.BattleEnchantments.Length; i++)
+            {
+                var saved = data.BattleEnchantments[i];
+                if (saved == null || string.IsNullOrEmpty(saved.SpellId))
+                {
+                    continue;
+                }
+
+                var spell = ResolveSpellDefinition(saved.SpellId);
+                if (spell == null || !spell.IsEnchantment)
+                {
+                    continue;
+                }
+
+                UnitBattleMetadata casterMeta = null;
+                if (!string.IsNullOrEmpty(saved.CasterInstanceId))
+                {
+                    metaByInstance.TryGetValue(saved.CasterInstanceId, out casterMeta);
+                }
+
+                bool isPlayerCaster = string.Equals(saved.CasterTeam, "player", StringComparison.OrdinalIgnoreCase);
+                if (casterMeta != null)
+                {
+                    isPlayerCaster = casterMeta.IsPlayerControlled;
+                }
+
+                bool restored = _enchantmentController.TryRestoreEnchantment(
+                    spell,
+                    saved.QuadIndex,
+                    isPlayerCaster,
+                    saved.CasterInstanceId,
+                    saved.CasterUnitId,
+                    skipVisual: false);
+
+                if (casterMeta == null && !string.IsNullOrEmpty(saved.CasterUnitId) && metas != null)
+                {
+                    for (int j = 0; j < metas.Length; j++)
+                    {
+                        var meta = metas[j];
+                        if (meta == null || meta.Definition == null)
+                        {
+                            continue;
+                        }
+
+                        if (!string.Equals(meta.Definition.Id, saved.CasterUnitId, StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        bool teamMatch = string.IsNullOrEmpty(saved.CasterTeam) ||
+                                         string.Equals(saved.CasterTeam, meta.IsPlayerControlled ? "player" : "enemy", StringComparison.OrdinalIgnoreCase);
+                        if (!teamMatch)
+                        {
+                            continue;
+                        }
+
+                        casterMeta = meta;
+                        break;
+                    }
+                }
+
+                if (restored && casterMeta != null)
+                {
+                    var deck = casterMeta.GetComponent<UnitSpellDeck>();
+                    if (deck != null)
+                    {
+                        deck.RemoveSpellForBattle(spell);
+                    }
+                }
+            }
         }
     }
 }

@@ -54,5 +54,32 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(s3);
             Object.DestroyImmediate(go);
         }
+
+        [Test]
+        public void RemoveSpellForBattle_RemovesFromDeckAndDrawn()
+        {
+            Random.InitState(42);
+
+            var go = new GameObject("Unit");
+            var deck = go.AddComponent<UnitSpellDeck>();
+
+            var s1 = ScriptableObject.CreateInstance<SpellDefinition>();
+            var s2 = ScriptableObject.CreateInstance<SpellDefinition>();
+
+            deck.Configure(new[] { s1, s2 }, deckCapacity: 0, drawCapacity: 0);
+            var drawn = deck.DrawForTurn();
+            Assert.IsTrue(drawn.Contains(s1));
+
+            deck.RemoveSpellForBattle(s1);
+            var afterRemoval = deck.CurrentDrawnSpells;
+            Assert.IsFalse(afterRemoval.Contains(s1));
+
+            var nextDraw = deck.DrawForTurn();
+            Assert.IsFalse(nextDraw.Contains(s1));
+
+            Object.DestroyImmediate(s1);
+            Object.DestroyImmediate(s2);
+            Object.DestroyImmediate(go);
+        }
     }
 }

@@ -164,6 +164,7 @@ namespace SevenBattles.UI
             if (_controller != null)
             {
                 _controller.ActiveUnitChanged += HandleActiveUnitChanged;
+                _controller.ActiveUnitActionPointsChanged += HandleActiveUnitActionPointsChanged;
                 _controller.ActiveUnitStatsChanged += HandleActiveUnitStatsChanged;
             }
 
@@ -185,6 +186,7 @@ namespace SevenBattles.UI
             if (_controller != null)
             {
                 _controller.ActiveUnitChanged -= HandleActiveUnitChanged;
+                _controller.ActiveUnitActionPointsChanged -= HandleActiveUnitActionPointsChanged;
                 _controller.ActiveUnitStatsChanged -= HandleActiveUnitStatsChanged;
             }
 
@@ -217,6 +219,11 @@ namespace SevenBattles.UI
         private void HandleActiveUnitStatsChanged()
         {
             RefreshSelectedSpellDescriptionValue();
+        }
+
+        private void HandleActiveUnitActionPointsChanged()
+        {
+            Refresh();
         }
 
         private void Refresh()
@@ -280,6 +287,7 @@ namespace SevenBattles.UI
                 var spell = spells[i];
                 int apCost = Mathf.Max(0, spell.ActionPointCost);
                 bool spent = _controller != null && _controller.IsActiveUnitSpellSpentThisTurn(spell);
+                bool castable = _controller != null && _controller.CanActiveUnitCastSpell(spell);
 
                 if (slot.Icon != null)
                 {
@@ -303,7 +311,7 @@ namespace SevenBattles.UI
 
                 if (slot.Button != null)
                 {
-                    slot.Button.interactable = !spent;
+                    slot.Button.interactable = !spent && castable;
                 }
 
                 if (slot.SelectionFrame != null)

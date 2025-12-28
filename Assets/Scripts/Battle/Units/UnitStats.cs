@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using SevenBattles.Core.Units;
+using SevenBattles.Core.Battle;
 using SevenBattles.Battle.Tiles;
 
 namespace SevenBattles.Battle.Units
@@ -131,6 +132,30 @@ namespace SevenBattles.Battle.Units
             _morale = Mathf.Max(0, _morale + delta.Morale);
 
             NotifyChanged();
+        }
+
+        public void ApplyStatDelta(EnchantmentStatBonus delta)
+        {
+            if (delta.IsZero)
+            {
+                return;
+            }
+
+            var tileDelta = new TileStatBonus
+            {
+                Life = delta.Life,
+                Attack = delta.Attack,
+                Shoot = delta.Shoot,
+                Spell = delta.Spell,
+                Speed = delta.Speed,
+                Luck = delta.Luck,
+                Defense = delta.Defense,
+                Protection = delta.Protection,
+                Initiative = delta.Initiative,
+                Morale = delta.Morale
+            };
+
+            ApplyStatDelta(tileDelta);
         }
 
         /// <summary>

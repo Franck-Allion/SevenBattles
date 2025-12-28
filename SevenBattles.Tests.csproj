@@ -98,6 +98,7 @@
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsLevelScalingTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SquadPlacementHUDTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\BattleEnchantmentGameStateSaveProviderTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\Tests\Tests.asmdef" />

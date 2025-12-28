@@ -83,6 +83,18 @@ namespace SevenBattles.Battle.Spells
             return _drawn;
         }
 
+        public bool RemoveSpellForBattle(SpellDefinition spell)
+        {
+            if (spell == null)
+            {
+                return false;
+            }
+
+            bool removedFromDeck = _deck.Remove(spell);
+            bool removedFromDrawn = RemoveFromDrawn(spell);
+            return removedFromDeck || removedFromDrawn;
+        }
+
         private void BuildDeck()
         {
             _deck.Clear();
@@ -176,6 +188,48 @@ namespace SevenBattles.Battle.Spells
             System.Array.Copy(_assignedSpells, trimmed, _deckCapacity);
             _assignedSpells = trimmed;
             Debug.LogWarning($"UnitSpellDeck: Assigned {originalCount} spells but deck capacity is {_deckCapacity}. Extra spells are ignored.", this);
+        }
+
+        private bool RemoveFromDrawn(SpellDefinition spell)
+        {
+            if (_drawn == null || _drawn.Length == 0 || spell == null)
+            {
+                return false;
+            }
+
+            int count = 0;
+            for (int i = 0; i < _drawn.Length; i++)
+            {
+                if (!ReferenceEquals(_drawn[i], spell))
+                {
+                    count++;
+                }
+            }
+
+            if (count == _drawn.Length)
+            {
+                return false;
+            }
+
+            if (count == 0)
+            {
+                _drawn = System.Array.Empty<SpellDefinition>();
+                return true;
+            }
+
+            var next = new SpellDefinition[count];
+            int index = 0;
+            for (int i = 0; i < _drawn.Length; i++)
+            {
+                var item = _drawn[i];
+                if (!ReferenceEquals(item, spell))
+                {
+                    next[index++] = item;
+                }
+            }
+
+            _drawn = next;
+            return true;
         }
     }
 }

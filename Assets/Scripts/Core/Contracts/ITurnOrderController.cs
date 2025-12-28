@@ -52,6 +52,11 @@ namespace SevenBattles.Core
         /// </summary>
         bool IsActiveUnitSpellSpentThisTurn(SpellDefinition spell);
 
+        /// <summary>
+        /// Returns true if the active unit can currently cast the specified spell (AP, control, and battle state).
+        /// </summary>
+        bool CanActiveUnitCastSpell(SpellDefinition spell);
+
         void RequestEndTurn();
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Tiles;
+using SevenBattles.Battle.Spells;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
@@ -19,6 +20,8 @@ namespace SevenBattles.Battle.Save
         private bool _logCapturedUnits;
         [SerializeField, Tooltip("Optional battlefield service used to strip transient tile bonuses from saved stats.")]
         private MonoBehaviour _battlefieldServiceBehaviour;
+        [SerializeField, Tooltip("Optional enchantment controller used to strip active enchantment bonuses from saved stats.")]
+        private BattleEnchantmentController _enchantmentController;
         private IBattlefieldService _battlefieldService;
 
         public void PopulateGameState(SaveGameData data)
@@ -29,6 +32,7 @@ namespace SevenBattles.Battle.Save
             }
 
             ResolveBattlefieldService();
+            ResolveEnchantmentController();
             var metas = UnityEngine.Object.FindObjectsByType<UnitBattleMetadata>(FindObjectsSortMode.None);
             var placements = new List<UnitPlacementSaveData>(metas.Length);
 
@@ -70,20 +74,23 @@ namespace SevenBattles.Battle.Save
                     }
 
                     dead = stats.Life <= 0;
+                    var enchantmentBonus = _enchantmentController != null
+                        ? _enchantmentController.GetTotalBonusFor(meta)
+                        : default;
                     statsSave = new UnitStatsSaveData
                     {
-                        Life = Mathf.Max(0, stats.Life - tileBonus.Life),
-                        MaxLife = Mathf.Max(0, stats.MaxLife - tileBonus.Life),
+                        Life = Mathf.Max(0, stats.Life - tileBonus.Life - enchantmentBonus.Life),
+                        MaxLife = Mathf.Max(0, stats.MaxLife - tileBonus.Life - enchantmentBonus.Life),
                         Level = stats.Level,
-                        Attack = Mathf.Max(0, stats.Attack - tileBonus.Attack),
-                        Shoot = Mathf.Max(0, stats.Shoot - tileBonus.Shoot),
-                        Spell = Mathf.Max(0, stats.Spell - tileBonus.Spell),
-                        Speed = Mathf.Max(0, stats.Speed - tileBonus.Speed),
-                        Luck = Mathf.Max(0, stats.Luck - tileBonus.Luck),
-                        Defense = Mathf.Max(0, stats.Defense - tileBonus.Defense),
-                        Protection = Mathf.Max(0, stats.Protection - tileBonus.Protection),
-                        Initiative = Mathf.Max(0, stats.Initiative - tileBonus.Initiative),
-                        Morale = Mathf.Max(0, stats.Morale - tileBonus.Morale),
+                        Attack = Mathf.Max(0, stats.Attack - tileBonus.Attack - enchantmentBonus.Attack),
+                        Shoot = Mathf.Max(0, stats.Shoot - tileBonus.Shoot - enchantmentBonus.Shoot),
+                        Spell = Mathf.Max(0, stats.Spell - tileBonus.Spell - enchantmentBonus.Spell),
+                        Speed = Mathf.Max(0, stats.Speed - tileBonus.Speed - enchantmentBonus.Speed),
+                        Luck = Mathf.Max(0, stats.Luck - tileBonus.Luck - enchantmentBonus.Luck),
+                        Defense = Mathf.Max(0, stats.Defense - tileBonus.Defense - enchantmentBonus.Defense),
+                        Protection = Mathf.Max(0, stats.Protection - tileBonus.Protection - enchantmentBonus.Protection),
+                        Initiative = Mathf.Max(0, stats.Initiative - tileBonus.Initiative - enchantmentBonus.Initiative),
+                        Morale = Mathf.Max(0, stats.Morale - tileBonus.Morale - enchantmentBonus.Morale),
                         DeckCapacity = stats.DeckCapacity,
                         DrawCapacity = stats.DrawCapacity
                     };
@@ -147,6 +154,16 @@ namespace SevenBattles.Battle.Save
                     }
                 }
             }
+        }
+
+        private void ResolveEnchantmentController()
+        {
+            if (_enchantmentController != null)
+            {
+                return;
+            }
+
+            _enchantmentController = UnityEngine.Object.FindFirstObjectByType<BattleEnchantmentController>();
         }
 
         private static string QuantizeFacing(Vector2 facing)

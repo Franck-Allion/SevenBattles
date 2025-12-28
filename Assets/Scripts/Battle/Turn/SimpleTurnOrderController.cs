@@ -53,6 +53,8 @@ namespace SevenBattles.Battle.Turn
         [Header("Spell Management")]
         [SerializeField, Tooltip("Service managing spell targeting, execution, and effects. Should reference a BattleSpellController component.")]
         private BattleSpellController _spellController;
+        [SerializeField, Tooltip("Service managing enchantment placement and effects. Should reference a BattleEnchantmentController component.")]
+        private BattleEnchantmentController _enchantmentController;
 
         [Header("Cursor Management")]
         [SerializeField, Tooltip("Service managing battle cursor states (move, attack, selection, spell). Should reference a BattleCursorController component.")]
@@ -132,6 +134,19 @@ namespace SevenBattles.Battle.Turn
             {
                 _spellController = GetComponent<BattleSpellController>();
                 if (_spellController == null) Debug.LogError("[SimpleTurnOrderController] BattleSpellController dependency missing!");
+            }
+
+            if (_enchantmentController == null)
+            {
+                _enchantmentController = GetComponent<BattleEnchantmentController>();
+                if (_enchantmentController == null)
+                {
+                    _enchantmentController = FindObjectOfType<BattleEnchantmentController>();
+                }
+                if (_enchantmentController == null)
+                {
+                    _enchantmentController = gameObject.AddComponent<BattleEnchantmentController>();
+                }
             }
 
             if (_combatController == null)
@@ -418,6 +433,10 @@ namespace SevenBattles.Battle.Turn
             RebuildUnits();
             ApplyTileStatBonusesForAllUnits();
             ResetSpellDecksForBattle();
+            if (_enchantmentController != null)
+            {
+                _enchantmentController.ResetForBattle();
+            }
             _turnIndex = 0;
             ConfigureBoardForBattle();
             if (_cursorController != null)
@@ -452,11 +471,17 @@ namespace SevenBattles.Battle.Turn
                 spell = null;
             }
 
+            if (spell != null && spell.IsEnchantment && (_enchantmentController == null || !_enchantmentController.HasAvailableQuads))
+            {
+                spell = null;
+            }
+
             if (ReferenceEquals(_selectedSpell, spell))
             {
                 return;
             }
 
+            bool wasEnchantment = _selectedSpell != null && _selectedSpell.IsEnchantment;
             _selectedSpell = spell;
 
             // Spell targeting overrides any pending movement selection.
@@ -470,6 +495,11 @@ namespace SevenBattles.Battle.Turn
             if (_cursorController != null)
             {
                 _cursorController.SetSpellCursor(_selectedSpell != null, _selectedSpell);
+            }
+
+            if (wasEnchantment && (_selectedSpell == null || !_selectedSpell.IsEnchantment))
+            {
+                _enchantmentController?.ClearHoverHighlight();
             }
 
             SelectedSpellChanged?.Invoke();
@@ -1554,6 +1584,12 @@ namespace SevenBattles.Battle.Turn
                 return;
             }
 
+            if (spell != null && spell.IsEnchantment)
+            {
+                UpdateEnchantmentTargetingInput(spell);
+                return;
+            }
+
             // Cancel spell targeting (AAA-style): RMB or ESC clears selection.
             if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
             {
@@ -1594,6 +1630,95 @@ namespace SevenBattles.Battle.Turn
             if (Input.GetMouseButtonDown(0) && eligible)
             {
                 TryExecuteSpellCast(spell, hoveredTile);
+            }
+        }
+
+        private void UpdateEnchantmentTargetingInput(SpellDefinition spell)
+        {
+            if (_enchantmentController == null)
+            {
+                return;
+            }
+
+            // Cancel enchantment targeting: RMB or ESC clears selection.
+            if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
+            {
+                SetSelectedSpell(null);
+                if (_cursorController != null)
+                {
+                    _cursorController.SetSpellCursor(false, _selectedSpell);
+                }
+                _enchantmentController.ClearHoverHighlight();
+                UpdateBoardHighlight();
+                return;
+            }
+
+            _hasSelectedMoveTile = false;
+            if (_cursorController != null)
+            {
+                _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+                _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                _cursorController.SetSpellCursor(true, _selectedSpell);
+            }
+
+            if (_highlightController != null)
+            {
+                _highlightController.HideSecondaryHighlight();
+            }
+            if (_board != null)
+            {
+                _board.SetSecondaryHighlightVisible(false);
+            }
+
+            if (!CanActiveUnitCastSpell(spell))
+            {
+                _enchantmentController.ClearHoverHighlight();
+                return;
+            }
+
+            if (_enchantmentController.TryUpdateHoverHighlight(Input.mousePosition, out var hoveredIndex))
+            {
+                if (Input.GetMouseButtonDown(0))
+                {
+                    TryExecuteEnchantmentCast(spell, hoveredIndex);
+                }
+            }
+        }
+
+        private void TryExecuteEnchantmentCast(SpellDefinition spell, int quadIndex)
+        {
+            if (_enchantmentController == null) return;
+            if (spell == null || !spell.IsEnchantment) return;
+            if (_activeIndex < 0 || _activeIndex >= _units.Count) return;
+            if (IsActiveUnitSpellSpentThisTurn(spell)) return;
+            if (!CanActiveUnitCastSpell(spell)) return;
+
+            var caster = _units[_activeIndex];
+            if (!IsUnitValid(caster))
+            {
+                return;
+            }
+
+            _spellAnimating = true;
+            try
+            {
+                bool placed = _enchantmentController.TryPlaceEnchantment(spell, quadIndex, caster.Metadata);
+                if (!placed)
+                {
+                    return;
+                }
+
+                MarkSpellSpentThisTurn(spell);
+                int cost = Mathf.Max(0, spell.ActionPointCost);
+                ConsumeActiveUnitActionPoints(cost);
+                RemoveSpellFromActiveUnitDeck(spell);
+                SetSelectedSpell(null);
+                _enchantmentController.ClearHoverHighlight();
+            }
+            finally
+            {
+                _spellAnimating = false;
             }
         }
 
@@ -1700,7 +1825,71 @@ namespace SevenBattles.Battle.Turn
             _spentActiveUnitSpells.Add(spell);
         }
 
-        private bool CanActiveUnitCastSpell(SpellDefinition spell)
+        private void RemoveSpellFromActiveUnitDeck(SpellDefinition spell)
+        {
+            if (spell == null || !_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count)
+            {
+                return;
+            }
+
+            var unit = _units[_activeIndex];
+            var meta = unit.Metadata;
+            if (meta == null)
+            {
+                return;
+            }
+
+            var deck = meta.GetComponent<UnitSpellDeck>();
+            if (deck != null)
+            {
+                deck.RemoveSpellForBattle(spell);
+            }
+
+            RemoveSpellFromActiveUnitDrawn(spell);
+        }
+
+        private void RemoveSpellFromActiveUnitDrawn(SpellDefinition spell)
+        {
+            if (_activeUnitDrawnSpells == null || _activeUnitDrawnSpells.Length == 0 || spell == null)
+            {
+                return;
+            }
+
+            int count = 0;
+            for (int i = 0; i < _activeUnitDrawnSpells.Length; i++)
+            {
+                if (!ReferenceEquals(_activeUnitDrawnSpells[i], spell))
+                {
+                    count++;
+                }
+            }
+
+            if (count == _activeUnitDrawnSpells.Length)
+            {
+                return;
+            }
+
+            if (count == 0)
+            {
+                _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
+                return;
+            }
+
+            var next = new SpellDefinition[count];
+            int index = 0;
+            for (int i = 0; i < _activeUnitDrawnSpells.Length; i++)
+            {
+                var item = _activeUnitDrawnSpells[i];
+                if (!ReferenceEquals(item, spell))
+                {
+                    next[index++] = item;
+                }
+            }
+
+            _activeUnitDrawnSpells = next;
+        }
+
+        public bool CanActiveUnitCastSpell(SpellDefinition spell)
         {
             if (spell == null) return false;
             if (!_hasActiveUnit) return false;
@@ -1711,7 +1900,17 @@ namespace SevenBattles.Battle.Turn
             if (_board == null) return false;
 
             int apCost = Mathf.Max(0, spell.ActionPointCost);
-            return _activeUnitCurrentActionPoints >= apCost;
+            if (_activeUnitCurrentActionPoints < apCost)
+            {
+                return false;
+            }
+
+            if (spell.IsEnchantment && (_enchantmentController == null || !_enchantmentController.HasAvailableQuads))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private bool IsTileLegalSpellTarget(SpellDefinition spell, Vector2Int tile)

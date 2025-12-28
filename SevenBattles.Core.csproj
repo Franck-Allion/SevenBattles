@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Core\Battle\UnitSpellLoadout.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\EnchantmentStatBonus.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleOutcome.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinitionRegistry.cs" />
@@ -93,6 +94,7 @@
     <Compile Include="Assets\Scripts\Core\Save\CompositeGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitStatsData.cs" />
     <Compile Include="Assets\Scripts\Core\Save\SaveGameServiceComponent.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\EnchantmentQuadDefinition.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\Core\Core.asmdef" />

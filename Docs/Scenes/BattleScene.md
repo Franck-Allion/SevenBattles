@@ -22,11 +22,13 @@
     - `BattlefieldService` (`BattlefieldService`) - Resolves the active battlefield definition for the scene.
     - `BattleVisualFeedbackService` (`BattleVisualFeedbackService`) - Manages battle visual effects (damage numbers, healing, buffs).
     - `SimpleTurnOrderController` (`SimpleTurnOrderController`) - Manages turn order and unit activation.
+    - `BattleEnchantmentController` (`BattleEnchantmentController`) - Handles permanent enchantment placement and effects.
     - `WorldSquadPlacementController` (`WorldSquadPlacementController`) - Handles pre-battle squad placement.
     - `WorldEnemySquadStartController` (`WorldEnemySquadStartController`) - Spawns enemy units at start.
     - `Save-Load System` (Container)
       - `SaveGameService` (`SaveGameServiceComponent`) - Core save/load service.
       - `BattleBoardGameStateSaveProvider` (`BattleBoardGameStateSaveProvider`) - Saves board state.
+      - `BattleEnchantmentGameStateSaveProvider` (`BattleEnchantmentGameStateSaveProvider`) - Saves active enchantments.
       - `BattleSessionSaveProvider` (`BattleSessionSaveProvider`) - Saves battle session configuration.
       - `PlayerGameStateProvider` (`PlayerSquadGameStateSaveProvider`) - Saves player squad state (DEPRECATED).
       - `CompositeGameStateProvider` (`CompositeGameStateSaveProvider`) - Aggregates save providers.

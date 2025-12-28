@@ -62,6 +62,19 @@ namespace SevenBattles.Core.Battle
         [Tooltip("Action Points cost required to cast this spell.")]
         public int ActionPointCost;
 
+        [Header("Enchantment (optional)")]
+        [Tooltip("If true, this spell is a permanent battlefield enchantment.")]
+        public bool IsEnchantment;
+
+        [Tooltip("Sprite displayed on the battlefield when this enchantment is placed.")]
+        public Sprite EnchantmentBoardSprite;
+
+        [Tooltip("Target scope for this enchantment's permanent effect.")]
+        public EnchantmentTargetScope EnchantmentTargetScope = EnchantmentTargetScope.AllUnits;
+
+        [Tooltip("Permanent stat bonus applied while this enchantment is active.")]
+        public EnchantmentStatBonus EnchantmentStatBonus;
+
         [Header("Targeting")]
         [Tooltip("What this spell can target when selecting a tile on the board.")]
         public SpellTargetFilter TargetFilter = SpellTargetFilter.EnemyUnit;

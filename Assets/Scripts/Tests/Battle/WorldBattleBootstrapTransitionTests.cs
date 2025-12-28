@@ -73,6 +73,11 @@ namespace SevenBattles.Tests.Battle
                 return false;
             }
 
+            public bool CanActiveUnitCastSpell(SpellDefinition spell)
+            {
+                return true;
+            }
+
             public void RequestEndTurn()
             {
             }

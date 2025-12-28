@@ -32,6 +32,7 @@ namespace SevenBattles.Tests.UI
             public bool HasSpellPreview { get; set; }
             public SpellAmountPreview SpellPreview { get; set; }
             public readonly System.Collections.Generic.HashSet<SpellDefinition> SpentSpells = new System.Collections.Generic.HashSet<SpellDefinition>();
+            public bool CanCastSpells { get; set; } = true;
 
             public event System.Action ActiveUnitChanged;
             public event System.Action ActiveUnitActionPointsChanged;
@@ -63,6 +64,11 @@ namespace SevenBattles.Tests.UI
             public bool IsActiveUnitSpellSpentThisTurn(SpellDefinition spell)
             {
                 return spell != null && SpentSpells.Contains(spell);
+            }
+
+            public bool CanActiveUnitCastSpell(SpellDefinition spell)
+            {
+                return CanCastSpells;
             }
 
             public void RequestEndTurn()
