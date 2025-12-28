@@ -42,6 +42,8 @@ namespace SevenBattles.UI
         private Image[] _portraitImages;
         [SerializeField, Tooltip("Optional: explicit entry roots per slot (e.g., Wizard1 objects). If set, these are toggled instead of the Button root.")]
         private Transform[] _entryRoots;
+        [SerializeField, Tooltip("Optional: explicit TMP level labels per slot.")]
+        private TMP_Text[] _levelTexts;
         [SerializeField, Tooltip("Up to 8 portrait buttons, mapped by index to wizard prefabs.")]
         private Button[] _portraitButtons = new Button[8];
         [SerializeField] private Button _startBattleButton;
@@ -232,6 +234,7 @@ namespace SevenBattles.UI
             {
                 _portraitButtons[index].gameObject.SetActive(false);
             }
+            UpdateLevelLabel(index, false);
             CenterActivePortraits();
             // If the placed wizard was selected, clear selection glow
             if (_selectedIndex == index)
@@ -257,6 +260,7 @@ namespace SevenBattles.UI
             {
                 _portraitButtons[index].gameObject.SetActive(true);
             }
+            UpdateLevelLabel(index, true);
             CenterActivePortraits();
             UpdateStartButtonVisibility();
         }
@@ -309,6 +313,8 @@ namespace SevenBattles.UI
                 {
                     img.gameObject.SetActive(visible);
                 }
+
+                UpdateLevelLabel(i, visible);
 
                 if (_logBindings && withinSquad && !visible)
                 {
@@ -389,6 +395,32 @@ namespace SevenBattles.UI
                 }
             }
             return FindPortraitImage(fallbackRoot);
+        }
+
+        private TMP_Text GetLevelText(int index)
+        {
+            if (_levelTexts != null && index >= 0 && index < _levelTexts.Length)
+            {
+                return _levelTexts[index];
+            }
+
+            return null;
+        }
+
+        private void UpdateLevelLabel(int index, bool visible)
+        {
+            var levelText = GetLevelText(index);
+            if (levelText == null)
+            {
+                return;
+            }
+
+            int level = _controller != null ? _controller.GetLevel(index) : 0;
+            levelText.text = level > 0 ? level.ToString() : string.Empty;
+            if (levelText.gameObject.activeSelf != visible)
+            {
+                levelText.gameObject.SetActive(visible);
+            }
         }
 
         private static Image FindPortraitImage(Transform root)

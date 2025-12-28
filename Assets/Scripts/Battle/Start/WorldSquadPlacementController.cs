@@ -260,6 +260,18 @@ namespace SevenBattles.Battle.Start
             return null;
         }
 
+        public int GetLevel(int index)
+        {
+            var squad = GetPlayerSquadLoadouts();
+            if (squad != null && index >= 0 && index < squad.Length)
+            {
+                var loadout = squad[index];
+                return loadout != null ? loadout.EffectiveLevel : UnitSpellLoadout.DefaultLevel;
+            }
+
+            return UnitSpellLoadout.DefaultLevel;
+        }
+
         public bool TryPlaceAt(int index, Vector2Int tile)
         {
             if (_locked) return false;
@@ -353,11 +365,13 @@ namespace SevenBattles.Battle.Start
             var squad = GetPlayerSquadLoadouts();
             if (squad == null) return;
             if (index < 0 || index >= squad.Length) return;
-            var def = squad[index] != null ? squad[index].Definition : null;
+            var loadout = squad[index];
+            var def = loadout != null ? loadout.Definition : null;
             if (def == null) return;
             var stats = go.GetComponent<UnitStats>();
             if (stats == null) stats = go.AddComponent<UnitStats>();
-            stats.ApplyBase(def.BaseStats);
+            int level = loadout != null ? loadout.EffectiveLevel : UnitSpellLoadout.DefaultLevel;
+            stats.ApplyBase(def.BaseStats, def.LevelBonus, level);
         }
 
         private void ApplySpellsIfAny(GameObject go, int index)

@@ -32,6 +32,44 @@ namespace SevenBattles.Tests.Core
             }
         }
 
+        private sealed class LevelGameStateProvider : IGameStateSaveProvider
+        {
+            public void PopulateGameState(SaveGameData data)
+            {
+                data.UnitPlacements = new[]
+                {
+                    new UnitPlacementSaveData
+                    {
+                        UnitId = "UnitA",
+                        Stats = new UnitStatsSaveData
+                        {
+                            Life = 5,
+                            MaxLife = 5,
+                            Level = 2
+                        }
+                    }
+                };
+
+                data.BattleSession = new BattleSessionSaveData
+                {
+                    PlayerSquadIds = new[] { "UnitA" },
+                    EnemySquadIds = Array.Empty<string>(),
+                    PlayerSquadUnits = new[]
+                    {
+                        new UnitSpellLoadoutSaveData
+                        {
+                            UnitId = "UnitA",
+                            SpellIds = Array.Empty<string>(),
+                            Level = 3
+                        }
+                    },
+                    EnemySquadUnits = Array.Empty<UnitSpellLoadoutSaveData>(),
+                    BattleType = "test",
+                    Difficulty = 0
+                };
+            }
+        }
+
         private static string CreateTestDirectory()
         {
             string root = Path.Combine(Path.GetTempPath(), "SevenBattlesTests", Guid.NewGuid().ToString("N"));
@@ -158,6 +196,28 @@ namespace SevenBattles.Tests.Core
             var data = JsonUtility.FromJson<SaveGameData>(json);
             Assert.IsNotNull(data.BattleSession, "BattleSession should be populated when provider supplies it.");
             Assert.AreEqual("battlefield.test", data.BattleSession.BattlefieldId);
+        }
+
+        [Test]
+        public async Task Save_IncludesLevelFields_WhenProvided()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            var provider = new LevelGameStateProvider();
+            var service = new SaveGameService(provider, dir);
+
+            await service.SaveSlotAsync(1);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            string json = File.ReadAllText(path);
+            var data = JsonUtility.FromJson<SaveGameData>(json);
+
+            Assert.IsNotNull(data.UnitPlacements);
+            Assert.AreEqual(2, data.UnitPlacements[0].Stats.Level);
+            Assert.IsNotNull(data.BattleSession);
+            Assert.AreEqual(3, data.BattleSession.PlayerSquadUnits[0].Level);
         }
 
         [Test]

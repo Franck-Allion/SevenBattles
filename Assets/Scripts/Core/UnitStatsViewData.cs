@@ -11,6 +11,7 @@ namespace SevenBattles.Core
     {
         public int Life;
         public int MaxLife;
+        public int Level;
         public int Force;
         public int Shoot;
         public int Spell;

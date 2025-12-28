@@ -74,6 +74,7 @@ namespace SevenBattles.Battle.Save
                     {
                         Life = Mathf.Max(0, stats.Life - tileBonus.Life),
                         MaxLife = Mathf.Max(0, stats.MaxLife - tileBonus.Life),
+                        Level = stats.Level,
                         Attack = Mathf.Max(0, stats.Attack - tileBonus.Attack),
                         Shoot = Mathf.Max(0, stats.Shoot - tileBonus.Shoot),
                         Spell = Mathf.Max(0, stats.Spell - tileBonus.Spell),

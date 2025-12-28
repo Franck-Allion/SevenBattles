@@ -20,6 +20,8 @@ namespace SevenBattles.UI
         private Image _activePortraitImage;
         [SerializeField, Tooltip("Optional Button used to detect clicks on the active unit portrait. If null, a Button on the portrait Image GameObject will be used if present.")]
         private Button _portraitButton;
+        [SerializeField, Tooltip("Optional TMP text used to display the active unit level near the portrait.")]
+        private TMP_Text _activeLevelText;
 
         [Header("End Turn Button")]
         [SerializeField] private Button _endTurnButton;
@@ -750,6 +752,7 @@ namespace SevenBattles.UI
                 _activePortraitImage.enabled = _controller.ActiveUnitPortrait != null;
             }
 
+            RefreshActiveUnitLevel();
             RefreshEndTurnButtonState();
 
             if (wasStatsPanelVisible && hasActiveUnit)
@@ -776,6 +779,15 @@ namespace SevenBattles.UI
         private void HandleActiveUnitStatsChanged()
         {
             RefreshHealthBar();
+            RefreshActiveUnitLevel();
+
+            if (_statsPanelVisible && !_showingInspectedEnemy && _controller != null && _controller.HasActiveUnit)
+            {
+                if (_controller.TryGetActiveUnitStats(out var stats))
+                {
+                    ApplyStatsToUI(stats);
+                }
+            }
         }
 
         private void HandleInspectedUnitChanged()
@@ -849,6 +861,31 @@ namespace SevenBattles.UI
                 ApplyStatsToUI(activeStatsAfterToggle);
                 ShowStatsPanel();
             }
+        }
+
+        private void RefreshActiveUnitLevel()
+        {
+            if (_activeLevelText == null)
+            {
+                return;
+            }
+
+            if (_controller == null || !_controller.HasActiveUnit)
+            {
+                _activeLevelText.text = string.Empty;
+                _activeLevelText.enabled = false;
+                return;
+            }
+
+            if (_controller.TryGetActiveUnitStats(out var stats))
+            {
+                _activeLevelText.text = stats.Level.ToString();
+                _activeLevelText.enabled = true;
+                return;
+            }
+
+            _activeLevelText.text = string.Empty;
+            _activeLevelText.enabled = false;
         }
 
         private void HandleStatsBackgroundClicked()

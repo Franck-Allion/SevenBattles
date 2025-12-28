@@ -8,7 +8,11 @@ namespace SevenBattles.Battle.Units
     // Runtime stats holder for a wizard instance.
     public class UnitStats : MonoBehaviour
     {
+        private const int DefaultLevel = 1;
+
         [Header("Core Stats")]
+        [SerializeField] private int _level = DefaultLevel;
+        [SerializeField] private UnitLevelBonusData _levelBonus;
         [SerializeField] private int _life;
         [SerializeField] private int _maxLife;
         [SerializeField] private int _attack;
@@ -24,6 +28,7 @@ namespace SevenBattles.Battle.Units
         [SerializeField] private int _deckCapacity;
         [SerializeField] private int _drawCapacity;
 
+        public int Level => _level;
         public int Life => _life;
         public int MaxLife => _maxLife;
         public int Attack => _attack;
@@ -47,22 +52,15 @@ namespace SevenBattles.Battle.Units
 
         public void ApplyBase(UnitStatsData data)
         {
-            _maxLife = Mathf.Max(0, data.Life);
-            _life = _maxLife;
-            _attack = data.Attack;
-            // Action points are fully independent from Attack.
-            _actionPoints = Mathf.Max(0, data.ActionPoints);
-            _shoot = data.Shoot;
-            _spell = data.Spell;
-            _speed = data.Speed;
-            _luck = data.Luck;
-            _defense = data.Defense;
-            _protection = data.Protection;
-            _initiative = data.Initiative;
-            _morale = data.Morale;
-            _deckCapacity = Mathf.Max(0, data.DeckCapacity);
-            _drawCapacity = Mathf.Max(0, data.DrawCapacity);
-            NotifyChanged();
+            ApplyBase(data, default, DefaultLevel);
+        }
+
+        public void ApplyBase(UnitStatsData baseData, UnitLevelBonusData levelBonus, int level)
+        {
+            _levelBonus = levelBonus;
+            _level = NormalizeLevel(level);
+            var scaled = levelBonus.ApplyTo(baseData, _level);
+            ApplyBaseInternal(scaled);
         }
 
         public void ApplySaved(SevenBattles.Core.Save.UnitStatsSaveData data)
@@ -72,6 +70,7 @@ namespace SevenBattles.Battle.Units
                 return;
             }
 
+            _level = ResolveSavedLevel(data.Level);
             _maxLife = data.MaxLife > 0 ? data.MaxLife : Mathf.Max(0, data.Life);
             _life = Mathf.Clamp(data.Life, 0, _maxLife);
             _attack = data.Attack;
@@ -91,6 +90,24 @@ namespace SevenBattles.Battle.Units
             {
                 _drawCapacity = data.DrawCapacity;
             }
+            NotifyChanged();
+        }
+
+        public void SetLevel(int level)
+        {
+            int normalized = NormalizeLevel(level);
+            if (normalized == _level)
+            {
+                return;
+            }
+
+            int deltaLevel = normalized - _level;
+            if (deltaLevel != 0 && !_levelBonus.IsZero)
+            {
+                ApplyLevelDelta(deltaLevel);
+            }
+
+            _level = normalized;
             NotifyChanged();
         }
 
@@ -161,6 +178,57 @@ namespace SevenBattles.Battle.Units
         private void NotifyChanged()
         {
             Changed?.Invoke();
+        }
+
+        private void ApplyBaseInternal(UnitStatsData data)
+        {
+            _maxLife = Mathf.Max(0, data.Life);
+            _life = _maxLife;
+            _attack = data.Attack;
+            // Action points are fully independent from Attack.
+            _actionPoints = Mathf.Max(0, data.ActionPoints);
+            _shoot = data.Shoot;
+            _spell = data.Spell;
+            _speed = data.Speed;
+            _luck = data.Luck;
+            _defense = data.Defense;
+            _protection = data.Protection;
+            _initiative = data.Initiative;
+            _morale = data.Morale;
+            _deckCapacity = Mathf.Max(0, data.DeckCapacity);
+            _drawCapacity = Mathf.Max(0, data.DrawCapacity);
+            NotifyChanged();
+        }
+
+        private void ApplyLevelDelta(int deltaLevel)
+        {
+            int lifeDelta = _levelBonus.Life * deltaLevel;
+            _maxLife = Mathf.Max(0, _maxLife + lifeDelta);
+            _life = Mathf.Clamp(_life + lifeDelta, 0, _maxLife);
+            _attack = Mathf.Max(0, _attack + (_levelBonus.Attack * deltaLevel));
+            _shoot = Mathf.Max(0, _shoot + (_levelBonus.Shoot * deltaLevel));
+            _spell = Mathf.Max(0, _spell + (_levelBonus.Spell * deltaLevel));
+            _speed = Mathf.Max(0, _speed + (_levelBonus.Speed * deltaLevel));
+            _luck = Mathf.Max(0, _luck + (_levelBonus.Luck * deltaLevel));
+            _defense = Mathf.Max(0, _defense + (_levelBonus.Defense * deltaLevel));
+            _protection = Mathf.Max(0, _protection + (_levelBonus.Protection * deltaLevel));
+            _initiative = Mathf.Max(0, _initiative + (_levelBonus.Initiative * deltaLevel));
+            _morale = Mathf.Max(0, _morale + (_levelBonus.Morale * deltaLevel));
+        }
+
+        private static int NormalizeLevel(int level)
+        {
+            return level > 0 ? level : DefaultLevel;
+        }
+
+        private int ResolveSavedLevel(int savedLevel)
+        {
+            if (savedLevel > 0)
+            {
+                return savedLevel;
+            }
+
+            return _level > 0 ? _level : DefaultLevel;
         }
     }
 }

@@ -28,6 +28,7 @@ namespace SevenBattles.Tests.Battle
 
             public bool IsPlaced(int index) => false;
             public Sprite GetPortrait(int index) => null;
+            public int GetLevel(int index) => 1;
             public void SelectWizard(int index) { }
             public void ConfirmAndLock() { }
 

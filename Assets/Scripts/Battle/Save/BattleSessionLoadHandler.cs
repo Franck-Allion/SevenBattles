@@ -104,6 +104,7 @@ namespace SevenBattles.Battle.Save
                 fallback[i] = new UnitSpellLoadout
                 {
                     Definition = def,
+                    Level = UnitSpellLoadout.DefaultLevel,
                     Spells = def != null ? def.Spells : System.Array.Empty<SpellDefinition>()
                 };
             }
@@ -132,6 +133,7 @@ namespace SevenBattles.Battle.Save
                 results.Add(new UnitSpellLoadout
                 {
                     Definition = def,
+                    Level = saved.Level > 0 ? saved.Level : UnitSpellLoadout.DefaultLevel,
                     Spells = spells
                 });
             }

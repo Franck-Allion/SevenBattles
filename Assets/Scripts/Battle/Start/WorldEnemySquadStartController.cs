@@ -127,7 +127,7 @@ namespace SevenBattles.Battle.Start
                 }
                 UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.down);
                 _board.PlaceHero(go.transform, tile.x, tile.y, _sortingLayer, sortingOrder);
-                ApplyStatsIfAny(go, def);
+                ApplyStatsIfAny(go, def, loadout);
                 ApplySpellsIfAny(go, loadout);
                 if (_ignoreRaycast) TrySetIgnoreRaycast(go);
             }
@@ -158,12 +158,13 @@ namespace SevenBattles.Battle.Start
             }
         }
 
-        private void ApplyStatsIfAny(GameObject go, UnitDefinition def)
+        private void ApplyStatsIfAny(GameObject go, UnitDefinition def, UnitSpellLoadout loadout)
         {
             if (go == null || def == null) return;
             var stats = go.GetComponent<UnitStats>();
             if (stats == null) stats = go.AddComponent<UnitStats>();
-            stats.ApplyBase(def.BaseStats);
+            int level = loadout != null ? loadout.EffectiveLevel : UnitSpellLoadout.DefaultLevel;
+            stats.ApplyBase(def.BaseStats, def.LevelBonus, level);
         }
 
         private void ApplySpellsIfAny(GameObject go, UnitSpellLoadout loadout)

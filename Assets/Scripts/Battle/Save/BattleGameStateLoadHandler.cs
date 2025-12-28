@@ -258,7 +258,10 @@ namespace SevenBattles.Battle.Save
 
                     // Always initialize from definition so ActionPoints and other base fields are set,
                     // then override with any saved runtime stat values (Life, Attack, etc.).
-                    stats.ApplyBase(def.BaseStats);
+                    int level = placement.Stats != null && placement.Stats.Level > 0
+                        ? placement.Stats.Level
+                        : UnitSpellLoadout.DefaultLevel;
+                    stats.ApplyBase(def.BaseStats, def.LevelBonus, level);
                     if (placement.Stats != null)
                     {
                         stats.ApplySaved(placement.Stats);

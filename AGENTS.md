@@ -47,22 +47,12 @@ Every implementation must list:
 
 ---
 
-## 4. 🧪 TESTS — Mandatory for all non-trivial logic
-
-- Create or update matching test classes under `/Tests/`.  
-- Use NUnit (`[Test]`, `[SetUp]`).  
-- Mock with NSubstitute.  
-- Reuse test helpers.  
-- If untestable via unit tests, propose integration tests.
-
----
-
-## 5. 🔌 UNITY WIRING CHECKLIST — How to Wire in Unity
+## 4. 🔌 UNITY WIRING CHECKLIST — How to Wire in Unity
 
 Every feature that touches Unity **Scenes, Prefabs, ScriptableObjects, Addressables, or Localization**  
 must include a `Unity Wiring` section in its design document and/or PR description.
 
-### 5.1 Unity Wiring Template (copy into PRs)
+### 4.1 Unity Wiring Template (copy into PRs)
 
 For each change, fill in **all sections that apply**.  
 Use exact project paths (`Assets/...`) and concrete component names as they appear in the Inspector.
@@ -129,7 +119,7 @@ Use exact project paths (`Assets/...`) and concrete component names as they appe
 If a change does **not** touch any Unity assets (pure code / tests), explicitly write in the PR:  
 **Unity Wiring:** Not applicable — pure code utility.
 
-### 5.2 Example — New Battle HUD Element (Turn Order)
+### 4.2 Example — New Battle HUD Element (Turn Order)
 
 Unity Wiring (example only):
 
@@ -159,7 +149,7 @@ Unity Wiring (example only):
 Review rule: any PR that changes Scenes, Prefabs, ScriptableObjects, Addressables, or Localization  
 **must not be approved** unless the `Unity Wiring` section is present and accurate.
 
-### 5.3 Scene Documentation Links
+### 4.3 Scene Documentation Links
 
 Each Unity scene with gameplay significance must have a short structure document under `Docs/Scenes/`.
 
@@ -174,7 +164,7 @@ Each Unity scene with gameplay significance must have a short structure document
 
 ---
 
-## 6. 🧪 AGENTS.md SUGGESTIONS — Improve Governance
+## 5. 🧪 AGENTS.md SUGGESTIONS — Improve Governance
 
 Each implementation must propose optional improvements to AGENTS.md based on the feature (unless none).
 
@@ -188,25 +178,16 @@ If none:
 
 ---
 
-## 7. 🧾 COMMIT MESSAGE — Follow Conventional Commits
+## 6. 🧾 COMMIT MESSAGE — MANDATORY - Follow Conventional Commits
 
+Provide the commit message to set:
 `<type>(<scope>): <short description>`
 
 Types: feat, fix, test, refactor, chore, docs.
 
 ---
 
-## 8. 🧱 CODE IMPLEMENTATION
-
-Only after the above sections are complete:
-
-- Runtime C# scripts.  
-- Unit tests.  
-- Optional YAML snippets for ScriptableObjects.
-
----
-
-## 9. ⚙️ UNITY CODE QUALITY RULES
+## 7. ⚙️ UNITY CODE QUALITY RULES
 
 - Respect SOLID.  
 - Unity naming conventions:
@@ -221,7 +202,7 @@ Only after the above sections are complete:
 
 ---
 
-## 10. 🧭 GAME DOMAINS — Functional Architecture
+## 8. 🧭 GAME DOMAINS — Functional Architecture
 
 To maintain modularity and enforce clean code organization, all systems in **SevenBattles** must belong to a defined **domain**.  
 Each domain represents a functional area of the game, with its own folder, assembly definition, and test suite.
@@ -272,7 +253,7 @@ Assets/
 
 ---
 
-## 11. 🌐 LOCALIZATION RULES
+## 9. 🌐 LOCALIZATION RULES
 
 - All displayed text must use `LocalizedString`.  
 - Organize in functional string tables.  
@@ -284,7 +265,7 @@ Assets/
 
 ---
 
-## 12. 💾 GAME STATE PERSISTENCE INVARIANTS
+## 10. 💾 GAME STATE PERSISTENCE INVARIANTS
 
 Whenever gameplay code introduces, removes, or changes any **game state** that must survive across sessions (e.g., current squad, campaign progress, difficulty, unlocked content, options that affect gameplay), the agent must:
 
@@ -331,7 +312,7 @@ For more details on the current save/load architecture and JSON format, see:
 
 ---
 
-## 13. 🖼 UI MODAL OVERLAY INVARIANTS
+## 11. 🖼 UI MODAL OVERLAY INVARIANTS
 
 - All blocking overlays (pause menus, confirmation dialogs, turn banners, etc.) must be driven by a `CanvasGroup` that controls both `alpha` and `blocksRaycasts`.  
 - While visible, modal overlays must use `blocksRaycasts = true` to prevent clicks on underlying HUD or world UI; when hidden, they must restore `blocksRaycasts = false` and any related HUD `CanvasGroup.alpha` state.  
@@ -341,7 +322,7 @@ For more details on the current save/load architecture and JSON format, see:
 
 ---
 
-## 15. ENEMY INSPECTION HUD INVARIANTS
+## 12. ENEMY INSPECTION HUD INVARIANTS
 
 - UI must access enemy inspection data only via the Core interface `IUnitInspectionController` (no direct references to Battle domain types from UI).  
 - Right-clicking an enemy inspects it only when spell targeting is not active; RMB must still cancel spell targeting first.  

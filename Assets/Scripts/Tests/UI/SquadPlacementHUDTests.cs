@@ -17,9 +17,18 @@ namespace SevenBattles.Tests.UI
             public int SquadSize { get; set; } = 3;
             public bool IsReady { get; set; }
             public bool IsLocked { get; private set; }
+            public int[] Levels = new[] { 1, 2, 3 };
 
             public bool IsPlaced(int index) => false;
             public Sprite GetPortrait(int index) => null;
+            public int GetLevel(int index)
+            {
+                if (Levels != null && index >= 0 && index < Levels.Length)
+                {
+                    return Levels[index];
+                }
+                return 1;
+            }
 
             public void SelectWizard(int index) { WizardSelected?.Invoke(index); }
             public void ConfirmAndLock()
@@ -74,6 +83,42 @@ namespace SevenBattles.Tests.UI
             // After locking, the instructions label should be hidden immediately (HUD may remain active for fade)
             Assert.IsFalse(instructionsGo.activeSelf,
                 "Instructions should be hidden after placement is locked");
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
+        public void LevelLabels_ShowDuringPlacement()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<SquadPlacementHUD>();
+
+            var buttonGo = new GameObject("PortraitButton");
+            buttonGo.transform.SetParent(hudGo.transform);
+            var button = buttonGo.AddComponent<Button>();
+            var portrait = buttonGo.AddComponent<Image>();
+            var tex = new Texture2D(2, 2);
+            portrait.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+
+            var levelGo = new GameObject("LevelText");
+            levelGo.transform.SetParent(hudGo.transform);
+            var levelText = levelGo.AddComponent<TextMeshProUGUI>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakePlacementController>();
+            fake.SquadSize = 1;
+            fake.Levels = new[] { 2 };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_portraitButtons", new[] { button });
+            SetPrivate(hud, "_levelTexts", new[] { levelText });
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            Assert.AreEqual("2", levelText.text);
+            Assert.IsTrue(levelGo.activeSelf, "Level label should be visible during placement.");
 
             Object.DestroyImmediate(hudGo);
             Object.DestroyImmediate(ctrlGo);

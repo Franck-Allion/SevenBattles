@@ -66,6 +66,7 @@ namespace SevenBattles.Core.Save
     {
         public int Life;
         public int MaxLife;
+        public int Level;
         public int Attack;
         public int Shoot;
         public int Spell;
@@ -111,6 +112,7 @@ namespace SevenBattles.Core.Save
     {
         public string UnitId;
         public string[] SpellIds;
+        public int Level;
     }
 
     [Serializable]

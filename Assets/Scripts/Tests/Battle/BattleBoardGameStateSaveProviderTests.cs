@@ -79,6 +79,7 @@ namespace SevenBattles.Tests.Battle
             Assert.IsNotNull(enemyPlacement.Stats, "Enemy stats should be populated.");
             Assert.AreEqual(10, enemyPlacement.Stats.Life);
             Assert.AreEqual(enemyStats.MaxLife, enemyPlacement.Stats.MaxLife);
+            Assert.AreEqual(enemyStats.Level, enemyPlacement.Stats.Level);
             Assert.AreEqual(2, enemyPlacement.Stats.DeckCapacity);
             Assert.AreEqual(1, enemyPlacement.Stats.DrawCapacity);
             Assert.IsNotNull(enemyPlacement.SpellIds);

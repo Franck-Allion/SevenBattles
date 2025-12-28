@@ -12,6 +12,7 @@ namespace SevenBattles.Core
 
         bool IsPlaced(int index);
         Sprite GetPortrait(int index);
+        int GetLevel(int index);
 
         void SelectWizard(int index);
         void ConfirmAndLock();

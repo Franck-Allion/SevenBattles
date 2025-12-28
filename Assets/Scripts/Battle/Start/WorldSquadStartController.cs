@@ -78,7 +78,7 @@ namespace SevenBattles.Battle.Start
                     }
                     SevenBattles.Battle.Units.UnitVisualUtil.InitializeHero(go, _sortingLayer, sortingOrder, Vector2.up);
                     _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
-                    ApplyStatsIfAny(go, def);
+                    ApplyStatsIfAny(go, def, loadout);
                     ApplySpellsIfAny(go, loadout);
                 }
             }
@@ -106,12 +106,13 @@ namespace SevenBattles.Battle.Start
             return index;
         }
 
-        private void ApplyStatsIfAny(GameObject go, UnitDefinition def)
+        private void ApplyStatsIfAny(GameObject go, UnitDefinition def, UnitSpellLoadout loadout)
         {
             if (go == null || def == null) return;
             var stats = go.GetComponent<SevenBattles.Battle.Units.UnitStats>();
             if (stats == null) stats = go.AddComponent<SevenBattles.Battle.Units.UnitStats>();
-            stats.ApplyBase(def.BaseStats);
+            int level = loadout != null ? loadout.EffectiveLevel : UnitSpellLoadout.DefaultLevel;
+            stats.ApplyBase(def.BaseStats, def.LevelBonus, level);
         }
 
         private void ApplySpellsIfAny(GameObject go, UnitSpellLoadout loadout)

@@ -707,6 +707,41 @@ namespace SevenBattles.Tests.UI
         }
 
         [Test]
+        public void ActiveUnitLevel_Updates_OnChange_AndStatsUpdate()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var levelGo = new GameObject("LevelText");
+            levelGo.transform.SetParent(hudGo.transform);
+            var levelText = levelGo.AddComponent<TextMeshProUGUI>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Level = 2 };
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_activeLevelText", levelText);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            Assert.AreEqual("2", levelText.text);
+            Assert.IsTrue(levelText.enabled);
+
+            fake.ActiveStats = new UnitStatsViewData { Level = 4 };
+            fake.FireStatsChanged();
+
+            Assert.AreEqual("4", levelText.text);
+            Assert.IsTrue(levelText.enabled);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
         public void InspectedEnemy_OpensStatsPanel_AndUpdatesValues()
         {
             var hudGo = new GameObject("HUD");

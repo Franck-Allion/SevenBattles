@@ -92,6 +92,7 @@ namespace SevenBattles.Battle.Turn
         private TurnUnit _inspectedUnit;
         private bool _hasInspectedUnit;
         private UnitStats _inspectedStatsSubscription;
+        private UnitStats _activeStatsSubscription;
         private int _activeIndex = -1;
         private bool _advancing;
         private bool _hasActiveUnit;
@@ -185,6 +186,7 @@ namespace SevenBattles.Battle.Turn
         private void OnDisable()
         {
             ClearHealingSubscriptions();
+            ClearActiveStatsSubscription();
             ClearInspectedEnemyInternal(false);
             if (_battlefieldService != null)
             {
@@ -284,6 +286,7 @@ namespace SevenBattles.Battle.Turn
             {
                 Life = stats.Life,
                 MaxLife = stats.MaxLife,
+                Level = stats.Level,
                 Force = stats.Attack,
                 Shoot = stats.Shoot,
                 Spell = stats.Spell,
@@ -804,6 +807,42 @@ namespace SevenBattles.Battle.Turn
             }
         }
 
+        private void SubscribeToActiveStats(UnitStats stats)
+        {
+            if (_activeStatsSubscription == stats)
+            {
+                return;
+            }
+
+            if (_activeStatsSubscription != null)
+            {
+                _activeStatsSubscription.Changed -= HandleActiveStatsChanged;
+            }
+
+            _activeStatsSubscription = stats;
+            if (_activeStatsSubscription != null)
+            {
+                _activeStatsSubscription.Changed += HandleActiveStatsChanged;
+            }
+        }
+
+        private void ClearActiveStatsSubscription()
+        {
+            if (_activeStatsSubscription != null)
+            {
+                _activeStatsSubscription.Changed -= HandleActiveStatsChanged;
+                _activeStatsSubscription = null;
+            }
+        }
+
+        private void HandleActiveStatsChanged()
+        {
+            if (_hasActiveUnit)
+            {
+                ActiveUnitStatsChanged?.Invoke();
+            }
+        }
+
         private void HandleInspectedUnitStatsChanged()
         {
             if (_hasInspectedUnit)
@@ -1042,6 +1081,7 @@ namespace SevenBattles.Battle.Turn
                 _hasActiveUnit = false;
                 _activeUnitCurrentActionPoints = 0;
                 _activeUnitMaxActionPoints = 0;
+                SubscribeToActiveStats(null);
             }
             else
             {
@@ -1052,6 +1092,7 @@ namespace SevenBattles.Battle.Turn
                 baseAp = Mathf.Max(0, baseAp);
                 _activeUnitMaxActionPoints = baseAp;
                 _activeUnitCurrentActionPoints = baseAp;
+                SubscribeToActiveStats(u.Stats);
                 ApplyTileStatBonusForUnit(u);
             }
 

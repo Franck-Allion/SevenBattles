@@ -72,6 +72,7 @@ namespace SevenBattles.Tests.Battle
                         {
                             Life = 23,
                             MaxLife = 30,
+                            Level = 3,
                             Attack = 5,
                             Shoot = 3,
                             Spell = 2,
@@ -112,6 +113,7 @@ namespace SevenBattles.Tests.Battle
             Assert.IsNotNull(stats, "UnitStats should be attached to spawned unit.");
             Assert.AreEqual(23, stats.Life);
             Assert.AreEqual(10, stats.Initiative);
+            Assert.AreEqual(3, stats.Level);
 
             Assert.IsTrue(ctrl.HasActiveUnit, "Turn controller should have an active unit after restore.");
             Assert.AreEqual(2, ctrl.TurnIndex);
