@@ -746,13 +746,7 @@ namespace SevenBattles.UI
                 }
             }
 
-            if (_activePortraitImage != null)
-            {
-                _activePortraitImage.sprite = _controller.ActiveUnitPortrait;
-                _activePortraitImage.enabled = _controller.ActiveUnitPortrait != null;
-            }
-
-            RefreshActiveUnitLevel();
+            RefreshDisplayedHeader();
             RefreshEndTurnButtonState();
 
             if (wasStatsPanelVisible && hasActiveUnit)
@@ -779,7 +773,7 @@ namespace SevenBattles.UI
         private void HandleActiveUnitStatsChanged()
         {
             RefreshHealthBar();
-            RefreshActiveUnitLevel();
+            RefreshDisplayedHeader();
 
             if (_statsPanelVisible && !_showingInspectedEnemy && _controller != null && _controller.HasActiveUnit)
             {
@@ -803,6 +797,7 @@ namespace SevenBattles.UI
                 {
                     _showingInspectedEnemy = false;
                     HideStatsPanel();
+                    RefreshDisplayedHeader();
                 }
                 return;
             }
@@ -811,6 +806,7 @@ namespace SevenBattles.UI
             {
                 ApplyStatsToUI(stats);
                 _showingInspectedEnemy = true;
+                RefreshDisplayedHeader();
                 ShowStatsPanel();
             }
         }
@@ -825,6 +821,7 @@ namespace SevenBattles.UI
             if (_inspectionController.TryGetInspectedEnemyStats(out var stats))
             {
                 ApplyStatsToUI(stats);
+                RefreshDisplayedHeader();
             }
         }
 
@@ -842,6 +839,7 @@ namespace SevenBattles.UI
                 if (_controller.TryGetActiveUnitStats(out var activeStats))
                 {
                     ApplyStatsToUI(activeStats);
+                    RefreshDisplayedHeader();
                     if (!_statsPanelVisible)
                     {
                         ShowStatsPanel();
@@ -863,21 +861,39 @@ namespace SevenBattles.UI
             }
         }
 
-        private void RefreshActiveUnitLevel()
+        private void RefreshDisplayedHeader()
+        {
+            if (_showingInspectedEnemy && _inspectionController != null && _inspectionController.HasInspectedEnemy)
+            {
+                ApplyPortrait(_inspectionController.InspectedEnemyPortrait);
+                ApplyInspectedLevel();
+                return;
+            }
+
+            var activePortrait = _controller != null && _controller.HasActiveUnit ? _controller.ActiveUnitPortrait : null;
+            ApplyPortrait(activePortrait);
+            ApplyActiveLevel();
+        }
+
+        private void ApplyPortrait(Sprite portrait)
+        {
+            if (_activePortraitImage == null)
+            {
+                return;
+            }
+
+            _activePortraitImage.sprite = portrait;
+            _activePortraitImage.enabled = portrait != null;
+        }
+
+        private void ApplyActiveLevel()
         {
             if (_activeLevelText == null)
             {
                 return;
             }
 
-            if (_controller == null || !_controller.HasActiveUnit)
-            {
-                _activeLevelText.text = string.Empty;
-                _activeLevelText.enabled = false;
-                return;
-            }
-
-            if (_controller.TryGetActiveUnitStats(out var stats))
+            if (_controller != null && _controller.HasActiveUnit && _controller.TryGetActiveUnitStats(out var stats))
             {
                 _activeLevelText.text = stats.Level.ToString();
                 _activeLevelText.enabled = true;
@@ -888,13 +904,48 @@ namespace SevenBattles.UI
             _activeLevelText.enabled = false;
         }
 
+        private void ApplyInspectedLevel()
+        {
+            if (_activeLevelText == null)
+            {
+                return;
+            }
+
+            if (_inspectionController != null && _inspectionController.TryGetInspectedEnemyStats(out var stats))
+            {
+                _activeLevelText.text = stats.Level.ToString();
+                _activeLevelText.enabled = true;
+                return;
+            }
+
+            _activeLevelText.text = string.Empty;
+            _activeLevelText.enabled = false;
+        }
+
+        private void RestoreActiveHeader(bool clearInspection)
+        {
+            if (!_showingInspectedEnemy)
+            {
+                return;
+            }
+
+            _showingInspectedEnemy = false;
+            if (clearInspection)
+            {
+                _inspectionController?.ClearInspectedEnemy();
+            }
+            RefreshDisplayedHeader();
+        }
+
         private void HandleStatsBackgroundClicked()
         {
+            RestoreActiveHeader(true);
             HideStatsPanel();
         }
 
         private void HandleStatsPanelClicked()
         {
+            RestoreActiveHeader(true);
             HideStatsPanel();
         }
 

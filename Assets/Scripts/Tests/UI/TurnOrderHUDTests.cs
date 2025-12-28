@@ -786,6 +786,79 @@ namespace SevenBattles.Tests.UI
         }
 
         [Test]
+        public void InspectedEnemy_PortraitAndLevel_Restore_OnPanelClose()
+        {
+            var hudGo = new GameObject("HUD");
+            var hud = hudGo.AddComponent<TurnOrderHUD>();
+
+            var statsRootGo = new GameObject("StatsPanel", typeof(RectTransform));
+            statsRootGo.transform.SetParent(hudGo.transform);
+            var statsRoot = statsRootGo.GetComponent<RectTransform>();
+            var statsCanvasGroup = statsRootGo.AddComponent<CanvasGroup>();
+
+            var lifeText = new GameObject("LifeText").AddComponent<TextMeshProUGUI>();
+            lifeText.transform.SetParent(statsRootGo.transform);
+
+            var portraitGo = new GameObject("Portrait");
+            portraitGo.transform.SetParent(hudGo.transform);
+            var portraitImg = portraitGo.AddComponent<Image>();
+            var portraitButton = portraitGo.AddComponent<Button>();
+
+            var levelGo = new GameObject("LevelText");
+            levelGo.transform.SetParent(hudGo.transform);
+            var levelText = levelGo.AddComponent<TextMeshProUGUI>();
+
+            var overlayGo = new GameObject("Overlay");
+            overlayGo.transform.SetParent(hudGo.transform);
+            var overlayButton = overlayGo.AddComponent<Button>();
+
+            var ctrlGo = new GameObject("FakeCtrl");
+            var fake = ctrlGo.AddComponent<FakeTurnController>();
+            fake.HasActiveUnit = true;
+            fake.IsActiveUnitPlayerControlled = true;
+            fake.ActiveStats = new UnitStatsViewData { Level = 3, Life = 10, MaxLife = 10 };
+            fake.InspectedStats = new UnitStatsViewData { Level = 7, Life = 5, MaxLife = 10 };
+
+            var activeTex = Texture2D.blackTexture;
+            var activeSprite = Sprite.Create(activeTex, new Rect(0, 0, activeTex.width, activeTex.height), new Vector2(0.5f, 0.5f));
+            var inspectedTex = Texture2D.whiteTexture;
+            var inspectedSprite = Sprite.Create(inspectedTex, new Rect(0, 0, inspectedTex.width, inspectedTex.height), new Vector2(0.5f, 0.5f));
+            fake.ActiveUnitPortrait = activeSprite;
+            fake.InspectedEnemyPortrait = inspectedSprite;
+
+            SetPrivate(hud, "_controllerBehaviour", fake);
+            SetPrivate(hud, "_statsPanelRoot", statsRoot);
+            SetPrivate(hud, "_statsPanelCanvasGroup", statsCanvasGroup);
+            SetPrivate(hud, "_lifeText", lifeText);
+            SetPrivate(hud, "_activePortraitImage", portraitImg);
+            SetPrivate(hud, "_portraitButton", portraitButton);
+            SetPrivate(hud, "_activeLevelText", levelText);
+            SetPrivate(hud, "_statsPanelBackgroundButton", overlayButton);
+
+            CallPrivate(hud, "Awake");
+            CallPrivate(hud, "OnEnable");
+
+            Assert.AreEqual(activeSprite, portraitImg.sprite, "Active portrait should be visible before inspection.");
+            Assert.AreEqual("3", levelText.text);
+
+            fake.HasInspectedEnemy = true;
+            fake.FireInspectedChanged();
+
+            Assert.IsTrue(statsRootGo.activeSelf, "Stats panel should open when inspecting an enemy.");
+            Assert.AreEqual(inspectedSprite, portraitImg.sprite, "Portrait should switch to the inspected enemy.");
+            Assert.AreEqual("7", levelText.text);
+
+            overlayButton.onClick.Invoke();
+
+            Assert.IsFalse(statsRootGo.activeSelf, "Stats panel should close when clicking the overlay.");
+            Assert.AreEqual(activeSprite, portraitImg.sprite, "Portrait should restore to the active unit when panel closes.");
+            Assert.AreEqual("3", levelText.text);
+
+            Object.DestroyImmediate(hudGo);
+            Object.DestroyImmediate(ctrlGo);
+        }
+
+        [Test]
         public void PortraitClick_WhenShowingInspectedEnemy_SwitchesToActiveStats()
         {
             var hudGo = new GameObject("HUD");
