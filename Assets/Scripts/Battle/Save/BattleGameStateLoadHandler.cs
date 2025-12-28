@@ -471,11 +471,6 @@ namespace SevenBattles.Battle.Save
 
         private void RestoreEnchantments(SaveGameData data, UnitBattleMetadata[] metas)
         {
-            if (data == null || data.BattleEnchantments == null || data.BattleEnchantments.Length == 0)
-            {
-                return;
-            }
-
             if (_enchantmentController == null)
             {
                 _enchantmentController = UnityEngine.Object.FindFirstObjectByType<BattleEnchantmentController>();
@@ -487,6 +482,11 @@ namespace SevenBattles.Battle.Save
             }
 
             _enchantmentController.ResetForBattle();
+
+            if (data == null || data.BattleEnchantments == null || data.BattleEnchantments.Length == 0)
+            {
+                return;
+            }
 
             var metaByInstance = new Dictionary<string, UnitBattleMetadata>(StringComparer.Ordinal);
             if (metas != null)
