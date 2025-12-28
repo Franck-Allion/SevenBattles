@@ -364,6 +364,29 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(ctrlGo);
         }
 
+        [Test]
+        public void DamageCalculation_MinimumDamageIsOneWhenAttackPositive()
+        {
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            int attack = 2;
+            int defense = 2;
+
+            var mi = typeof(SimpleTurnOrderController).GetMethod(
+                "CalculateDamage",
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic);
+
+            Assert.IsNotNull(mi, "CalculateDamage method should exist on SimpleTurnOrderController.");
+
+            int damage = (int)mi.Invoke(ctrl, new object[] { attack, defense });
+
+            Assert.AreEqual(1, damage, "Damage should be clamped to at least 1 when attack > 0");
+
+            Object.DestroyImmediate(ctrlGo);
+        }
+
         [UnityTest]
         public IEnumerator DamageCalculation_HandlesVeryHighDefense()
         {
@@ -404,13 +427,12 @@ namespace SevenBattles.Tests.Battle
 
             // Execute attack (should deal minimal damage but not crash)
             CallPrivate(ctrl, "TryExecuteAttack", new Vector2Int(2, 3));
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(0.6f);
 
             int finalLife = targetStats.Life;
 
-            // Mitigation = 10/(10+1000) ≈ 0.0099, so very low damage (likely 0 after floor)
-            Assert.That(finalLife, Is.LessThanOrEqualTo(initialLife), "Life should not increase");
-            Assert.That(finalLife, Is.GreaterThanOrEqualTo(0), "Life should not go negative");
+            // Mitigation = 10/(10+1000) ~= 0.0099, so damage is clamped to minimum 1.
+            Assert.That(finalLife, Is.EqualTo(initialLife - 1), "Very high defense should still take minimum damage");
 
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(attackerGo);
@@ -464,7 +486,7 @@ namespace SevenBattles.Tests.Battle
 
             // Execute: Attack target from the west (attacker is west of target)
             CallPrivate(ctrl, "TryExecuteAttack", new Vector2Int(3, 2));
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(0.6f);
 
             // Assert: Attacker should face RIGHT (east towards target)
             Assert.AreEqual(Vector2.right, attackerMeta.Facing, "Attacker should face right (towards target to the east)");

@@ -36,11 +36,11 @@ namespace SevenBattles.Battle.Combat
             // Calculate mitigation – higher defense reduces effective damage.
             float mitigation = (float)attack / (attack + defense);
 
-            // Final damage
+            // Final damage (minimum 1 if attack > 0)
             float finalDamage = rawDamage * mitigation;
 
             // Round down to integer
-            return Mathf.FloorToInt(finalDamage);
+            return Mathf.Max(1, Mathf.FloorToInt(finalDamage));
         }
     }
 }
