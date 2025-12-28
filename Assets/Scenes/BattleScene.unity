@@ -3785,6 +3785,7 @@ GameObject:
   - component: {fileID: 461991017}
   - component: {fileID: 461991016}
   - component: {fileID: 461991018}
+  - component: {fileID: 461991019}
   m_Layer: 0
   m_Name: Background
   m_TagString: Untagged
@@ -3911,6 +3912,20 @@ MonoBehaviour:
   _highlightSortingOrder: 10
   _autoHoverUpdate: 1
   _logTileClicks: 1
+--- !u!114 &461991019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 461991014}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbf3df92424b4e8f9b89c78872e6b95b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _spriteRenderer: {fileID: 461991017}
+  _battlefieldServiceBehaviour: {fileID: 2043223351}
 --- !u!1 &475333587
 GameObject:
   m_ObjectHideFlags: 0
@@ -18798,7 +18813,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _sessionServiceBehaviour: {fileID: 541858501}
   _registry: {fileID: 11400000, guid: 0ac8779aaa7bbfc4f8538352e57522ad, type: 2}
-  _inspectorDefaultBattlefield: {fileID: 11400000, guid: 1847f5e749f4f6d4fbe91e9d21cc5fb4, type: 2}
+  _inspectorDefaultBattlefield: {fileID: 11400000, guid: 04650c6b549f7bc4dab4eb9b4b248e39, type: 2}
 --- !u!114 &2061234567
 MonoBehaviour:
   m_ObjectHideFlags: 0
