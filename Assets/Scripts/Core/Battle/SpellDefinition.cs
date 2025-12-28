@@ -75,6 +75,33 @@ namespace SevenBattles.Core.Battle
         [Tooltip("Permanent stat bonus applied while this enchantment is active.")]
         public EnchantmentStatBonus EnchantmentStatBonus;
 
+        [Header("Enchantment VFX (optional)")]
+        [Tooltip("Optional VFX prefab spawned when the enchantment is placed.")]
+        public GameObject EnchantmentVfxPrefab;
+
+        [Min(0f)]
+        [Tooltip("Optional lifetime in seconds before the enchantment VFX instance is destroyed. 0 means 'do not auto-destroy'.")]
+        public float EnchantmentVfxLifetimeSeconds = 2f;
+
+        [Min(0f)]
+        [Tooltip("Multiplies the instantiated enchantment VFX transform scale (uniform).")]
+        public float EnchantmentVfxScaleMultiplier = 1f;
+
+        [Tooltip("Additional local offset applied when spawning the enchantment VFX (board local space).")]
+        public Vector2 EnchantmentVfxOffset;
+
+        [Min(0f)]
+        [Tooltip("Seconds to fade out the enchantment VFX before its lifetime ends. 0 disables fading.")]
+        public float EnchantmentVfxFadeOutDurationSeconds;
+
+        [Min(0f)]
+        [Tooltip("Seconds to fade the enchantment sprite from 0 to 1 alpha when placed.")]
+        public float EnchantmentAppearDurationSeconds = 0.35f;
+
+        [Min(0f)]
+        [Tooltip("Delay before starting the enchantment sprite fade-in (allows VFX to lead).")]
+        public float EnchantmentAppearDelaySeconds = 0f;
+
         [Header("Targeting")]
         [Tooltip("What this spell can target when selecting a tile on the board.")]
         public SpellTargetFilter TargetFilter = SpellTargetFilter.EnemyUnit;

@@ -30,6 +30,7 @@ namespace SevenBattles.Battle.Spells
             public string CasterUnitId;
             public bool IsPlayerControlledCaster;
             public GameObject Visual;
+            public GameObject Vfx;
         }
 
         [Header("Dependencies")]
@@ -286,6 +287,7 @@ namespace SevenBattles.Battle.Spells
             if (!skipVisual)
             {
                 entry.Visual = SpawnEnchantmentVisual(spell, quad);
+                entry.Vfx = SpawnEnchantmentVfx(spell, quad);
             }
 
             _activeEnchantments[quadIndex] = entry;
@@ -379,7 +381,98 @@ namespace SevenBattles.Battle.Spells
                 renderer.sharedMaterial = _enchantmentMaterial;
             }
 
+            PrepareFadeIn(renderer, spell);
+
             return go;
+        }
+
+        private GameObject SpawnEnchantmentVfx(SpellDefinition spell, EnchantmentQuadDefinition quad)
+        {
+            if (_board == null || spell == null || spell.EnchantmentVfxPrefab == null)
+            {
+                return null;
+            }
+
+            var center = quad.Center;
+            var offset = quad.Offset;
+            var vfxOffset = spell.EnchantmentVfxOffset;
+            var position = _board.transform.TransformPoint(new Vector3(center.x + offset.x + vfxOffset.x, center.y + offset.y + vfxOffset.y, 0f));
+            var instance = InstantiatePrefabAsGameObject(spell.EnchantmentVfxPrefab, position, Quaternion.identity);
+            if (instance == null)
+            {
+                Debug.LogWarning($"[BattleEnchantmentController] EnchantmentVfxPrefab is not a GameObject prefab: '{spell.EnchantmentVfxPrefab?.name}'.", this);
+                return null;
+            }
+
+            if (!Mathf.Approximately(spell.EnchantmentVfxScaleMultiplier, 1f) && spell.EnchantmentVfxScaleMultiplier > 0f)
+            {
+                instance.transform.localScale = instance.transform.localScale * spell.EnchantmentVfxScaleMultiplier;
+            }
+
+            ApplyVfxSorting(instance, _enchantmentSortingLayer, _enchantmentSortingOrder + 1);
+
+            float lifetime = Mathf.Max(0f, spell.EnchantmentVfxLifetimeSeconds);
+            float fadeDuration = Mathf.Max(0f, spell.EnchantmentVfxFadeOutDurationSeconds);
+            StartVfxFadeOut(instance, lifetime, fadeDuration);
+            if (lifetime > 0f)
+            {
+                Destroy(instance, Mathf.Max(lifetime, fadeDuration));
+            }
+
+            return instance;
+        }
+
+        private void PrepareFadeIn(SpriteRenderer renderer, SpellDefinition spell)
+        {
+            if (renderer == null || spell == null)
+            {
+                return;
+            }
+
+            float duration = Mathf.Max(0f, spell.EnchantmentAppearDurationSeconds);
+            float delay = Mathf.Max(0f, spell.EnchantmentAppearDelaySeconds);
+
+            if (duration <= 0f)
+            {
+                return;
+            }
+
+            var color = renderer.color;
+            renderer.color = new Color(color.r, color.g, color.b, 0f);
+            StartCoroutine(FadeInSprite(renderer, delay, duration));
+        }
+
+        private System.Collections.IEnumerator FadeInSprite(SpriteRenderer renderer, float delay, float duration)
+        {
+            if (delay > 0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
+            if (renderer == null)
+            {
+                yield break;
+            }
+
+            float elapsed = 0f;
+            var color = renderer.color;
+            while (elapsed < duration)
+            {
+                if (renderer == null)
+                {
+                    yield break;
+                }
+
+                elapsed += Time.deltaTime;
+                float t = duration > 0f ? Mathf.Clamp01(elapsed / duration) : 1f;
+                renderer.color = new Color(color.r, color.g, color.b, t);
+                yield return null;
+            }
+
+            if (renderer != null)
+            {
+                renderer.color = new Color(color.r, color.g, color.b, 1f);
+            }
         }
 
         private void SetHighlightQuad(EnchantmentQuadDefinition quad)
@@ -614,9 +707,246 @@ namespace SevenBattles.Battle.Spells
                 {
                     Destroy(entry.Visual);
                 }
+
+                if (entry != null && entry.Vfx != null)
+                {
+                    Destroy(entry.Vfx);
+                }
             }
 
             _activeEnchantments.Clear();
+        }
+
+        private static void ApplyVfxSorting(GameObject instance, string sortingLayerName, int sortingOrder)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+
+            var group = instance.GetComponentInChildren<UnityEngine.Rendering.SortingGroup>(true);
+            if (group != null)
+            {
+                group.sortingLayerName = sortingLayerName;
+                group.sortingOrder = sortingOrder;
+            }
+
+            var renderers = instance.GetComponentsInChildren<Renderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                if (renderers[i] == null) continue;
+                renderers[i].sortingLayerName = sortingLayerName;
+                renderers[i].sortingOrder = sortingOrder;
+            }
+        }
+
+        private static GameObject InstantiatePrefabAsGameObject(GameObject prefab, Vector3 position, Quaternion rotation)
+        {
+            if (prefab == null) return null;
+
+            var obj = UnityEngine.Object.Instantiate((UnityEngine.Object)prefab, position, rotation);
+            return obj as GameObject;
+        }
+
+        private void StartVfxFadeOut(GameObject instance, float lifetime, float fadeDuration)
+        {
+            if (instance == null || lifetime <= 0f || fadeDuration <= 0f)
+            {
+                return;
+            }
+
+            float delay = Mathf.Max(0f, lifetime - fadeDuration);
+            StartCoroutine(FadeOutVfx(instance, delay, fadeDuration));
+        }
+
+        private System.Collections.IEnumerator FadeOutVfx(GameObject instance, float delay, float duration)
+        {
+            if (delay > 0f)
+            {
+                yield return new WaitForSeconds(delay);
+            }
+
+            if (instance == null)
+            {
+                yield break;
+            }
+
+            var spriteRenderers = instance.GetComponentsInChildren<SpriteRenderer>(true);
+            var renderers = instance.GetComponentsInChildren<Renderer>(true);
+            var rendererData = BuildVfxRendererData(renderers);
+            var spriteData = BuildVfxSpriteData(spriteRenderers);
+            var propertyBlock = new MaterialPropertyBlock();
+
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                if (instance == null)
+                {
+                    yield break;
+                }
+
+                elapsed += Time.deltaTime;
+                float t = duration > 0f ? Mathf.Clamp01(elapsed / duration) : 1f;
+                float eased = t * t * (3f - 2f * t);
+                float alpha = 1f - eased;
+
+                ApplyVfxSpriteAlpha(spriteData, alpha);
+                ApplyVfxRendererAlpha(rendererData, alpha, propertyBlock);
+
+                yield return null;
+            }
+
+            ApplyVfxSpriteAlpha(spriteData, 0f);
+            ApplyVfxRendererAlpha(rendererData, 0f, propertyBlock);
+        }
+
+
+        private static List<VfxSpriteFadeData> BuildVfxSpriteData(SpriteRenderer[] renderers)
+        {
+            var data = new List<VfxSpriteFadeData>();
+            if (renderers == null)
+            {
+                return data;
+            }
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var renderer = renderers[i];
+                if (renderer == null)
+                {
+                    continue;
+                }
+
+                data.Add(new VfxSpriteFadeData
+                {
+                    Renderer = renderer,
+                    BaseColor = renderer.color
+                });
+            }
+
+            return data;
+        }
+
+        private static List<VfxRendererFadeData> BuildVfxRendererData(Renderer[] renderers)
+        {
+            var data = new List<VfxRendererFadeData>();
+            if (renderers == null)
+            {
+                return data;
+            }
+
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var renderer = renderers[i];
+                if (renderer == null || renderer is SpriteRenderer)
+                {
+                    continue;
+                }
+
+                if (!TryGetRendererFadeColor(renderer, out var color, out var propertyId))
+                {
+                    continue;
+                }
+
+                data.Add(new VfxRendererFadeData
+                {
+                    Renderer = renderer,
+                    BaseColor = color,
+                    ColorPropertyId = propertyId
+                });
+            }
+
+            return data;
+        }
+
+        private static bool TryGetRendererFadeColor(Renderer renderer, out Color color, out int propertyId)
+        {
+            color = default;
+            propertyId = 0;
+            if (renderer == null)
+            {
+                return false;
+            }
+
+            var material = renderer.sharedMaterial;
+            if (material == null)
+            {
+                return false;
+            }
+
+            return TryGetColorProperty(material, "_Color", out color, out propertyId) ||
+                   TryGetColorProperty(material, "_BaseColor", out color, out propertyId) ||
+                   TryGetColorProperty(material, "_TintColor", out color, out propertyId) ||
+                   TryGetColorProperty(material, "_Tint", out color, out propertyId);
+        }
+
+        private static bool TryGetColorProperty(Material material, string propertyName, out Color color, out int propertyId)
+        {
+            color = default;
+            propertyId = 0;
+            if (material == null || string.IsNullOrEmpty(propertyName) || !material.HasProperty(propertyName))
+            {
+                return false;
+            }
+
+            propertyId = Shader.PropertyToID(propertyName);
+            color = material.GetColor(propertyId);
+            return true;
+        }
+
+        private static void ApplyVfxSpriteAlpha(List<VfxSpriteFadeData> sprites, float alpha)
+        {
+            if (sprites == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < sprites.Count; i++)
+            {
+                var entry = sprites[i];
+                if (entry.Renderer == null)
+                {
+                    continue;
+                }
+
+                var baseColor = entry.BaseColor;
+                entry.Renderer.color = new Color(baseColor.r, baseColor.g, baseColor.b, baseColor.a * alpha);
+            }
+        }
+
+        private static void ApplyVfxRendererAlpha(List<VfxRendererFadeData> renderers, float alpha, MaterialPropertyBlock block)
+        {
+            if (renderers == null || block == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < renderers.Count; i++)
+            {
+                var entry = renderers[i];
+                if (entry.Renderer == null)
+                {
+                    continue;
+                }
+
+                var baseColor = entry.BaseColor;
+                entry.Renderer.GetPropertyBlock(block);
+                block.SetColor(entry.ColorPropertyId, new Color(baseColor.r, baseColor.g, baseColor.b, baseColor.a * alpha));
+                entry.Renderer.SetPropertyBlock(block);
+            }
+        }
+
+        private struct VfxSpriteFadeData
+        {
+            public SpriteRenderer Renderer;
+            public Color BaseColor;
+        }
+
+        private struct VfxRendererFadeData
+        {
+            public Renderer Renderer;
+            public Color BaseColor;
+            public int ColorPropertyId;
         }
     }
 }
