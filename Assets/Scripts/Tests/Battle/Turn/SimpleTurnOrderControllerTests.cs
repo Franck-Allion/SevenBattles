@@ -638,6 +638,41 @@ namespace SevenBattles.Tests.Battle
         }
 
         [Test]
+        public void InspectFriendlyAtTile_AllowsPlayerUnits()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 3);
+            SetPrivate(board, "_rows", 3);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 12, ActionPoints = 1, Speed = 1, Initiative = 10 });
+            UnitBattleMetadata.Ensure(playerGo, true, def, new Vector2Int(0, 0));
+
+            CallPrivate(ctrl, "BeginBattle");
+
+            bool inspected = (bool)CallPrivate(ctrl, "TryInspectUnitAtTile", new Vector2Int(0, 0), true);
+
+            Assert.IsTrue(inspected, "Inspecting a player tile should return true when player units are allowed.");
+            Assert.IsTrue(ctrl.HasInspectedEnemy, "Controller should report inspected unit.");
+            Assert.IsTrue(ctrl.TryGetInspectedEnemyStats(out var stats));
+            Assert.AreEqual(12, stats.Life);
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(def);
+        }
+
+        [Test]
         public void ActiveUnitChange_ClearsInspectedEnemy()
         {
             var boardGo = new GameObject("Board");

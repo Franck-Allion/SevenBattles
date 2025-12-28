@@ -761,7 +761,17 @@ namespace SevenBattles.Battle.Turn
 
         private void SetInspectedEnemy(TurnUnit unit)
         {
-            if (unit.Metadata == null || unit.Metadata.IsPlayerControlled)
+            SetInspectedUnit(unit, allowPlayerUnits: false);
+        }
+
+        private void SetInspectedUnit(TurnUnit unit, bool allowPlayerUnits)
+        {
+            if (unit.Metadata == null)
+            {
+                return;
+            }
+
+            if (!allowPlayerUnits && unit.Metadata.IsPlayerControlled)
             {
                 return;
             }
@@ -1330,7 +1340,7 @@ namespace SevenBattles.Battle.Turn
 
             if (Input.GetMouseButtonDown(1))
             {
-                if (TryInspectEnemyAtScreenPosition(Input.mousePosition))
+                if (TryInspectUnitAtScreenPosition(Input.mousePosition, allowPlayerUnits: true))
                 {
                     return;
                 }
@@ -1493,6 +1503,16 @@ namespace SevenBattles.Battle.Turn
 
         private bool TryInspectEnemyAtScreenPosition(Vector2 screenPosition)
         {
+            return TryInspectUnitAtScreenPosition(screenPosition, allowPlayerUnits: false);
+        }
+
+        private bool TryInspectEnemyAtTile(Vector2Int tile)
+        {
+            return TryInspectUnitAtTile(tile, allowPlayerUnits: false);
+        }
+
+        private bool TryInspectUnitAtScreenPosition(Vector2 screenPosition, bool allowPlayerUnits)
+        {
             if (_board == null)
             {
                 return false;
@@ -1503,22 +1523,27 @@ namespace SevenBattles.Battle.Turn
                 return false;
             }
 
-            return TryInspectEnemyAtTile(new Vector2Int(x, y));
+            return TryInspectUnitAtTile(new Vector2Int(x, y), allowPlayerUnits);
         }
 
-        private bool TryInspectEnemyAtTile(Vector2Int tile)
+        private bool TryInspectUnitAtTile(Vector2Int tile, bool allowPlayerUnits)
         {
             if (!TryGetValidUnitAtTile(tile, out var unit))
             {
                 return false;
             }
 
-            if (unit.Metadata == null || unit.Metadata.IsPlayerControlled)
+            if (unit.Metadata == null)
             {
                 return false;
             }
 
-            SetInspectedEnemy(unit);
+            if (!allowPlayerUnits && unit.Metadata.IsPlayerControlled)
+            {
+                return false;
+            }
+
+            SetInspectedUnit(unit, allowPlayerUnits);
             return true;
         }
 
