@@ -338,7 +338,7 @@ namespace SevenBattles.Battle.Turn
             }
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             if (_battleEnded) return;
             if (_interactionLocked) return;

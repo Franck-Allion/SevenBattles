@@ -67,6 +67,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\BattleCursorControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitDefinitionControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\TurnOrderHUDTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridBilinearTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SpellAmountPreviewTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitMovementTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SaveLoadHUDTests.cs" />

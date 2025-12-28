@@ -10,6 +10,7 @@ namespace SevenBattles.Battle.Start
 {
     // Ensures enemies are spawned before the player placement phase begins.
     // Uses Awake to run before other Start methods, avoiding race conditions.
+    [DefaultExecutionOrder(100)]
     public class WorldBattleBootstrap : MonoBehaviour
     {
         [Header("Sequence")]

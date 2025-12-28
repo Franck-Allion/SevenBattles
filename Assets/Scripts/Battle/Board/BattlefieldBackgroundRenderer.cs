@@ -3,7 +3,7 @@ using SevenBattles.Core;
 
 namespace SevenBattles.Battle.Board
 {
-    [DefaultExecutionOrder(50)]
+    [DefaultExecutionOrder(-450)]
     public sealed class BattlefieldBackgroundRenderer : MonoBehaviour
     {
         [SerializeField, Tooltip("SpriteRenderer that displays the battlefield background.")]
@@ -84,7 +84,10 @@ namespace SevenBattles.Battle.Board
             }
 
             var battlefield = _battlefieldService.Current;
-            _spriteRenderer.sprite = battlefield != null ? battlefield.BackgroundSprite : null;
+            if (battlefield != null && battlefield.BackgroundSprite != null)
+            {
+                _spriteRenderer.sprite = battlefield.BackgroundSprite;
+            }
         }
     }
 }

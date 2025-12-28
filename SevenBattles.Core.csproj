@@ -76,6 +76,7 @@
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleSessionService.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IUnitInspectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Players\PlayerContext.cs" />
+    <Compile Include="Assets\Scripts\Core\Math\PerspectiveGridMappingMode.cs" />
     <Compile Include="Assets\Scripts\Core\UnitStatsViewData.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGrid.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinition.cs" />

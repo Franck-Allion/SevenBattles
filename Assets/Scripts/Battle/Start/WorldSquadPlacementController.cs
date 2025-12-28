@@ -115,7 +115,7 @@ namespace SevenBattles.Battle.Start
             _model = new SquadPlacementModel(cols, rows, Mathf.Max(1, _playerRows), size);
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             if (_locked || _board == null) return;
             if (_model == null) EnsureModel();

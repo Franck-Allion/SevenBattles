@@ -20,6 +20,7 @@ namespace SevenBattles.Battle.Board
         [Header("Grid")]
         [SerializeField] private int _columns = 7;
         [SerializeField] private int _rows = 7;
+        [SerializeField] private PerspectiveGridMappingMode _gridMappingMode = PerspectiveGridMappingMode.Homography;
 
         [Header("Inner Quad (local coords of play area)")]
         [SerializeField] private Vector2 _topLeft;
@@ -63,7 +64,7 @@ namespace SevenBattles.Battle.Board
 
         public void RebuildGrid()
         {
-            _grid = PerspectiveGrid.FromQuad(_topLeft, _topRight, _bottomRight, _bottomLeft, _columns, _rows);
+            _grid = PerspectiveGrid.FromQuad(_topLeft, _topRight, _bottomRight, _bottomLeft, _columns, _rows, _gridMappingMode);
         }
 
         

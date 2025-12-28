@@ -1,3 +1,5 @@
+using SevenBattles.Core;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Math;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -7,17 +9,27 @@ namespace SevenBattles.Battle.Board
     // World-space version of the perspective board.
     // Use when your characters are SpriteRenderers (not UI). The board is a world object
     // (SpriteRenderer on a quad, or MeshRenderer) that sits behind the characters via Sorting Layers.
+    [DefaultExecutionOrder(-430)]
     public class WorldPerspectiveBoard : MonoBehaviour
     {
-        [Header("Grid")]
-        [SerializeField] private int _columns = 7;
-        [SerializeField] private int _rows = 7;
+        [Header("Battlefield (optional)")]
+        [SerializeField, Tooltip("Battlefield service (MonoBehaviour implementing IBattlefieldService). If not assigned, will be auto-found at runtime.")]
+        private MonoBehaviour _battlefieldServiceBehaviour;
 
-        [Header("Inner Quad (local, in this transform's plane)")]
+        [Header("Grid (legacy fallback)")]
+        [SerializeField] private int _columns = 7;
+        [SerializeField] private int _rows = 6;
+        [SerializeField] private PerspectiveGridMappingMode _gridMappingMode = PerspectiveGridMappingMode.Homography;
+
+        [Header("Inner Quad (local, in this transform's plane, legacy fallback)")]
         [SerializeField] private Vector2 _topLeft;
         [SerializeField] private Vector2 _topRight;
         [SerializeField] private Vector2 _bottomRight;
         [SerializeField] private Vector2 _bottomLeft;
+
+        [Header("Highlight Shape (legacy fallback)")]
+        [SerializeField, Range(0f, 0.45f), Tooltip("Inset applied to tile highlight quads so they sit inside painted borders. 0 = no inset.")]
+        private float _tileHighlightInset01;
 
         [Header("Highlight (optional)")]
         [SerializeField] private Material _highlightMaterial;
@@ -37,21 +49,37 @@ namespace SevenBattles.Battle.Board
         private Color _highlightColor = Color.white;
         private Mesh _secondaryHighlightMesh;
         private MeshRenderer _secondaryHighlightMr;
+        private IBattlefieldService _battlefieldService;
 
         private void Awake()
         {
-            RebuildGrid();
+            ResolveBattlefieldService();
+            ApplyBattlefieldDefinition();
         }
 
         private void OnEnable()
         {
             if (_cam == null) _cam = Camera.main;
+            ResolveBattlefieldService();
+            if (_battlefieldService != null)
+            {
+                _battlefieldService.BattlefieldChanged += HandleBattlefieldChanged;
+            }
+            ApplyBattlefieldDefinition();
             EnsureHighlightObjects();
+        }
+
+        private void OnDisable()
+        {
+            if (_battlefieldService != null)
+            {
+                _battlefieldService.BattlefieldChanged -= HandleBattlefieldChanged;
+            }
         }
 
         public void RebuildGrid()
         {
-            _grid = PerspectiveGrid.FromQuad(_topLeft, _topRight, _bottomRight, _bottomLeft, _columns, _rows);
+            _grid = PerspectiveGrid.FromQuad(_topLeft, _topRight, _bottomRight, _bottomLeft, _columns, _rows, _gridMappingMode);
         }
 
         public bool TryScreenToTile(Vector2 screen, out int x, out int y)
@@ -76,6 +104,7 @@ namespace SevenBattles.Battle.Board
         {
             if (_highlightMr == null || !_grid.IsValid) return;
             _grid.TileQuadLocal(x, y, out var tl, out var tr, out var br, out var bl);
+            ApplyHighlightInset(x, y, ref tl, ref tr, ref br, ref bl);
             UpdateHighlightMesh(tl, tr, br, bl);
         }
 
@@ -236,7 +265,7 @@ namespace SevenBattles.Battle.Board
             _secondaryHighlightMr.gameObject.SetActive(false);
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             if (!_autoHoverUpdate) return;
             if (_cam == null) _cam = Camera.main;
@@ -301,6 +330,7 @@ namespace SevenBattles.Battle.Board
             if (_secondaryHighlightMr == null) EnsureSecondaryHighlightObjects();
             if (_secondaryHighlightMr == null || !_grid.IsValid) return;
             _grid.TileQuadLocal(x, y, out var tl, out var tr, out var br, out var bl);
+            ApplyHighlightInset(x, y, ref tl, ref tr, ref br, ref bl);
             UpdateSecondaryHighlightMesh(tl, tr, br, bl);
         }
 
@@ -329,5 +359,70 @@ namespace SevenBattles.Battle.Board
         // Expose grid size for placement logic consumers.
         public int Columns => _grid.IsValid ? _grid.Columns : 0;
         public int Rows => _grid.IsValid ? _grid.Rows : 0;
+
+        private void HandleBattlefieldChanged(BattlefieldDefinition battlefield)
+        {
+            ApplyBattlefieldDefinition();
+        }
+
+        private void ApplyBattlefieldDefinition()
+        {
+            var battlefield = _battlefieldService != null ? _battlefieldService.Current : null;
+            if (battlefield != null)
+            {
+                _columns = battlefield.Columns;
+                _rows = battlefield.Rows;
+                _gridMappingMode = battlefield.GridMappingMode;
+                _topLeft = battlefield.TopLeft;
+                _topRight = battlefield.TopRight;
+                _bottomRight = battlefield.BottomRight;
+                _bottomLeft = battlefield.BottomLeft;
+                _tileHighlightInset01 = battlefield.TileHighlightInset01;
+            }
+
+            RebuildGrid();
+        }
+
+        private void ResolveBattlefieldService()
+        {
+            if (_battlefieldService != null)
+            {
+                return;
+            }
+
+            if (_battlefieldServiceBehaviour != null)
+            {
+                _battlefieldService = _battlefieldServiceBehaviour as IBattlefieldService;
+            }
+
+            if (_battlefieldService == null)
+            {
+                var behaviours = Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is IBattlefieldService service)
+                    {
+                        _battlefieldService = service;
+                        _battlefieldServiceBehaviour = behaviours[i];
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void ApplyHighlightInset(int x, int y, ref Vector2 tl, ref Vector2 tr, ref Vector2 br, ref Vector2 bl)
+        {
+            float inset = Mathf.Clamp(_tileHighlightInset01, 0f, 0.45f);
+            if (inset <= 0f || !_grid.IsValid)
+            {
+                return;
+            }
+
+            var center = _grid.TileCenterLocal(x, y);
+            tl = Vector2.Lerp(tl, center, inset);
+            tr = Vector2.Lerp(tr, center, inset);
+            br = Vector2.Lerp(br, center, inset);
+            bl = Vector2.Lerp(bl, center, inset);
+        }
     }
 }

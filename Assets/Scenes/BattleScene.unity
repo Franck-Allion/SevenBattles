@@ -586,6 +586,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 541858502}
+  - {fileID: 2043223350}
   - {fileID: 346359281}
   - {fileID: 1825238185}
   - {fileID: 532915270}
@@ -598,7 +599,6 @@ Transform:
   - {fileID: 1760860159}
   - {fileID: 985955652}
   - {fileID: 1354297972}
-  - {fileID: 2043223350}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &86743373
@@ -2967,7 +2967,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.00012207031, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!225 &335623664
@@ -3874,7 +3874,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 21300000, guid: 2f29ff62558089142aab782bed388865, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 512a7ec971c6a5a46857dfbe62d49c1c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -3897,12 +3897,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d3c6f920cd6f0348982319b9b12c328, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _battlefieldServiceBehaviour: {fileID: 0}
   _columns: 7
   _rows: 6
-  _topLeft: {x: -2.2263505, y: 2.356318}
-  _topRight: {x: 2.7544587, y: 2.3357024}
-  _bottomRight: {x: 3.6162903, y: -0.8366817}
-  _bottomLeft: {x: -3.1395967, y: -0.85844886}
+  _gridMappingMode: 0
+  _topLeft: {x: -2.0868518, y: 2.4244504}
+  _topRight: {x: 2.8690755, y: 2.4049144}
+  _bottomRight: {x: 3.7146947, y: -0.7815291}
+  _bottomLeft: {x: -3.0671523, y: -0.80113924}
+  _tileHighlightInset01: 0
   _highlightMaterial: {fileID: 2100000, guid: 507af875f8b238344b7c02137d8f858e, type: 2}
   _highlightSortingLayer: Default
   _highlightSortingOrder: 10
@@ -18794,8 +18797,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _sessionServiceBehaviour: {fileID: 541858501}
-  _registry: {fileID: 0}
-  _inspectorDefaultBattlefield: {fileID: 0}
+  _registry: {fileID: 11400000, guid: 0ac8779aaa7bbfc4f8538352e57522ad, type: 2}
+  _inspectorDefaultBattlefield: {fileID: 11400000, guid: 1847f5e749f4f6d4fbe91e9d21cc5fb4, type: 2}
 --- !u!114 &2061234567
 MonoBehaviour:
   m_ObjectHideFlags: 0

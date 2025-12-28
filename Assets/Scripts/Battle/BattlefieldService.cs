@@ -5,6 +5,7 @@ using SevenBattles.Core.Battle;
 
 namespace SevenBattles.Battle
 {
+    [DefaultExecutionOrder(-500)]
     public sealed class BattlefieldService : MonoBehaviour, IBattlefieldService
     {
         [Header("References")]
@@ -26,6 +27,13 @@ namespace SevenBattles.Battle
         private void Awake()
         {
             ResolveSessionService();
+            RefreshBattlefield();
+        }
+
+        private void Start()
+        {
+            // BattleSessionService is often initialized by WorldBattleBootstrap in Awake (execution order > 0),
+            // so run a second refresh after all Awakes have completed to pick up the injected session battlefield.
             RefreshBattlefield();
         }
 

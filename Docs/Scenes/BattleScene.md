@@ -33,6 +33,7 @@
   - `World`
     - World/board representation (`WorldPerspectiveBoard`, tiles, highlights, etc.)
     - Background sprite driver (`BattlefieldBackgroundRenderer`) sets the board image at battle start
+    - `WorldPerspectiveBoard` reads grid size + inner quad from `BattlefieldDefinition` via `BattlefieldService` (legacy inspector values are fallback)
     - Camera rigs and controllers
   - `BattleHUD`
     - `TurnOrderHUD` (`TurnOrderHUD`) - Shows active unit stats, health, action points, and End Turn button

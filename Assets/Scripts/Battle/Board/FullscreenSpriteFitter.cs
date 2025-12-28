@@ -5,6 +5,7 @@ namespace SevenBattles.Battle.Board
     // Scales and positions a SpriteRenderer so it fills the camera view.
     // Works with both perspective and orthographic cameras.
     [RequireComponent(typeof(SpriteRenderer))]
+    [DefaultExecutionOrder(-440)]
     public class FullscreenSpriteFitter : MonoBehaviour
     {
         public enum FitMode { Cover, Contain }
@@ -27,6 +28,7 @@ namespace SevenBattles.Battle.Board
         {
             _sr = GetComponent<SpriteRenderer>();
             _baseScale = transform.localScale;
+            Fit();
         }
 
         private void OnEnable()
@@ -108,4 +110,3 @@ namespace SevenBattles.Battle.Board
         }
     }
 }
-
