@@ -96,6 +96,7 @@
     <Compile Include="Assets\Scripts\Battle\Units\UnitVisualUtil.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\WorldPerspectiveBoard.cs" />
     <Compile Include="Assets\Scripts\Battle\Movement\BattleMovementController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Spells\SpellEffectContracts.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\UiPerspectiveBoard.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldSquadPlacementController.cs" />
     <Compile Include="Assets\Scripts\Battle\Start\WorldBattleBootstrap.cs" />

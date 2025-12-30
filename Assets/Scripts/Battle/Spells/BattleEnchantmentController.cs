@@ -64,6 +64,7 @@ namespace SevenBattles.Battle.Spells
         public int QuadCount => _quads != null ? _quads.Length : 0;
 
         public bool HasAvailableQuads => GetAvailableQuadCount() > 0;
+        public bool HasActiveEnchantments => _activeEnchantments.Count > 0;
 
         private void Awake()
         {
@@ -128,6 +129,32 @@ namespace SevenBattles.Battle.Spells
             return false;
         }
 
+        public bool TryUpdateActiveEnchantmentHighlight(Vector2 screenPosition, out int quadIndex)
+        {
+            quadIndex = -1;
+            if (!TryGetHoveredQuadIndex(screenPosition, out var hoveredIndex))
+            {
+                ClearHoverHighlight();
+                return false;
+            }
+
+            if (!_activeEnchantments.TryGetValue(hoveredIndex, out var active) || active == null || active.Spell == null)
+            {
+                ClearHoverHighlight();
+                return false;
+            }
+
+            if (TryGetQuad(hoveredIndex, out var quad))
+            {
+                SetHighlightQuad(quad);
+                quadIndex = hoveredIndex;
+                return true;
+            }
+
+            ClearHoverHighlight();
+            return false;
+        }
+
         public void ClearHoverHighlight()
         {
             if (_highlightRenderer != null && _highlightRenderer.gameObject.activeSelf)
@@ -164,6 +191,24 @@ namespace SevenBattles.Battle.Spells
             }
 
             return TryActivateEnchantment(spell, quadIndex, isPlayerControlledCaster, casterInstanceId, casterUnitId, skipVisual, null);
+        }
+
+        public bool TryRemoveEnchantment(SpellDefinition feedbackSpell, int quadIndex, UnitBattleMetadata casterMeta)
+        {
+            if (!_activeEnchantments.TryGetValue(quadIndex, out var entry) || entry == null || entry.Spell == null)
+            {
+                return false;
+            }
+
+            if (TryGetQuad(quadIndex, out var quad))
+            {
+                PlayRemovalFeedback(feedbackSpell, quad, casterMeta);
+            }
+
+            RemoveEnchantmentEffect(entry);
+            DestroyEnchantmentVisuals(entry);
+            _activeEnchantments.Remove(quadIndex);
+            return true;
         }
 
         public void CopyActiveEnchantments(List<EnchantmentSnapshot> buffer)
@@ -237,6 +282,11 @@ namespace SevenBattles.Battle.Spells
             }
 
             return count;
+        }
+
+        public bool HasActiveEnchantmentAt(int index)
+        {
+            return _activeEnchantments.ContainsKey(index);
         }
 
         public bool IsQuadAvailable(int index)
@@ -327,6 +377,73 @@ namespace SevenBattles.Battle.Spells
                 }
 
                 stats.ApplyStatDelta(spell.EnchantmentStatBonus);
+            }
+        }
+
+        private void RemoveEnchantmentEffect(ActiveEnchantment enchantment)
+        {
+            if (enchantment == null || enchantment.Spell == null || enchantment.Spell.EnchantmentStatBonus.IsZero)
+            {
+                return;
+            }
+
+            var delta = NegateBonus(enchantment.Spell.EnchantmentStatBonus);
+            var metas = UnityEngine.Object.FindObjectsByType<UnitBattleMetadata>(FindObjectsSortMode.None);
+            for (int i = 0; i < metas.Length; i++)
+            {
+                var meta = metas[i];
+                if (meta == null || !meta.isActiveAndEnabled)
+                {
+                    continue;
+                }
+
+                if (!DoesEnchantmentAffectUnit(enchantment, meta))
+                {
+                    continue;
+                }
+
+                var stats = meta.GetComponent<UnitStats>();
+                if (stats == null)
+                {
+                    continue;
+                }
+
+                stats.ApplyStatDelta(delta);
+            }
+        }
+
+        private static EnchantmentStatBonus NegateBonus(EnchantmentStatBonus bonus)
+        {
+            return new EnchantmentStatBonus
+            {
+                Life = -bonus.Life,
+                Attack = -bonus.Attack,
+                Shoot = -bonus.Shoot,
+                Spell = -bonus.Spell,
+                Speed = -bonus.Speed,
+                Luck = -bonus.Luck,
+                Defense = -bonus.Defense,
+                Protection = -bonus.Protection,
+                Initiative = -bonus.Initiative,
+                Morale = -bonus.Morale
+            };
+        }
+
+        private void DestroyEnchantmentVisuals(ActiveEnchantment entry)
+        {
+            if (entry == null)
+            {
+                return;
+            }
+
+            if (entry.Visual != null)
+            {
+                Destroy(entry.Visual);
+            }
+
+            if (entry.Vfx != null)
+            {
+                Destroy(entry.Vfx);
             }
         }
 
@@ -707,18 +824,103 @@ namespace SevenBattles.Battle.Spells
             foreach (var kvp in _activeEnchantments)
             {
                 var entry = kvp.Value;
-                if (entry != null && entry.Visual != null)
-                {
-                    Destroy(entry.Visual);
-                }
-
-                if (entry != null && entry.Vfx != null)
-                {
-                    Destroy(entry.Vfx);
-                }
+                DestroyEnchantmentVisuals(entry);
             }
 
             _activeEnchantments.Clear();
+        }
+
+        private void PlayRemovalFeedback(SpellDefinition spell, EnchantmentQuadDefinition quad, UnitBattleMetadata casterMeta)
+        {
+            if (spell == null)
+            {
+                return;
+            }
+
+            var world = ResolveQuadWorldPosition(quad, casterMeta);
+            SpawnRemovalVfx(spell, world);
+            PlayRemovalSfx(spell, world);
+        }
+
+        private Vector3 ResolveQuadWorldPosition(EnchantmentQuadDefinition quad, UnitBattleMetadata casterMeta)
+        {
+            if (_board != null)
+            {
+                var center = quad.Center;
+                var offset = quad.Offset;
+                return _board.transform.TransformPoint(new Vector3(center.x + offset.x, center.y + offset.y, 0f));
+            }
+
+            return casterMeta != null ? casterMeta.transform.position : Vector3.zero;
+        }
+
+        private void SpawnRemovalVfx(SpellDefinition spell, Vector3 worldPosition)
+        {
+            if (spell == null || spell.TargetVfxPrefab == null)
+            {
+                return;
+            }
+
+            var instance = InstantiatePrefabAsGameObject(spell.TargetVfxPrefab, worldPosition, Quaternion.identity);
+            if (instance == null)
+            {
+                Debug.LogWarning($"[BattleEnchantmentController] TargetVfxPrefab is not a GameObject prefab: '{spell.TargetVfxPrefab?.name}'.", this);
+                return;
+            }
+
+            string sortingLayerName = !string.IsNullOrEmpty(spell.TargetVfxSortingLayerOverride)
+                ? spell.TargetVfxSortingLayerOverride
+                : _enchantmentSortingLayer;
+            int sortingOrder = _enchantmentSortingOrder + spell.TargetVfxSortingOrderOffset;
+            ApplyVfxSorting(instance, sortingLayerName, sortingOrder);
+
+            float scaleMultiplier = Mathf.Max(0f, spell.TargetVfxScaleMultiplier);
+            if (!Mathf.Approximately(scaleMultiplier, 1f) && scaleMultiplier > 0f)
+            {
+                instance.transform.localScale = instance.transform.localScale * scaleMultiplier;
+            }
+
+            var systems = instance.GetComponentsInChildren<ParticleSystem>(true);
+            for (int i = 0; i < systems.Length; i++)
+            {
+                if (systems[i] != null)
+                {
+                    systems[i].Play(true);
+                }
+            }
+
+            float lifetime = Mathf.Max(0f, spell.TargetVfxLifetimeSeconds);
+            if (lifetime > 0f)
+            {
+                Destroy(instance, lifetime);
+            }
+        }
+
+        private void PlayRemovalSfx(SpellDefinition spell, Vector3 worldPosition)
+        {
+            if (spell == null)
+            {
+                return;
+            }
+
+            var clip = spell.ImpactSfxClip != null ? spell.ImpactSfxClip : spell.CastSfxClip;
+            if (clip == null)
+            {
+                return;
+            }
+
+            float volume = spell.ImpactSfxClip != null ? spell.ImpactSfxVolume : spell.CastSfxVolume;
+            volume = Mathf.Clamp(volume, 0f, 1.5f);
+
+            var source = EnsureEnchantmentSfxSource();
+            if (source != null)
+            {
+                source.transform.position = worldPosition;
+                source.PlayOneShot(clip, volume);
+                return;
+            }
+
+            AudioSource.PlayClipAtPoint(clip, worldPosition, volume);
         }
 
         private static void ApplyVfxSorting(GameObject instance, string sortingLayerName, int sortingOrder)

@@ -29,10 +29,16 @@ namespace SevenBattles.Battle.Spells
         [SerializeField, Tooltip("Service dealing with cursor states (to reset cursors on cast).")]
         private BattleCursorController _cursorController;
         
+        [Header("Effect Handlers")]
+        [SerializeField, Tooltip("Optional extra spell effect handlers (MonoBehaviours implementing ISpellEffectHandler).")]
+        private MonoBehaviour[] _effectHandlerBehaviours;
+
         [Header("Battlefield (optional)")]
         [SerializeField, Tooltip("Optional battlefield service used to resolve tile bonuses. If null, will be auto-found at runtime.")]
         private MonoBehaviour _battlefieldServiceBehaviour;
         private IBattlefieldService _battlefieldService;
+
+        private readonly Dictionary<SpellEffectKind, ISpellEffectHandler> _effectHandlers = new Dictionary<SpellEffectKind, ISpellEffectHandler>();
 
         // Auto-wire dependencies on awake
         private void Awake()
@@ -52,7 +58,106 @@ namespace SevenBattles.Battle.Spells
             }
 
             ResolveBattlefieldService();
+            RegisterDefaultEffectHandlers();
+            RegisterExtraEffectHandlers();
         }
+
+        #region Effect Handlers
+
+        public ISpellEffectHandler GetEffectHandler(SpellDefinition spell)
+        {
+            if (spell == null)
+            {
+                return null;
+            }
+
+            var kind = ResolveEffectKind(spell);
+            if (_effectHandlers.TryGetValue(kind, out var handler))
+            {
+                return handler;
+            }
+
+            _effectHandlers.TryGetValue(SpellEffectKind.Standard, out var fallback);
+            return fallback;
+        }
+
+        public bool TryExecuteSpellEffect(SpellDefinition spell, SpellCastContext context, SpellTargetSelection target, SpellCastCallbacks callbacks)
+        {
+            var handler = GetEffectHandler(spell);
+            if (handler == null)
+            {
+                return false;
+            }
+
+            if (!handler.HasAvailableTargets(spell, context))
+            {
+                return false;
+            }
+
+            if (!handler.IsTargetValid(spell, context, target))
+            {
+                return false;
+            }
+
+            handler.Execute(spell, context, target, callbacks);
+            return true;
+        }
+
+        private void RegisterDefaultEffectHandlers()
+        {
+            RegisterEffectHandler(new StandardSpellEffectHandler(this));
+            RegisterEffectHandler(new EnchantmentPlacementSpellEffectHandler());
+            RegisterEffectHandler(new EnchantmentRemovalSpellEffectHandler());
+        }
+
+        private void RegisterExtraEffectHandlers()
+        {
+            if (_effectHandlerBehaviours == null || _effectHandlerBehaviours.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _effectHandlerBehaviours.Length; i++)
+            {
+                var behaviour = _effectHandlerBehaviours[i];
+                if (behaviour == null)
+                {
+                    continue;
+                }
+
+                if (behaviour is ISpellEffectHandler handler)
+                {
+                    RegisterEffectHandler(handler);
+                }
+            }
+        }
+
+        private void RegisterEffectHandler(ISpellEffectHandler handler)
+        {
+            if (handler == null)
+            {
+                return;
+            }
+
+            _effectHandlers[handler.Kind] = handler;
+        }
+
+        private static SpellEffectKind ResolveEffectKind(SpellDefinition spell)
+        {
+            if (spell == null)
+            {
+                return SpellEffectKind.Standard;
+            }
+
+            if (spell.IsEnchantment)
+            {
+                return SpellEffectKind.EnchantmentPlacement;
+            }
+
+            return spell.EffectKind;
+        }
+
+        #endregion
 
         #region Targeting Logic
 
@@ -64,8 +169,15 @@ namespace SevenBattles.Battle.Spells
             Func<T, UnitBattleMetadata> getMetadata, 
             Func<Vector2Int, T, bool> isUnitAtTile) where T : struct
         {
+            var adapter = new SpellUnitAdapter<T>(allUnits, getMetadata, null, isUnitAtTile);
+            return IsTileLegalSpellTarget(spell, tile, casterMeta, adapter);
+        }
+
+        public bool IsTileLegalSpellTarget(SpellDefinition spell, Vector2Int tile, UnitBattleMetadata casterMeta, ISpellUnitProvider units)
+        {
             if (spell == null) return false;
             if (casterMeta == null || !casterMeta.HasTile) return false;
+            if (units == null) return false;
 
             int minRange = Mathf.Max(0, spell.MinCastRange);
             int maxRange = Mathf.Max(0, spell.MaxCastRange);
@@ -82,38 +194,28 @@ namespace SevenBattles.Battle.Spells
 
                 if (spell.RequiresClearLineOfSight && delta != Vector2Int.zero)
                 {
-                    if (HasBlockingUnitBetween(casterMeta.Tile, tile, allUnits, getMetadata, isUnitAtTile))
+                    if (HasBlockingUnitBetween(casterMeta.Tile, tile, units))
                     {
                         return false;
                     }
                 }
             }
 
-            // Find if there is a unit at the target tile
             bool hasUnit = false;
             UnitBattleMetadata targetUnitMeta = null;
 
-            for (int i = 0; i < allUnits.Count; i++)
+            for (int i = 0; i < units.Count; i++)
             {
-                var u = allUnits[i];
-                // Use caller-provided predicate to check presence AND validity
-                // Caller must handle null checks in the predicate if needed, or we rely on getMetadata(u) for basic existence
-                
-                // Compatibility: If getMetadata returns null, skip. 
-                var m = getMetadata(u);
-                if (m == null || !m.HasTile) continue;
-
-                if (isUnitAtTile != null && isUnitAtTile(tile, u))
+                var meta = units.GetMetadata(i);
+                if (meta == null || !meta.HasTile)
                 {
-                    hasUnit = true;
-                    targetUnitMeta = m;
-                    break;
+                    continue;
                 }
-                // Fallback if predicate is null (shouldn't happen given usage)
-                else if (isUnitAtTile == null && m.Tile == tile)
+
+                if (units.IsUnitAtTile(i, tile))
                 {
                     hasUnit = true;
-                    targetUnitMeta = m;
+                    targetUnitMeta = meta;
                     break;
                 }
             }
@@ -138,12 +240,10 @@ namespace SevenBattles.Battle.Spells
             }
         }
 
-        private static bool HasBlockingUnitBetween<T>(
+        private static bool HasBlockingUnitBetween(
             Vector2Int from,
             Vector2Int to,
-            List<T> allUnits,
-            Func<T, UnitBattleMetadata> getMetadata,
-            Func<Vector2Int, T, bool> isUnitAtTile) where T : struct
+            ISpellUnitProvider units)
         {
             var delta = to - from;
             if (delta == Vector2Int.zero) return false;
@@ -159,25 +259,14 @@ namespace SevenBattles.Battle.Spells
 
             while (cursor != to)
             {
-                for (int i = 0; i < allUnits.Count; i++)
+                for (int i = 0; i < units.Count; i++)
                 {
-                    var unit = allUnits[i];
-                    var meta = getMetadata(unit);
+                    var meta = units.GetMetadata(i);
                     if (meta == null || !meta.HasTile) continue;
 
-                    if (isUnitAtTile != null)
+                    if (units.IsUnitAtTile(i, cursor))
                     {
-                        if (isUnitAtTile(cursor, unit))
-                        {
-                            return true;
-                        }
-                    }
-                    else
-                    {
-                        if (meta.Tile == cursor)
-                        {
-                            return true;
-                        }
+                        return true;
                     }
                 }
 
@@ -331,17 +420,29 @@ namespace SevenBattles.Battle.Spells
         {
             var casterMeta = getMetadata(caster);
             var casterStats = getStats(caster);
+            var adapter = new SpellUnitAdapter<T>(allUnits, getMetadata, getStats, null);
+            var callbacks = new SpellCastCallbacks(onStart, onAPConsumed, onStatsChanged, onUnitDied, onComplete);
+            TryExecuteSpellCast(spell, targetTile, adapter, casterMeta, casterStats, callbacks);
+        }
 
-            if (casterMeta == null || casterStats == null || !casterMeta.HasTile)
+        public void TryExecuteSpellCast(
+            SpellDefinition spell,
+            Vector2Int targetTile,
+            ISpellUnitProvider units,
+            UnitBattleMetadata casterMeta,
+            UnitStats casterStats,
+            SpellCastCallbacks callbacks)
+        {
+            if (casterMeta == null || casterStats == null || !casterMeta.HasTile || units == null)
             {
                 return;
             }
 
-            onStart?.Invoke();
+            callbacks.OnStart?.Invoke();
 
             if (_cursorController != null)
             {
-                // We don't have reference to the specific spell being casted in cursor controller here, 
+                // We don't have reference to the specific spell being casted in cursor controller here,
                 // but we can just clear spell cursor via SetSpellCursor(false, null).
                 // Assuming caller handles selection state clearing if needed.
             }
@@ -349,37 +450,27 @@ namespace SevenBattles.Battle.Spells
 
             try
             {
-                // Animation
                 UnitVisualUtil.TryPlayAnimation(casterMeta.gameObject, "Cast");
 
-                // Identify target
-                T targetUnit = default;
-                bool hasTargetUnit = false;
-                
-                // Manual search for target unit
-                for (int i = 0; i < allUnits.Count; i++)
+                UnitBattleMetadata targetMeta = null;
+                UnitStats targetStats = null;
+                for (int i = 0; i < units.Count; i++)
                 {
-                    var u = allUnits[i];
-                    var m = getMetadata(u);
-                    if (m != null && m.HasTile && m.Tile == targetTile)
+                    var meta = units.GetMetadata(i);
+                    if (meta != null && meta.HasTile && units.IsUnitAtTile(i, targetTile))
                     {
-                        targetUnit = u;
-                        hasTargetUnit = true;
+                        targetMeta = meta;
+                        targetStats = units.GetStats(i);
                         break;
                     }
                 }
 
-                var targetMeta = hasTargetUnit ? getMetadata(targetUnit) : null;
-                var targetStats = hasTargetUnit ? getStats(targetUnit) : null;
-
                 Vector3 targetWorld = GetSpellTargetWorldPosition(targetTile, targetMeta);
                 if (targetMeta == null && casterMeta != null)
                 {
-                    // Keep VFX on the same Z plane as units
                     targetWorld.z = casterMeta.transform.position.z;
                 }
 
-                // Calculate Amount
                 int amount = 0;
                 SpellPrimaryAmountKind kind = SpellPrimaryAmountKind.None;
 
@@ -393,7 +484,6 @@ namespace SevenBattles.Battle.Spells
                     }
                     else
                     {
-                        // Fallback logic if preview failed
                         int baseAmount = Mathf.Max(0, spell.PrimaryBaseAmount);
                         float scaling = spell.PrimarySpellStatScaling;
                         int scaledAmount = baseAmount;
@@ -411,7 +501,7 @@ namespace SevenBattles.Battle.Spells
                 {
                     if (targetMeta == null || targetStats == null)
                     {
-                        onComplete?.Invoke();
+                        callbacks.OnComplete?.Invoke();
                         return;
                     }
 
@@ -442,7 +532,7 @@ namespace SevenBattles.Battle.Spells
                     if (projectileInstance == null)
                     {
                         Debug.LogError($"[BattleSpellController] ProjectilePrefab is not a GameObject prefab: '{spell.ProjectilePrefab?.name}'.", this);
-                        onComplete?.Invoke();
+                        callbacks.OnComplete?.Invoke();
                         return;
                     }
 
@@ -453,7 +543,7 @@ namespace SevenBattles.Battle.Spells
                     PlaySpellCastSfx(spell, casterMeta, targetWorld);
 
                     int cost = Mathf.Max(0, spell.ActionPointCost);
-                    onAPConsumed?.Invoke(cost);
+                    callbacks.OnApConsumed?.Invoke(cost);
 
                     var relay = projectileInstance.GetComponent<SpellProjectileImpactRelay>();
                     if (relay == null)
@@ -493,17 +583,17 @@ namespace SevenBattles.Battle.Spells
 
                             if (targetDied && targetMeta != null)
                             {
-                                onUnitDied?.Invoke(targetMeta);
+                                callbacks.OnUnitDied?.Invoke(targetMeta);
                             }
 
                             if (targetMeta != null && ReferenceEquals(targetMeta, casterMeta))
                             {
-                                onStatsChanged?.Invoke();
+                                callbacks.OnStatsChanged?.Invoke();
                             }
                         },
                         onComplete: () =>
                         {
-                            onComplete?.Invoke();
+                            callbacks.OnComplete?.Invoke();
                         }
                     );
 
@@ -536,23 +626,23 @@ namespace SevenBattles.Battle.Spells
 
                 if (diedImmediate && targetMeta != null)
                 {
-                    onUnitDied?.Invoke(targetMeta);
+                    callbacks.OnUnitDied?.Invoke(targetMeta);
                 }
 
                 int immediateCost = Mathf.Max(0, spell != null ? spell.ActionPointCost : 0);
-                onAPConsumed?.Invoke(immediateCost);
+                callbacks.OnApConsumed?.Invoke(immediateCost);
 
                 if (targetMeta != null && ReferenceEquals(targetMeta, casterMeta))
                 {
-                    onStatsChanged?.Invoke();
+                    callbacks.OnStatsChanged?.Invoke();
                 }
 
-                onComplete?.Invoke();
+                callbacks.OnComplete?.Invoke();
             }
             catch (Exception e)
             {
                 Debug.LogError($"[BattleSpellController] Error executing spell cast: {e}");
-                onComplete?.Invoke(); // Ensure cleanup happens
+                callbacks.OnComplete?.Invoke();
             }
         }
 
@@ -875,5 +965,188 @@ namespace SevenBattles.Battle.Spells
         }
 
         #endregion
+
+        private readonly struct SpellUnitAdapter<T> : ISpellUnitProvider where T : struct
+        {
+            private readonly List<T> _units;
+            private readonly Func<T, UnitBattleMetadata> _getMetadata;
+            private readonly Func<T, UnitStats> _getStats;
+            private readonly Func<Vector2Int, T, bool> _isUnitAtTile;
+
+            public SpellUnitAdapter(
+                List<T> units,
+                Func<T, UnitBattleMetadata> getMetadata,
+                Func<T, UnitStats> getStats,
+                Func<Vector2Int, T, bool> isUnitAtTile)
+            {
+                _units = units;
+                _getMetadata = getMetadata;
+                _getStats = getStats;
+                _isUnitAtTile = isUnitAtTile;
+            }
+
+            public int Count => _units != null ? _units.Count : 0;
+
+            public UnitBattleMetadata GetMetadata(int index)
+            {
+                if (_units == null || index < 0 || index >= _units.Count || _getMetadata == null)
+                {
+                    return null;
+                }
+
+                return _getMetadata(_units[index]);
+            }
+
+            public UnitStats GetStats(int index)
+            {
+                if (_units == null || index < 0 || index >= _units.Count || _getStats == null)
+                {
+                    return null;
+                }
+
+                return _getStats(_units[index]);
+            }
+
+            public bool IsUnitAtTile(int index, Vector2Int tile)
+            {
+                if (_units == null || index < 0 || index >= _units.Count)
+                {
+                    return false;
+                }
+
+                var unit = _units[index];
+                if (_isUnitAtTile != null)
+                {
+                    return _isUnitAtTile(tile, unit);
+                }
+
+                var meta = _getMetadata != null ? _getMetadata(unit) : null;
+                return meta != null && meta.HasTile && meta.Tile == tile;
+            }
+        }
+
+        private sealed class StandardSpellEffectHandler : ISpellEffectHandler
+        {
+            private readonly BattleSpellController _controller;
+
+            public StandardSpellEffectHandler(BattleSpellController controller)
+            {
+                _controller = controller;
+            }
+
+            public SpellEffectKind Kind => SpellEffectKind.Standard;
+            public SpellTargetingMode TargetingMode => SpellTargetingMode.UnitOrTile;
+            public bool UsesActiveEnchantments => false;
+            public SpellRemovalPolicy RemovalPolicy => SpellRemovalPolicy.EphemeralOnly;
+
+            public bool HasAvailableTargets(SpellDefinition spell, SpellCastContext context)
+            {
+                return true;
+            }
+
+            public bool IsTargetValid(SpellDefinition spell, SpellCastContext context, SpellTargetSelection target)
+            {
+                if (target.Mode != SpellTargetingMode.UnitOrTile || _controller == null)
+                {
+                    return false;
+                }
+
+                return _controller.IsTileLegalSpellTarget(spell, target.Tile, context.CasterMeta, context.Units);
+            }
+
+            public void Execute(SpellDefinition spell, SpellCastContext context, SpellTargetSelection target, SpellCastCallbacks callbacks)
+            {
+                if (_controller == null)
+                {
+                    return;
+                }
+
+                _controller.TryExecuteSpellCast(spell, target.Tile, context.Units, context.CasterMeta, context.CasterStats, callbacks);
+            }
+        }
+
+        private sealed class EnchantmentPlacementSpellEffectHandler : ISpellEffectHandler
+        {
+            public SpellEffectKind Kind => SpellEffectKind.EnchantmentPlacement;
+            public SpellTargetingMode TargetingMode => SpellTargetingMode.Enchantment;
+            public bool UsesActiveEnchantments => false;
+            public SpellRemovalPolicy RemovalPolicy => SpellRemovalPolicy.Always;
+
+            public bool HasAvailableTargets(SpellDefinition spell, SpellCastContext context)
+            {
+                return context.EnchantmentController != null && context.EnchantmentController.HasAvailableQuads;
+            }
+
+            public bool IsTargetValid(SpellDefinition spell, SpellCastContext context, SpellTargetSelection target)
+            {
+                if (target.Mode != SpellTargetingMode.Enchantment)
+                {
+                    return false;
+                }
+
+                return context.EnchantmentController != null &&
+                       context.EnchantmentController.IsQuadAvailable(target.QuadIndex);
+            }
+
+            public void Execute(SpellDefinition spell, SpellCastContext context, SpellTargetSelection target, SpellCastCallbacks callbacks)
+            {
+                if (context.EnchantmentController == null)
+                {
+                    return;
+                }
+
+                bool placed = context.EnchantmentController.TryPlaceEnchantment(spell, target.QuadIndex, context.CasterMeta);
+                if (!placed)
+                {
+                    return;
+                }
+
+                callbacks.OnStart?.Invoke();
+                callbacks.OnApConsumed?.Invoke(Mathf.Max(0, spell != null ? spell.ActionPointCost : 0));
+                callbacks.OnComplete?.Invoke();
+            }
+        }
+
+        private sealed class EnchantmentRemovalSpellEffectHandler : ISpellEffectHandler
+        {
+            public SpellEffectKind Kind => SpellEffectKind.EnchantmentRemoval;
+            public SpellTargetingMode TargetingMode => SpellTargetingMode.Enchantment;
+            public bool UsesActiveEnchantments => true;
+            public SpellRemovalPolicy RemovalPolicy => SpellRemovalPolicy.EphemeralOnly;
+
+            public bool HasAvailableTargets(SpellDefinition spell, SpellCastContext context)
+            {
+                return context.EnchantmentController != null && context.EnchantmentController.HasActiveEnchantments;
+            }
+
+            public bool IsTargetValid(SpellDefinition spell, SpellCastContext context, SpellTargetSelection target)
+            {
+                if (target.Mode != SpellTargetingMode.Enchantment)
+                {
+                    return false;
+                }
+
+                return context.EnchantmentController != null &&
+                       context.EnchantmentController.HasActiveEnchantmentAt(target.QuadIndex);
+            }
+
+            public void Execute(SpellDefinition spell, SpellCastContext context, SpellTargetSelection target, SpellCastCallbacks callbacks)
+            {
+                if (context.EnchantmentController == null)
+                {
+                    return;
+                }
+
+                bool removed = context.EnchantmentController.TryRemoveEnchantment(spell, target.QuadIndex, context.CasterMeta);
+                if (!removed)
+                {
+                    return;
+                }
+
+                callbacks.OnStart?.Invoke();
+                callbacks.OnApConsumed?.Invoke(Mathf.Max(0, spell != null ? spell.ActionPointCost : 0));
+                callbacks.OnComplete?.Invoke();
+            }
+        }
     }
 }

@@ -205,6 +205,65 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(enemyDef);
         }
 
+        [Test]
+        public void TryExecuteSpellCast_EphemeralSpell_RemovesFromDeckAfterCast()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+            SetPrivate(board, "_columns", 6);
+            SetPrivate(board, "_rows", 6);
+            CallPrivate(board, "RebuildGrid");
+
+            var ctrlGo = new GameObject("TurnController");
+            var spellCtrl = ctrlGo.AddComponent<BattleSpellController>();
+            SetPrivate(spellCtrl, "_board", board);
+
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+            SetPrivate(ctrl, "_board", board);
+
+            var playerDef = ScriptableObject.CreateInstance<UnitDefinition>();
+            var enemyDef = ScriptableObject.CreateInstance<UnitDefinition>();
+
+            var playerGo = new GameObject("PlayerUnit");
+            var playerStats = playerGo.AddComponent<UnitStats>();
+            playerStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 3, Speed = 1, Initiative = 10, Spell = 0 });
+            UnitBattleMetadata.Ensure(playerGo, true, playerDef, new Vector2Int(2, 2));
+
+            var enemyGo = new GameObject("EnemyUnit");
+            var enemyStats = enemyGo.AddComponent<UnitStats>();
+            enemyStats.ApplyBase(new UnitStatsData { Life = 10, ActionPoints = 1, Speed = 1, Initiative = 1 });
+            UnitBattleMetadata.Ensure(enemyGo, false, enemyDef, new Vector2Int(4, 2));
+
+            var spell = ScriptableObject.CreateInstance<SpellDefinition>();
+            spell.IsEphemeral = true;
+            spell.ActionPointCost = 1;
+            spell.TargetFilter = SpellTargetFilter.EnemyUnit;
+            spell.MinCastRange = 1;
+            spell.MaxCastRange = 4;
+            spell.PrimaryAmountKind = SpellPrimaryAmountKind.Damage;
+            spell.PrimaryBaseAmount = 1;
+            spell.PrimarySpellStatScaling = 0f;
+
+            UnitSpellDeck.Ensure(playerGo).Configure(new[] { spell }, deckCapacity: 0, drawCapacity: 0);
+
+            CallPrivate(ctrl, "BeginBattle");
+            Assert.IsTrue(System.Array.Exists(ctrl.ActiveUnitSpells, s => ReferenceEquals(s, spell)));
+
+            CallPrivate(ctrl, "TryExecuteSpellCast", spell, new Vector2Int(4, 2));
+
+            Assert.IsFalse(System.Array.Exists(ctrl.ActiveUnitSpells, s => ReferenceEquals(s, spell)));
+            var nextDraw = playerGo.GetComponent<UnitSpellDeck>().DrawForTurn();
+            Assert.IsFalse(System.Array.Exists(nextDraw, s => ReferenceEquals(s, spell)));
+
+            Object.DestroyImmediate(spell);
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(playerGo);
+            Object.DestroyImmediate(enemyGo);
+            Object.DestroyImmediate(playerDef);
+            Object.DestroyImmediate(enemyDef);
+        }
+
         private static void SetPrivate(object obj, string field, object value)
         {
             var f = obj.GetType().GetField(field, BindingFlags.Instance | BindingFlags.NonPublic);

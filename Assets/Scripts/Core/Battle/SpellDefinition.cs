@@ -11,6 +11,19 @@ namespace SevenBattles.Core.Battle
         AnyTile = 4
     }
 
+    public enum SpellTargetingMode
+    {
+        UnitOrTile = 0,
+        Enchantment = 1
+    }
+
+    public enum SpellEffectKind
+    {
+        Standard = 0,
+        EnchantmentPlacement = 1,
+        EnchantmentRemoval = 2
+    }
+
     public enum SpellPrimaryAmountKind
     {
         None = 0,
@@ -62,6 +75,14 @@ namespace SevenBattles.Core.Battle
         [Tooltip("Action Points cost required to cast this spell.")]
         public int ActionPointCost;
 
+        [Header("Lifecycle")]
+        [Tooltip("If true, the spell is removed from the unit's deck after it is cast (battle-only).")]
+        public bool IsEphemeral;
+
+        [Header("Effect")]
+        [Tooltip("Controls which runtime effect handler executes this spell. Enchantment spells are routed automatically.")]
+        public SpellEffectKind EffectKind = SpellEffectKind.Standard;
+
         [Header("Enchantment (optional)")]
         [Tooltip("If true, this spell is a permanent battlefield enchantment.")]
         public bool IsEnchantment;
@@ -103,6 +124,9 @@ namespace SevenBattles.Core.Battle
         public float EnchantmentAppearDelaySeconds = 0f;
 
         [Header("Targeting")]
+        [Tooltip("Controls how the spell selects targets (unit/tile vs. active enchantment).")]
+        public SpellTargetingMode TargetingMode = SpellTargetingMode.UnitOrTile;
+
         [Tooltip("What this spell can target when selecting a tile on the board.")]
         public SpellTargetFilter TargetFilter = SpellTargetFilter.EnemyUnit;
 
