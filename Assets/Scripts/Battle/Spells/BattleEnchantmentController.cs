@@ -51,6 +51,8 @@ namespace SevenBattles.Battle.Spells
         [SerializeField] private int _enchantmentSortingOrder = 2;
         [SerializeField] private Material _enchantmentMaterial;
         [SerializeField] private float _enchantmentZOffset;
+        [SerializeField, Tooltip("Optional AudioSource used for enchantment cast SFX (uses PlayOneShot).")]
+        private AudioSource _enchantmentSfxSource;
 
         private readonly Dictionary<int, ActiveEnchantment> _activeEnchantments = new Dictionary<int, ActiveEnchantment>();
         private EnchantmentQuadDefinition[] _quads = Array.Empty<EnchantmentQuadDefinition>();
@@ -145,7 +147,7 @@ namespace SevenBattles.Battle.Spells
             string casterInstanceId = casterMeta != null ? casterMeta.SaveInstanceId : null;
             string casterUnitId = casterMeta != null && casterMeta.Definition != null ? casterMeta.Definition.Id : null;
 
-            return TryActivateEnchantment(spell, quadIndex, isPlayerControlledCaster, casterInstanceId, casterUnitId, skipVisual: false);
+            return TryActivateEnchantment(spell, quadIndex, isPlayerControlledCaster, casterInstanceId, casterUnitId, skipVisual: false, casterMeta);
         }
 
         public bool TryRestoreEnchantment(
@@ -161,7 +163,7 @@ namespace SevenBattles.Battle.Spells
                 return false;
             }
 
-            return TryActivateEnchantment(spell, quadIndex, isPlayerControlledCaster, casterInstanceId, casterUnitId, skipVisual);
+            return TryActivateEnchantment(spell, quadIndex, isPlayerControlledCaster, casterInstanceId, casterUnitId, skipVisual, null);
         }
 
         public void CopyActiveEnchantments(List<EnchantmentSnapshot> buffer)
@@ -268,7 +270,8 @@ namespace SevenBattles.Battle.Spells
             bool isPlayerControlledCaster,
             string casterInstanceId,
             string casterUnitId,
-            bool skipVisual)
+            bool skipVisual,
+            UnitBattleMetadata casterMeta)
         {
             if (!TryGetQuad(quadIndex, out var quad))
             {
@@ -288,6 +291,7 @@ namespace SevenBattles.Battle.Spells
             {
                 entry.Visual = SpawnEnchantmentVisual(spell, quad);
                 entry.Vfx = SpawnEnchantmentVfx(spell, quad);
+                PlaySpellCastSfx(spell, casterMeta, quad);
             }
 
             _activeEnchantments[quadIndex] = entry;
@@ -746,6 +750,66 @@ namespace SevenBattles.Battle.Spells
 
             var obj = UnityEngine.Object.Instantiate((UnityEngine.Object)prefab, position, rotation);
             return obj as GameObject;
+        }
+
+        private void PlaySpellCastSfx(SpellDefinition spell, UnitBattleMetadata casterMeta, EnchantmentQuadDefinition quad)
+        {
+            if (spell == null || spell.CastSfxClip == null)
+            {
+                return;
+            }
+
+            float volume = Mathf.Clamp(spell.CastSfxVolume, 0f, 1.5f);
+            Vector3 targetWorld;
+            if (_board != null)
+            {
+                var center = quad.Center;
+                var offset = quad.Offset;
+                targetWorld = _board.transform.TransformPoint(new Vector3(center.x + offset.x, center.y + offset.y, 0f));
+            }
+            else if (casterMeta != null)
+            {
+                targetWorld = casterMeta.transform.position;
+            }
+            else
+            {
+                targetWorld = Vector3.zero;
+            }
+
+            if (casterMeta != null)
+            {
+                targetWorld.z = casterMeta.transform.position.z;
+            }
+
+            Vector3 pos = spell.CastSfxAtTarget ? targetWorld : (casterMeta != null ? casterMeta.transform.position : targetWorld);
+            var source = EnsureEnchantmentSfxSource();
+            if (source != null)
+            {
+                source.transform.position = pos;
+                source.PlayOneShot(spell.CastSfxClip, volume);
+                return;
+            }
+
+            AudioSource.PlayClipAtPoint(spell.CastSfxClip, pos, volume);
+        }
+
+        private AudioSource EnsureEnchantmentSfxSource()
+        {
+            if (_enchantmentSfxSource != null)
+            {
+                return _enchantmentSfxSource;
+            }
+
+            var source = GetComponent<AudioSource>();
+            if (source == null)
+            {
+                source = gameObject.AddComponent<AudioSource>();
+                source.playOnAwake = false;
+                source.spatialBlend = 0f;
+            }
+
+            _enchantmentSfxSource = source;
+            return source;
         }
 
         private void StartVfxFadeOut(GameObject instance, float lifetime, float fadeDuration)
