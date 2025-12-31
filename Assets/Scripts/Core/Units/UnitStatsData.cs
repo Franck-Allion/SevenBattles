@@ -11,6 +11,8 @@ namespace SevenBattles.Core.Units
         public int Life;
         public int Attack;
         public int Shoot;
+        public int ShootRange;
+        public int ShootDefense;
         public int Spell;
         public int Speed;
         public int Luck;

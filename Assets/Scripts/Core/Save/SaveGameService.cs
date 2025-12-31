@@ -69,6 +69,8 @@ namespace SevenBattles.Core.Save
         public int Level;
         public int Attack;
         public int Shoot;
+        public int ShootRange;
+        public int ShootDefense;
         public int Spell;
         public int Speed;
         public int Luck;

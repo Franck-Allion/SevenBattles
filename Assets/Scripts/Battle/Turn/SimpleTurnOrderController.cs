@@ -42,6 +42,11 @@ namespace SevenBattles.Battle.Turn
         [SerializeField, Tooltip("Hotspot offset for the attack cursor (typically center of the texture).")]
         private Vector2 _attackCursorHotspot = new Vector2(16f, 16f);
 
+        [SerializeField, Tooltip("Cursor texture displayed when hovering over a shootable enemy.")]
+        private Texture2D _shootCursorTexture;
+        [SerializeField, Tooltip("Hotspot offset for the shoot cursor (typically center of the texture).")]
+        private Vector2 _shootCursorHotspot = new Vector2(16f, 16f);
+
         [Header("Combat Management")]
         [SerializeField, Tooltip("Service managing attack validation, execution, and damage application. Should reference a BattleCombatController component.")]
         private SevenBattles.Battle.Combat.BattleCombatController _combatController;
@@ -155,7 +160,12 @@ namespace SevenBattles.Battle.Turn
         private bool _activeUnitHasMoved;
         private bool _movementAnimating;
         private bool _attackAnimating;
+        private bool _shootAnimating;
         private bool _spellAnimating;
+        private int _cachedActiveSpeed;
+        private int _cachedActiveAttack;
+        private int _cachedActiveShoot;
+        private int _cachedActiveShootRange;
         private bool _hasSelectedMoveTile;
         private Vector2Int _selectedMoveTile;
         private bool _aiMovePendingCompletion;
@@ -474,6 +484,7 @@ namespace SevenBattles.Battle.Turn
             if (!HasActiveUnit) return;
             if (_movementAnimating) return;
             if (_attackAnimating) return;
+            if (_shootAnimating) return;
             if (_spellAnimating) return;
 
             if (IsActiveUnitPlayerControlled)
@@ -1061,6 +1072,11 @@ namespace SevenBattles.Battle.Turn
             if (_hasActiveUnit)
             {
                 ActiveUnitStatsChanged?.Invoke();
+                if (TryUpdateActiveUnitCachedStats())
+                {
+                    RebuildLegalMoveTilesForActiveUnit();
+                    RebuildAttackableEnemyTiles();
+                }
             }
         }
 
@@ -1291,6 +1307,7 @@ namespace SevenBattles.Battle.Turn
             if (_cursorController != null)
             {
                 _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
                 _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
                 _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
             }
@@ -1315,14 +1332,12 @@ namespace SevenBattles.Battle.Turn
                 _activeUnitCurrentActionPoints = baseAp;
                 SubscribeToActiveStats(u.Stats);
                 ApplyTileStatBonusForUnit(u);
+                CacheActiveUnitStats(u.Stats);
             }
 
             UpdateBoardHighlight();
             RebuildLegalMoveTilesForActiveUnit();
-            if (_combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
-            {
-                _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
-            }
+            RebuildAttackableEnemyTiles();
 
             DrawActiveUnitSpells();
 
@@ -1398,9 +1413,14 @@ namespace SevenBattles.Battle.Turn
             if (_advancing) return;
             if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return;
             if (IsActiveUnitPlayerControlledInternal()) return;
-            if (_movementAnimating || _attackAnimating || _spellAnimating) return;
+            if (_movementAnimating || _attackAnimating || _shootAnimating || _spellAnimating) return;
 
             if (TryExecuteAiAttack())
+            {
+                return;
+            }
+
+            if (TryExecuteAiShoot())
             {
                 return;
             }
@@ -1436,14 +1456,14 @@ namespace SevenBattles.Battle.Turn
         {
             if (_combatController == null) return false;
             if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
-            if (_movementAnimating || _attackAnimating || _spellAnimating) return false;
+            if (_movementAnimating || _attackAnimating || _shootAnimating || _spellAnimating) return false;
             if (_activeUnitCurrentActionPoints <= 0) return false;
 
             var activeUnit = _units[_activeIndex];
             var stats = activeUnit.Stats;
-            if (stats == null || stats.Attack <= 0) return false;
+            if (stats == null) return false;
 
-            _combatController.RebuildAttackableEnemyTiles(activeUnit, _units, u => u.Metadata, u => u.Stats);
+            RebuildAttackableEnemyTiles();
             if (!TryGetAttackableEnemyTile(activeUnit, out var targetTile)) return false;
 
             _combatController.TryExecuteAttack(
@@ -1459,12 +1479,53 @@ namespace SevenBattles.Battle.Turn
                     CompactUnits();
                     if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                     {
-                        _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
+                        RebuildAttackableEnemyTiles();
                     }
                 },
                 () =>
                 {
                     _attackAnimating = false;
+                    UpdateBoardHighlight();
+                    CompleteAiTurnAfterDecision();
+                }
+            );
+
+            return true;
+        }
+
+        private bool TryExecuteAiShoot()
+        {
+            if (_combatController == null) return false;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
+            if (_movementAnimating || _attackAnimating || _shootAnimating || _spellAnimating) return false;
+            if (_activeUnitCurrentActionPoints <= 0) return false;
+
+            var activeUnit = _units[_activeIndex];
+            var stats = activeUnit.Stats;
+            if (stats == null || stats.Shoot <= 0 || stats.ShootRange <= 0) return false;
+
+            RebuildAttackableEnemyTiles();
+            if (!TryGetShootableEnemyTile(activeUnit, out var targetTile)) return false;
+
+            _combatController.TryExecuteShoot(
+                targetTile,
+                activeUnit,
+                _units,
+                u => u.Metadata,
+                u => u.Stats,
+                () => { _shootAnimating = true; },
+                () => { ConsumeActiveUnitActionPoint(); },
+                () =>
+                {
+                    CompactUnits();
+                    if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                    {
+                        RebuildAttackableEnemyTiles();
+                    }
+                },
+                () =>
+                {
+                    _shootAnimating = false;
                     UpdateBoardHighlight();
                     CompleteAiTurnAfterDecision();
                 }
@@ -1504,6 +1565,46 @@ namespace SevenBattles.Battle.Turn
             return false;
         }
 
+        private bool TryGetShootableEnemyTile(TurnUnit activeUnit, out Vector2Int targetTile)
+        {
+            targetTile = default;
+
+            if (_combatController == null) return false;
+
+            var meta = activeUnit.Metadata;
+            var stats = activeUnit.Stats;
+            if (meta == null || stats == null || !meta.HasTile) return false;
+
+            int range = Mathf.Max(0, stats.ShootRange);
+            if (range <= 0) return false;
+
+            var origin = meta.Tile;
+            int maxStep = range + 1;
+            Vector2Int[] directions =
+            {
+                new Vector2Int(0, 1),
+                new Vector2Int(0, -1),
+                new Vector2Int(1, 0),
+                new Vector2Int(-1, 0)
+            };
+
+            for (int d = 0; d < directions.Length; d++)
+            {
+                var dir = directions[d];
+                for (int step = 1; step <= maxStep; step++)
+                {
+                    var candidate = new Vector2Int(origin.x + (dir.x * step), origin.y + (dir.y * step));
+                    if (_combatController.IsShootableEnemyTile(candidate))
+                    {
+                        targetTile = candidate;
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private BattleAiTurnService.Context BuildAiContext()
         {
             _aiAllUnitsBuffer.Clear();
@@ -1532,7 +1633,7 @@ namespace SevenBattles.Battle.Turn
 
             if (_battleEnded) return;
             if (!_hasActiveUnit || IsActiveUnitPlayerControlledInternal()) return;
-            if (_movementAnimating || _attackAnimating || _spellAnimating) return;
+            if (_movementAnimating || _attackAnimating || _shootAnimating || _spellAnimating) return;
             if (_advancing) return;
 
             AdvanceToNextUnit();
@@ -1576,9 +1677,12 @@ namespace SevenBattles.Battle.Turn
             // First check if we can do anything at all
             bool canMove = CanActiveUnitMove();
             bool canAttack = _combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count
+                && !_shootAnimating
                 && _combatController.CanAttack(_units[_activeIndex].Stats, _activeUnitCurrentActionPoints, IsActiveUnitPlayerControlledInternal(), _movementAnimating, _attackAnimating);
+            bool canShoot = _combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count
+                && _combatController.CanShoot(_units[_activeIndex].Stats, _activeUnitCurrentActionPoints, IsActiveUnitPlayerControlledInternal(), _movementAnimating, _attackAnimating, _shootAnimating);
 
-            if (!canMove && !canAttack)
+            if (!canMove && !canAttack && !canShoot)
             {
                 if (_highlightController != null)
                 {
@@ -1588,6 +1692,7 @@ namespace SevenBattles.Battle.Turn
                 if (_cursorController != null)
                 {
                     _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                    _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
                     _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
                     _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
                 }
@@ -1604,6 +1709,7 @@ namespace SevenBattles.Battle.Turn
                 if (_cursorController != null)
                 {
                     _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                    _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
                     _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
                     _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
                 }
@@ -1612,17 +1718,59 @@ namespace SevenBattles.Battle.Turn
 
             var hoveredTile = new Vector2Int(x, y);
 
-            // PRIORITY 1: Attack input handling (takes priority over movement)
+            // PRIORITY 1: Shoot input handling (takes priority over movement)
+            if (canShoot && _combatController != null && _combatController.IsShootableEnemyTile(hoveredTile))
+            {
+                if (_cursorController != null)
+                {
+                    _cursorController.SetShootCursor(true, _shootCursorTexture, _shootCursorHotspot);
+                    _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
+                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
+                }
+
+                if (_highlightController != null)
+                {
+                    _highlightController.SetSecondaryHighlight(hoveredTile, true);
+                }
+
+                if (Input.GetMouseButtonDown(0) && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                {
+                    _combatController.TryExecuteShoot(
+                        hoveredTile,
+                        _units[_activeIndex],
+                        _units,
+                        u => u.Metadata,
+                        u => u.Stats,
+                        () => { _shootAnimating = true; },
+                        () => { ConsumeActiveUnitActionPoint(); },
+                        () =>
+                        {
+                            CompactUnits();
+                            if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                            {
+                                RebuildAttackableEnemyTiles();
+                            }
+                        },
+                        () => { _shootAnimating = false; UpdateBoardHighlight(); }
+                    );
+                }
+
+                return;
+            }
+
+            // PRIORITY 2: Attack input handling
             if (canAttack && _combatController != null && _combatController.IsAttackableEnemyTile(hoveredTile))
             {
                 // Show attack cursor and highlight
                 if (_cursorController != null)
                 {
                     _cursorController.SetAttackCursor(true, _attackCursorTexture, _attackCursorHotspot);
+                    _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
                     _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
                     _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
                 }
-                
+
                 if (_highlightController != null)
                 {
                     _highlightController.SetSecondaryHighlight(hoveredTile, _combatController.AttackCursorColor);
@@ -1642,7 +1790,7 @@ namespace SevenBattles.Battle.Turn
                             CompactUnits(); 
                             if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                             {
-                                _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats); 
+                                RebuildAttackableEnemyTiles();
                             }
                         },
                         () => { _attackAnimating = false; UpdateBoardHighlight(); }
@@ -1658,7 +1806,13 @@ namespace SevenBattles.Battle.Turn
                 _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
             }
 
-            // PRIORITY 2: Movement input handling (fallback if not attacking)
+            // Reset shoot cursor if not hovering shootable enemy
+            if (_cursorController != null)
+            {
+                _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
+            }
+
+            // PRIORITY 3: Movement input handling (fallback if not attacking or shooting)
             if (!canMove)
             {
                 if (_highlightController != null)
@@ -1835,6 +1989,7 @@ namespace SevenBattles.Battle.Turn
                 _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
                 _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
                 _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
                 _cursorController.SetSpellCursor(true, _selectedSpell);
             }
 
@@ -1897,6 +2052,7 @@ namespace SevenBattles.Battle.Turn
                 _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
                 _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
                 _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
+                _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
                 _cursorController.SetSpellCursor(true, _selectedSpell);
             }
 
@@ -2179,6 +2335,7 @@ namespace SevenBattles.Battle.Turn
             if (!IsActiveUnitPlayerControlledInternal()) return false;
             if (_movementAnimating) return false;
             if (_attackAnimating) return false;
+            if (_shootAnimating) return false;
             if (_board == null) return false;
 
             int apCost = Mathf.Max(0, spell.ActionPointCost);
@@ -2211,6 +2368,44 @@ namespace SevenBattles.Battle.Turn
             return _spellController.IsTileLegalSpellTarget(spell, tile, caster.Metadata, _units, 
                 u => u.Metadata, 
                 (pos, u) => IsUnitValid(u) && u.Metadata.Tile == pos);
+        }
+
+        private bool CanActiveUnitAttack()
+        {
+            if (_combatController == null) return false;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
+            if (_shootAnimating) return false;
+            return _combatController.CanAttack(_units[_activeIndex].Stats, _activeUnitCurrentActionPoints, IsActiveUnitPlayerControlledInternal(), _movementAnimating, _attackAnimating);
+        }
+
+        private bool IsAttackableEnemyTile(Vector2Int tile)
+        {
+            return _combatController != null && _combatController.IsAttackableEnemyTile(tile);
+        }
+
+        private void TryExecuteAttack(Vector2Int targetTile)
+        {
+            if (_combatController == null) return;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return;
+
+            _combatController.TryExecuteAttack(
+                targetTile,
+                _units[_activeIndex],
+                _units,
+                u => u.Metadata,
+                u => u.Stats,
+                () => { _attackAnimating = true; },
+                () => { ConsumeActiveUnitActionPoint(); },
+                () =>
+                {
+                    CompactUnits();
+                    if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                    {
+                        RebuildAttackableEnemyTiles();
+                    }
+                },
+                () => { _attackAnimating = false; UpdateBoardHighlight(); }
+            );
         }
 
         private bool TryGetValidUnitAtTile(Vector2Int tile, out TurnUnit unit)
@@ -2286,14 +2481,15 @@ namespace SevenBattles.Battle.Turn
                 (m) => { // On Face Enemy
                      FaceActiveUnitTowardsNearestEnemy(m);
                 },
-                () => { // On Complete
-                    _activeUnitHasMoved = true;
-                    _movementAnimating = false;
-                    UpdateBoardHighlight();
-                    ApplyTileStatBonusForUnit(u);
-                    RebuildAttackableEnemyTiles();
-                    HandleAiMoveCompleted();
-                }
+                  () => { // On Complete
+                      _activeUnitHasMoved = true;
+                      _movementAnimating = false;
+                      ActiveUnitActionPointsChanged?.Invoke();
+                      UpdateBoardHighlight();
+                      ApplyTileStatBonusForUnit(u);
+                      RebuildAttackableEnemyTiles();
+                      HandleAiMoveCompleted();
+                  }
             );
         }
 
@@ -2307,6 +2503,11 @@ namespace SevenBattles.Battle.Turn
             _aiMovePendingCompletion = false;
 
             if (TryExecuteAiAttack())
+            {
+                return;
+            }
+
+            if (TryExecuteAiShoot())
             {
                 return;
             }
@@ -2408,12 +2609,43 @@ namespace SevenBattles.Battle.Turn
             return u.Metadata != null && u.Metadata.IsPlayerControlled;
         }
 
+        private void CacheActiveUnitStats(UnitStats stats)
+        {
+            _cachedActiveSpeed = stats != null ? stats.Speed : 0;
+            _cachedActiveAttack = stats != null ? stats.Attack : 0;
+            _cachedActiveShoot = stats != null ? stats.Shoot : 0;
+            _cachedActiveShootRange = stats != null ? stats.ShootRange : 0;
+        }
+
+        private bool TryUpdateActiveUnitCachedStats()
+        {
+            var stats = _activeStatsSubscription;
+            if (stats == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            if (stats.Speed != _cachedActiveSpeed) changed = true;
+            if (stats.Attack != _cachedActiveAttack) changed = true;
+            if (stats.Shoot != _cachedActiveShoot) changed = true;
+            if (stats.ShootRange != _cachedActiveShootRange) changed = true;
+
+            if (changed)
+            {
+                CacheActiveUnitStats(stats);
+            }
+
+            return changed;
+        }
+
         // Helper to delegate to combat controller
         private void RebuildAttackableEnemyTiles()
         {
             if (_combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
             {
                 _combatController.RebuildAttackableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
+                _combatController.RebuildShootableEnemyTiles(_units[_activeIndex], _units, u => u.Metadata, u => u.Stats);
             }
         }
 

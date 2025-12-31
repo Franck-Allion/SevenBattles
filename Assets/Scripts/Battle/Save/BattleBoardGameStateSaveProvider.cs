@@ -84,6 +84,8 @@ namespace SevenBattles.Battle.Save
                         Level = stats.Level,
                         Attack = Mathf.Max(0, stats.Attack - tileBonus.Attack - enchantmentBonus.Attack),
                         Shoot = Mathf.Max(0, stats.Shoot - tileBonus.Shoot - enchantmentBonus.Shoot),
+                        ShootRange = Mathf.Max(0, stats.ShootRange),
+                        ShootDefense = Mathf.Max(0, stats.ShootDefense),
                         Spell = Mathf.Max(0, stats.Spell - tileBonus.Spell - enchantmentBonus.Spell),
                         Speed = Mathf.Max(0, stats.Speed - tileBonus.Speed - enchantmentBonus.Speed),
                         Luck = Mathf.Max(0, stats.Luck - tileBonus.Luck - enchantmentBonus.Luck),

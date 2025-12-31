@@ -19,6 +19,8 @@ namespace SevenBattles.Battle.Units
         [SerializeField] private int _attack;
         [SerializeField] private int _actionPoints;
         [SerializeField] private int _shoot;
+        [SerializeField] private int _shootRange;
+        [SerializeField] private int _shootDefense;
         [SerializeField] private int _spell;
         [SerializeField] private int _speed;
         [SerializeField] private int _luck;
@@ -34,6 +36,8 @@ namespace SevenBattles.Battle.Units
         public int MaxLife => _maxLife;
         public int Attack => _attack;
         public int Shoot => _shoot;
+        public int ShootRange => _shootRange;
+        public int ShootDefense => _shootDefense;
         public int Spell => _spell;
         public int Speed => _speed;
         public int Luck => _luck;
@@ -76,6 +80,14 @@ namespace SevenBattles.Battle.Units
             _life = Mathf.Clamp(data.Life, 0, _maxLife);
             _attack = data.Attack;
             _shoot = data.Shoot;
+            if (data.ShootRange > 0)
+            {
+                _shootRange = Mathf.Max(0, data.ShootRange);
+            }
+            if (data.ShootDefense > 0)
+            {
+                _shootDefense = Mathf.Max(0, data.ShootDefense);
+            }
             _spell = data.Spell;
             _speed = data.Speed;
             _luck = data.Luck;
@@ -90,6 +102,10 @@ namespace SevenBattles.Battle.Units
             if (data.DrawCapacity > 0)
             {
                 _drawCapacity = data.DrawCapacity;
+            }
+            if (_shoot > 0 && _shootRange <= 0)
+            {
+                _shootRange = 1;
             }
             NotifyChanged();
         }
@@ -213,6 +229,12 @@ namespace SevenBattles.Battle.Units
             // Action points are fully independent from Attack.
             _actionPoints = Mathf.Max(0, data.ActionPoints);
             _shoot = data.Shoot;
+            _shootRange = Mathf.Max(0, data.ShootRange);
+            _shootDefense = Mathf.Max(0, data.ShootDefense);
+            if (_shoot > 0 && _shootRange <= 0)
+            {
+                _shootRange = 1;
+            }
             _spell = data.Spell;
             _speed = data.Speed;
             _luck = data.Luck;
@@ -232,6 +254,8 @@ namespace SevenBattles.Battle.Units
             _life = Mathf.Clamp(_life + lifeDelta, 0, _maxLife);
             _attack = Mathf.Max(0, _attack + (_levelBonus.Attack * deltaLevel));
             _shoot = Mathf.Max(0, _shoot + (_levelBonus.Shoot * deltaLevel));
+            _shootRange = Mathf.Max(0, _shootRange + (_levelBonus.ShootRange * deltaLevel));
+            _shootDefense = Mathf.Max(0, _shootDefense + (_levelBonus.ShootDefense * deltaLevel));
             _spell = Mathf.Max(0, _spell + (_levelBonus.Spell * deltaLevel));
             _speed = Mathf.Max(0, _speed + (_levelBonus.Speed * deltaLevel));
             _luck = Mathf.Max(0, _luck + (_levelBonus.Luck * deltaLevel));

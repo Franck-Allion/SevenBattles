@@ -8,6 +8,8 @@ namespace SevenBattles.Core.Units
         public int Life;
         public int Attack;
         public int Shoot;
+        public int ShootRange;
+        public int ShootDefense;
         public int Spell;
         public int Speed;
         public int Luck;
@@ -20,6 +22,8 @@ namespace SevenBattles.Core.Units
             Life == 0 &&
             Attack == 0 &&
             Shoot == 0 &&
+            ShootRange == 0 &&
+            ShootDefense == 0 &&
             Spell == 0 &&
             Speed == 0 &&
             Luck == 0 &&
@@ -36,6 +40,8 @@ namespace SevenBattles.Core.Units
                 Life = baseStats.Life + (Life * clampedLevel),
                 Attack = baseStats.Attack + (Attack * clampedLevel),
                 Shoot = baseStats.Shoot + (Shoot * clampedLevel),
+                ShootRange = baseStats.ShootRange + (ShootRange * clampedLevel),
+                ShootDefense = baseStats.ShootDefense + (ShootDefense * clampedLevel),
                 Spell = baseStats.Spell + (Spell * clampedLevel),
                 Speed = baseStats.Speed + (Speed * clampedLevel),
                 Luck = baseStats.Luck + (Luck * clampedLevel),

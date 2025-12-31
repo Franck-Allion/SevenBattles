@@ -16,7 +16,8 @@ namespace SevenBattles.Battle.Cursors
             Move = 2,
             Selection = 3,
             Attack = 4,
-            Spell = 5
+            Shoot = 5,
+            Spell = 6
         }
 
         [Header("Default Cursor")]
@@ -83,6 +84,20 @@ namespace SevenBattles.Battle.Cursors
             }
 
             ClearCursorIfActive(CursorKind.Attack);
+        }
+
+        /// <summary>
+        /// Sets the shoot cursor (displayed when hovering over shootable enemies).
+        /// </summary>
+        public void SetShootCursor(bool active, Texture2D texture, Vector2 hotspot)
+        {
+            if (active)
+            {
+                ApplyCursor(CursorKind.Shoot, texture, hotspot);
+                return;
+            }
+
+            ClearCursorIfActive(CursorKind.Shoot);
         }
 
         /// <summary>

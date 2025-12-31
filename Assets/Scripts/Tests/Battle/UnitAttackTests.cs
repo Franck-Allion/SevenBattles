@@ -12,7 +12,7 @@ namespace SevenBattles.Tests.Battle
     public class UnitAttackTests
     {
         [Test]
-        public void AttackEligibility_RequiresAttackGreaterThanZero()
+        public void AttackEligibility_AllowsZeroAttack()
         {
             var boardGo = new GameObject("Board");
             var board = boardGo.AddComponent<WorldPerspectiveBoard>();
@@ -47,9 +47,9 @@ namespace SevenBattles.Tests.Battle
             SetPrivate(ctrl, "_board", board);
             CallPrivate(ctrl, "BeginBattle");
 
-            // Verify attack cannot be executed
+            // Verify attack is allowed even with Attack=0
             bool canAttack = (bool)CallPrivate(ctrl, "CanActiveUnitAttack");
-            Assert.IsFalse(canAttack, "Unit with Attack=0 should not be able to attack");
+            Assert.IsTrue(canAttack, "Unit with Attack=0 should still be able to attack");
 
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(attackerGo);

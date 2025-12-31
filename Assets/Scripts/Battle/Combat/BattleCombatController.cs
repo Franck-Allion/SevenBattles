@@ -9,17 +9,29 @@ using SevenBattles.Core.Units;
 namespace SevenBattles.Battle.Combat
 {
     /// <summary>
-    /// Handles melee attack validation, execution, and damage application.
+    /// Handles melee and ranged attack validation, execution, and damage application.
     /// Extracted from SimpleTurnOrderController to follow SRP.
     /// </summary>
     public class BattleCombatController : MonoBehaviour
     {
+        private const int MIN_SHOOT_GAP = 1;
+
         [Header("Attack Configuration")]
         [SerializeField, Tooltip("Audio clip played when an attack hits (one-shot).")]
         private AudioClip _attackHitClip;
         
         [SerializeField, Tooltip("Color for secondary highlight when hovering an attackable enemy.")]
         private Color _attackCursorColor = new Color(1f, 0.3f, 0.3f, 0.6f);
+
+        [Header("Shoot Configuration")]
+        [SerializeField, Tooltip("Audio clip played when a ranged shot hits (one-shot).")]
+        private AudioClip _shootHitClip;
+
+        [SerializeField, Tooltip("Color for secondary highlight when hovering a shootable enemy.")]
+        private Color _shootCursorColor = new Color(0.3f, 1f, 0.3f, 0.6f);
+
+        [SerializeField, Tooltip("Seconds to wait after firing before resetting animations and completing the shot.")]
+        private float _shootRecoverySeconds = 0.35f;
 
         [Header("Death Effects")]
         [SerializeField, Tooltip("Optional VFX prefab instantiated when a unit dies (e.g., puff of smoke or soul effect).")]
@@ -40,8 +52,10 @@ namespace SevenBattles.Battle.Combat
 
         // Internal state
         private readonly HashSet<Vector2Int> _attackableEnemyTiles = new HashSet<Vector2Int>();
+        private readonly HashSet<Vector2Int> _shootableEnemyTiles = new HashSet<Vector2Int>();
 
         public Color AttackCursorColor => _attackCursorColor;
+        public Color ShootCursorColor => _shootCursorColor;
 
         /// <summary>
         /// Checks if the active unit can perform an attack.
@@ -54,7 +68,24 @@ namespace SevenBattles.Battle.Combat
             if (isAttacking) return false;
             if (_board == null) return false;
             if (activeUnitStats == null) return false;
-            if (activeUnitStats.Attack <= 0) return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Checks if the active unit can perform a ranged shot.
+        /// </summary>
+        public bool CanShoot(UnitStats activeUnitStats, int currentAP, bool isPlayerControlled, bool isMoving, bool isAttacking, bool isShooting)
+        {
+            if (!isPlayerControlled) return false;
+            if (currentAP < 1) return false;
+            if (isMoving) return false;
+            if (isAttacking) return false;
+            if (isShooting) return false;
+            if (_board == null) return false;
+            if (activeUnitStats == null) return false;
+            if (activeUnitStats.Shoot <= 0) return false;
+            if (activeUnitStats.ShootRange <= 0) return false;
 
             return true;
         }
@@ -68,6 +99,14 @@ namespace SevenBattles.Battle.Combat
         }
 
         /// <summary>
+        /// Checks if the specified tile contains a shootable enemy.
+        /// </summary>
+        public bool IsShootableEnemyTile(Vector2Int tile)
+        {
+            return _shootableEnemyTiles.Contains(tile);
+        }
+
+        /// <summary>
         /// Rebuilds the set of tiles containing attackable enemies (adjacent to active unit).
         /// </summary>
         public void RebuildAttackableEnemyTiles<T>(T activeUnit, List<T> allUnits, Func<T, UnitBattleMetadata> getMetadata, Func<T, UnitStats> getStats) where T : struct
@@ -78,7 +117,7 @@ namespace SevenBattles.Battle.Combat
             var activeStats = getStats(activeUnit);
             
             if (activeMeta == null || !activeMeta.HasTile) return;
-            if (activeStats == null || activeStats.Attack <= 0) return;
+            if (activeStats == null) return;
 
             var activeTile = activeMeta.Tile;
 
@@ -108,6 +147,74 @@ namespace SevenBattles.Battle.Combat
                         _attackableEnemyTiles.Add(checkTile);
                         break; // Only one unit per tile
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds the set of tiles containing shootable enemies (same row/column within range).
+        /// Friendly units do not block line-of-sight, but only the first enemy in each direction is targetable.
+        /// </summary>
+        public void RebuildShootableEnemyTiles<T>(T activeUnit, List<T> allUnits, Func<T, UnitBattleMetadata> getMetadata, Func<T, UnitStats> getStats) where T : struct
+        {
+            _shootableEnemyTiles.Clear();
+
+            var activeMeta = getMetadata(activeUnit);
+            var activeStats = getStats(activeUnit);
+
+            if (activeMeta == null || !activeMeta.HasTile) return;
+            if (activeStats == null || activeStats.Shoot <= 0) return;
+
+            int maxGap = Mathf.Max(0, activeStats.ShootRange);
+            if (maxGap <= 0) return;
+
+            var origin = activeMeta.Tile;
+            int maxStep = maxGap + 1;
+            Vector2Int[] directions =
+            {
+                new Vector2Int(0, 1),   // North
+                new Vector2Int(0, -1),  // South
+                new Vector2Int(1, 0),   // East
+                new Vector2Int(-1, 0)   // West
+            };
+
+            for (int d = 0; d < directions.Length; d++)
+            {
+                var dir = directions[d];
+                for (int step = 1; step <= maxStep; step++)
+                {
+                    var checkTile = new Vector2Int(origin.x + (dir.x * step), origin.y + (dir.y * step));
+
+                    UnitBattleMetadata found = null;
+                    UnitStats foundStats = null;
+                    for (int i = 0; i < allUnits.Count; i++)
+                    {
+                        var targetMeta = getMetadata(allUnits[i]);
+                        if (targetMeta == null || !targetMeta.HasTile) continue;
+                        if (targetMeta.Tile != checkTile) continue;
+                        var targetStats = getStats(allUnits[i]);
+                        if (targetStats == null || targetStats.Life <= 0) continue;
+                        found = targetMeta;
+                        foundStats = targetStats;
+                        break;
+                    }
+
+                    if (found == null || foundStats == null)
+                    {
+                        continue;
+                    }
+
+                    if (found.IsPlayerControlled != activeMeta.IsPlayerControlled)
+                    {
+                        if (step <= MIN_SHOOT_GAP)
+                        {
+                            break;
+                        }
+                        _shootableEnemyTiles.Add(checkTile);
+                        break;
+                    }
+
+                    // Friendly units do not block line-of-sight; keep scanning.
                 }
             }
         }
@@ -174,6 +281,69 @@ namespace SevenBattles.Battle.Combat
             // Start the attack sequence coroutine
             onAttackStarted?.Invoke();
             StartCoroutine(ExecuteAttackRoutine(attacker, target, damage, getMetadata, getStats, onAPConsumed, onUnitDied, onComplete));
+        }
+
+        /// <summary>
+        /// Attempts to execute a ranged shot on the target tile.
+        /// </summary>
+        public void TryExecuteShoot<T>(
+            Vector2Int targetTile,
+            T attacker,
+            List<T> allUnits,
+            Func<T, UnitBattleMetadata> getMetadata,
+            Func<T, UnitStats> getStats,
+            Action onShotStarted,
+            Action onAPConsumed,
+            Action onUnitDied,
+            Action onComplete) where T : struct
+        {
+            if (!IsShootableEnemyTile(targetTile))
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var attackerMeta = getMetadata(attacker);
+            var attackerStats = getStats(attacker);
+
+            if (attackerMeta == null || attackerStats == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            // Find the target unit on the target tile
+            T? targetUnit = null;
+            for (int i = 0; i < allUnits.Count; i++)
+            {
+                var targetMeta = getMetadata(allUnits[i]);
+                if (targetMeta == null || !targetMeta.HasTile) continue;
+                if (targetMeta.Tile == targetTile)
+                {
+                    targetUnit = allUnits[i];
+                    break;
+                }
+            }
+
+            if (!targetUnit.HasValue)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            var target = targetUnit.Value;
+            var targetStats = getStats(target);
+            if (targetStats == null)
+            {
+                onComplete?.Invoke();
+                return;
+            }
+
+            // Calculate damage using Shoot vs ShootDefense
+            int damage = BattleDamageCalculator.Calculate(attackerStats.Shoot, targetStats.ShootDefense);
+
+            onShotStarted?.Invoke();
+            StartCoroutine(ExecuteShootRoutine(attacker, target, damage, getMetadata, getStats, onAPConsumed, onUnitDied, onComplete));
         }
 
         private IEnumerator ExecuteAttackRoutine<T>(
@@ -306,6 +476,127 @@ namespace SevenBattles.Battle.Combat
             onAPConsumed?.Invoke();
 
             // Notify completion
+            onComplete?.Invoke();
+        }
+
+        private IEnumerator ExecuteShootRoutine<T>(
+            T attacker,
+            T target,
+            int damage,
+            Func<T, UnitBattleMetadata> getMetadata,
+            Func<T, UnitStats> getStats,
+            Action onAPConsumed,
+            Action onUnitDied,
+            Action onComplete) where T : struct
+        {
+            if (_board != null) _board.SetSecondaryHighlightVisible(false);
+
+            var attackerMeta = getMetadata(attacker);
+            var targetMeta = getMetadata(target);
+            var targetStats = getStats(target);
+
+            // Face both combatants towards each other before shooting.
+            if (attackerMeta != null && targetMeta != null)
+            {
+                var dir = ComputeDirection(attackerMeta.Tile, targetMeta.Tile);
+                if (dir != Vector2.zero)
+                {
+                    UnitVisualUtil.SetDirectionIfCharacter4D(attackerMeta.gameObject, dir);
+                }
+
+                var reverseDir = ComputeDirection(targetMeta.Tile, attackerMeta.Tile);
+                if (reverseDir != Vector2.zero)
+                {
+                    UnitVisualUtil.SetDirectionIfCharacter4D(targetMeta.gameObject, reverseDir);
+                }
+            }
+
+            // Play shot animation on attacker.
+            if (attackerMeta != null)
+            {
+                UnitVisualUtil.TryPlayAnimation(attackerMeta.gameObject, "ShotBow");
+            }
+
+            // Play hit animation on target immediately.
+            if (targetMeta != null)
+            {
+                UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Hit");
+            }
+
+            // Apply damage instantly after firing.
+            bool targetDied = false;
+            if (targetStats != null)
+            {
+                targetStats.TakeDamage(damage);
+                targetDied = targetStats.Life <= 0;
+            }
+
+            if (_visualFeedback != null && targetMeta != null)
+            {
+                Vector3 targetPosition = targetMeta.transform.position;
+                _visualFeedback.ShowDamageNumber(targetPosition, damage);
+            }
+
+            if (_shootHitClip != null)
+            {
+                AudioSource.PlayClipAtPoint(_shootHitClip, Vector3.zero, 1f);
+            }
+
+            string attackerName = attackerMeta != null ? (attackerMeta.Definition != null ? attackerMeta.Definition.Id : attackerMeta.gameObject.name) : "Unknown";
+            string targetName = targetMeta != null ? (targetMeta.Definition != null ? targetMeta.Definition.Id : targetMeta.gameObject.name) : "Unknown";
+            Debug.Log($"[Combat] {attackerName} shot {targetName} for {damage} damage.");
+
+            float recovery = Mathf.Max(0f, _shootRecoverySeconds);
+            if (recovery > 0f)
+            {
+                yield return new WaitForSeconds(recovery);
+            }
+
+            if (attackerMeta != null)
+            {
+                UnitVisualUtil.TryPlayAnimation(attackerMeta.gameObject, "Idle");
+            }
+
+            if (targetMeta != null)
+            {
+                if (targetDied)
+                {
+                    UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Death");
+
+                    if (_deathVfxPrefab != null)
+                    {
+                        var vfxInstance = Instantiate(_deathVfxPrefab, targetMeta.transform.position, Quaternion.identity);
+                        if (_deathVfxLifetimeSeconds > 0f)
+                        {
+                            Destroy(vfxInstance, _deathVfxLifetimeSeconds);
+                        }
+                    }
+
+                    var def = targetMeta.Definition;
+                    if (def != null && def.DeathSfx != null)
+                    {
+                        float volume = 1f;
+                        try
+                        {
+                            volume = Mathf.Clamp(def.DeathSfxVolume, 0f, 1.5f);
+                        }
+                        catch
+                        {
+                            volume = 1f;
+                        }
+
+                        AudioSource.PlayClipAtPoint(def.DeathSfx, targetMeta.transform.position, volume);
+                    }
+
+                    StartCoroutine(HandleUnitDeathCleanup(targetMeta, onUnitDied));
+                }
+                else
+                {
+                    UnitVisualUtil.TryPlayAnimation(targetMeta.gameObject, "Idle");
+                }
+            }
+
+            onAPConsumed?.Invoke();
             onComplete?.Invoke();
         }
 

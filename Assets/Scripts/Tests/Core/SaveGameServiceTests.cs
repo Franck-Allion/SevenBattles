@@ -70,6 +70,27 @@ namespace SevenBattles.Tests.Core
             }
         }
 
+        private sealed class ShootStatsGameStateProvider : IGameStateSaveProvider
+        {
+            public void PopulateGameState(SaveGameData data)
+            {
+                data.UnitPlacements = new[]
+                {
+                    new UnitPlacementSaveData
+                    {
+                        UnitId = "UnitA",
+                        Stats = new UnitStatsSaveData
+                        {
+                            Life = 5,
+                            MaxLife = 5,
+                            ShootRange = 4,
+                            ShootDefense = 2
+                        }
+                    }
+                };
+            }
+        }
+
         private static string CreateTestDirectory()
         {
             string root = Path.Combine(Path.GetTempPath(), "SevenBattlesTests", Guid.NewGuid().ToString("N"));
@@ -219,6 +240,27 @@ namespace SevenBattles.Tests.Core
             Assert.AreEqual(2, data.UnitPlacements[0].Stats.Level);
             Assert.IsNotNull(data.BattleSession);
             Assert.AreEqual(3, data.BattleSession.PlayerSquadUnits[0].Level);
+        }
+
+        [Test]
+        public async Task Save_IncludesShootRangeAndDefense_WhenProvided()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            var provider = new ShootStatsGameStateProvider();
+            var service = new SaveGameService(provider, dir);
+
+            await service.SaveSlotAsync(1);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            string json = File.ReadAllText(path);
+            var data = JsonUtility.FromJson<SaveGameData>(json);
+
+            Assert.IsNotNull(data.UnitPlacements);
+            Assert.AreEqual(4, data.UnitPlacements[0].Stats.ShootRange);
+            Assert.AreEqual(2, data.UnitPlacements[0].Stats.ShootDefense);
         }
 
         [Test]
