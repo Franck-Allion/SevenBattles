@@ -15,7 +15,7 @@ namespace SevenBattles.Battle.Turn
     // Basic initiative-based turn controller for wizards.
     // Discovers UnitBattleMetadata instances at battle start, sorts by UnitStats.Initiative,
     // and advances turns for player and AI units.
-    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController, ISpellSelectionController, IUnitInspectionController
+    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController, ISpellSelectionController, IUnitInspectionController, IEnchantmentInspectionController
     {
         [Header("Board Highlight (delegated)")]
         [SerializeField] private WorldPerspectiveBoard _board; // Kept for other initialization if needed, or remove if unused. Checking usage needed. 
@@ -137,6 +137,12 @@ namespace SevenBattles.Battle.Turn
         private TurnUnit _inspectedUnit;
         private bool _hasInspectedUnit;
         private UnitStats _inspectedStatsSubscription;
+        private SpellDefinition _inspectedEnchantmentSpell;
+        private string _inspectedEnchantmentCasterInstanceId;
+        private string _inspectedEnchantmentCasterUnitId;
+        private bool _inspectedEnchantmentIsPlayerControlledCaster;
+        private int _inspectedEnchantmentQuadIndex = -1;
+        private bool _hasInspectedEnchantment;
         private UnitStats _activeStatsSubscription;
         private int _activeIndex = -1;
         private bool _advancing;
@@ -247,6 +253,7 @@ namespace SevenBattles.Battle.Turn
             ClearHealingSubscriptions();
             ClearActiveStatsSubscription();
             ClearInspectedEnemyInternal(false);
+            ClearInspectedEnchantmentInternal(false);
             if (_battlefieldService != null)
             {
                 _battlefieldService.BattlefieldChanged -= HandleBattlefieldChanged;
@@ -309,6 +316,12 @@ namespace SevenBattles.Battle.Turn
 
         public bool HasInspectedEnemy => _hasInspectedUnit;
 
+        public bool HasInspectedEnchantment => _hasInspectedEnchantment;
+
+        public SpellDefinition InspectedEnchantmentSpell => _hasInspectedEnchantment ? _inspectedEnchantmentSpell : null;
+
+        public bool InspectedEnchantmentIsPlayerControlledCaster => _hasInspectedEnchantment && _inspectedEnchantmentIsPlayerControlledCaster;
+
         public Sprite InspectedEnemyPortrait
         {
             get
@@ -337,6 +350,28 @@ namespace SevenBattles.Battle.Turn
         public void ClearInspectedEnemy()
         {
             ClearInspectedEnemyInternal(true);
+        }
+
+        public bool TryGetInspectedEnchantmentSpellAmountPreview(out SpellAmountPreview preview)
+        {
+            preview = default;
+
+            if (!_hasInspectedEnchantment || _inspectedEnchantmentSpell == null || _spellController == null)
+            {
+                return false;
+            }
+
+            if (!TryGetInspectedEnchantmentCaster(out var meta, out var stats))
+            {
+                return false;
+            }
+
+            return _spellController.TryGetSpellAmountPreview(_inspectedEnchantmentSpell, meta, stats, out preview);
+        }
+
+        public void ClearInspectedEnchantment()
+        {
+            ClearInspectedEnchantmentInternal(true);
         }
 
         private UnitStatsViewData BuildStatsViewData(UnitStats stats, TileStatBonus bonus)
@@ -403,6 +438,7 @@ namespace SevenBattles.Battle.Turn
         public event Action SelectedSpellChanged;
         public event Action InspectedUnitChanged;
         public event Action InspectedUnitStatsChanged;
+        public event Action InspectedEnchantmentChanged;
 
         public int ActiveUnitCurrentActionPoints => _hasActiveUnit ? _activeUnitCurrentActionPoints : 0;
         public int ActiveUnitMaxActionPoints => _hasActiveUnit ? _activeUnitMaxActionPoints : 0;
@@ -531,6 +567,8 @@ namespace SevenBattles.Battle.Turn
             {
                 return;
             }
+
+            ClearInspectedEnchantmentInternal(true);
 
             var previousHandler = _selectedSpell != null && _spellController != null
                 ? _spellController.GetEffectHandler(_selectedSpell)
@@ -872,6 +910,23 @@ namespace SevenBattles.Battle.Turn
             InspectedUnitChanged?.Invoke();
         }
 
+        private void SetInspectedEnchantment(BattleEnchantmentController.EnchantmentSnapshot snapshot)
+        {
+            if (snapshot.Spell == null)
+            {
+                return;
+            }
+
+            ClearInspectedEnchantmentInternal(false);
+            _hasInspectedEnchantment = true;
+            _inspectedEnchantmentSpell = snapshot.Spell;
+            _inspectedEnchantmentCasterInstanceId = snapshot.CasterInstanceId;
+            _inspectedEnchantmentCasterUnitId = snapshot.CasterUnitId;
+            _inspectedEnchantmentIsPlayerControlledCaster = snapshot.IsPlayerControlledCaster;
+            _inspectedEnchantmentQuadIndex = snapshot.QuadIndex;
+            InspectedEnchantmentChanged?.Invoke();
+        }
+
         private void SubscribeToInspectedStats(UnitStats stats)
         {
             if (stats == null)
@@ -899,6 +954,78 @@ namespace SevenBattles.Battle.Turn
             {
                 InspectedUnitChanged?.Invoke();
             }
+        }
+
+        private void ClearInspectedEnchantmentInternal(bool notify)
+        {
+            bool wasInspecting = _hasInspectedEnchantment;
+            _hasInspectedEnchantment = false;
+            _inspectedEnchantmentSpell = null;
+            _inspectedEnchantmentCasterInstanceId = null;
+            _inspectedEnchantmentCasterUnitId = null;
+            _inspectedEnchantmentIsPlayerControlledCaster = false;
+            _inspectedEnchantmentQuadIndex = -1;
+
+            if (notify && wasInspecting)
+            {
+                InspectedEnchantmentChanged?.Invoke();
+            }
+        }
+
+        private bool TryGetInspectedEnchantmentCaster(out UnitBattleMetadata meta, out UnitStats stats)
+        {
+            meta = null;
+            stats = null;
+
+            if (!_hasInspectedEnchantment || _units == null || _units.Count == 0)
+            {
+                return false;
+            }
+
+            if (!string.IsNullOrEmpty(_inspectedEnchantmentCasterInstanceId))
+            {
+                for (int i = 0; i < _units.Count; i++)
+                {
+                    var unit = _units[i];
+                    if (!IsUnitValid(unit)) continue;
+                    var candidateMeta = unit.Metadata;
+                    if (candidateMeta == null) continue;
+                    if (string.Equals(candidateMeta.SaveInstanceId, _inspectedEnchantmentCasterInstanceId, StringComparison.Ordinal))
+                    {
+                        meta = candidateMeta;
+                        stats = unit.Stats;
+                        return true;
+                    }
+                }
+            }
+
+            if (!string.IsNullOrEmpty(_inspectedEnchantmentCasterUnitId))
+            {
+                for (int i = 0; i < _units.Count; i++)
+                {
+                    var unit = _units[i];
+                    if (!IsUnitValid(unit)) continue;
+                    var candidateMeta = unit.Metadata;
+                    if (candidateMeta == null) continue;
+                    var def = candidateMeta.Definition;
+                    if (def == null) continue;
+                    if (!string.Equals(def.Id, _inspectedEnchantmentCasterUnitId, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    if (candidateMeta.IsPlayerControlled != _inspectedEnchantmentIsPlayerControlledCaster)
+                    {
+                        continue;
+                    }
+
+                    meta = candidateMeta;
+                    stats = unit.Stats;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void SubscribeToActiveStats(UnitStats stats)
@@ -1422,11 +1549,27 @@ namespace SevenBattles.Battle.Turn
 
             if (_board == null) return;
 
+            if (Input.GetMouseButtonDown(0) && _hasInspectedEnchantment)
+            {
+                ClearInspectedEnchantmentInternal(true);
+            }
+
             if (Input.GetMouseButtonDown(1))
             {
-                if (TryInspectUnitAtScreenPosition(Input.mousePosition, allowPlayerUnits: true))
+                if (TryInspectEnchantmentAtScreenPosition(Input.mousePosition))
                 {
                     return;
+                }
+
+                if (TryInspectUnitAtScreenPosition(Input.mousePosition, allowPlayerUnits: true))
+                {
+                    ClearInspectedEnchantmentInternal(true);
+                    return;
+                }
+
+                if (_hasInspectedEnchantment)
+                {
+                    ClearInspectedEnchantmentInternal(true);
                 }
             }
 
@@ -1583,6 +1726,28 @@ namespace SevenBattles.Battle.Turn
                 _hasSelectedMoveTile = true;
                 _selectedMoveTile = hoveredTile;
             }
+        }
+
+        private bool TryInspectEnchantmentAtScreenPosition(Vector2 screenPosition)
+        {
+            if (_enchantmentController == null)
+            {
+                return false;
+            }
+
+            if (!_enchantmentController.TryGetActiveEnchantmentAtScreenPosition(screenPosition, out var snapshot, out var quadIndex))
+            {
+                return false;
+            }
+
+            if (_hasInspectedEnchantment && _inspectedEnchantmentQuadIndex == quadIndex)
+            {
+                ClearInspectedEnchantmentInternal(true);
+                return true;
+            }
+
+            SetInspectedEnchantment(snapshot);
+            return true;
         }
 
         private bool TryInspectEnemyAtScreenPosition(Vector2 screenPosition)

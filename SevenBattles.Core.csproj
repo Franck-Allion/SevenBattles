@@ -74,6 +74,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattleSessionConfig.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IHealthBarView.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\IEnchantmentInspectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleSessionService.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IUnitInspectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Players\PlayerContext.cs" />

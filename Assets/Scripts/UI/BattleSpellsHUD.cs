@@ -20,6 +20,7 @@ namespace SevenBattles.UI
         private MonoBehaviour _controllerBehaviour;
         private ITurnOrderController _controller;
         private ISpellSelectionController _spellSelectionController;
+        private IEnchantmentInspectionController _enchantmentInspectionController;
 
         [Header("Audio (optional)")]
         [SerializeField, Tooltip("AudioSource used to play spell click SFX (optional). If not set, PlayClipAtPoint will be used unless a custom player is assigned.")]
@@ -62,6 +63,13 @@ namespace SevenBattles.UI
         private TMP_Text _selectedSpellDescriptionText;
         [SerializeField, Tooltip("Localization table used for spell descriptions (default: UI.Common).")]
         private string _spellDescriptionTable = "UI.Common";
+        [Header("Enchantment Inspection")]
+        [SerializeField, Tooltip("Localization key for the enchantment owner line (Smart String) in the spell description table.")]
+        private string _enchantmentOwnerLineKey = "Battle.Enchantment.OwnerLine";
+        [SerializeField, Tooltip("Localization key for the player owner value in the spell description table.")]
+        private string _enchantmentOwnerPlayerKey = "Battle.Enchantment.Owner.Player";
+        [SerializeField, Tooltip("Localization key for the enemy owner value in the spell description table.")]
+        private string _enchantmentOwnerEnemyKey = "Battle.Enchantment.Owner.Enemy";
         [Header("Selected Spell Description Icons")]
         [SerializeField, Tooltip("Sprite index for the nature element icon in the ElementsIcon TMP sprite asset.")]
         private int _natureElementSpriteIndex = 0;
@@ -105,12 +113,39 @@ namespace SevenBattles.UI
             }
         }
 
+        private sealed class OwnerLineArgs
+        {
+            public string Owner { get; }
+
+            public OwnerLineArgs(string owner)
+            {
+                Owner = owner ?? string.Empty;
+            }
+        }
+
         private readonly List<SlotView> _slots = new List<SlotView>(8);
         private int _selectedIndex = -1;
         private bool _boundFixedSlots;
         private SpellDefinition[] _currentSpells = Array.Empty<SpellDefinition>();
         private SpellDefinition _selectedSpell;
         private LocalizedString _selectedSpellDescriptionString;
+        private SpellDefinition _inspectedEnchantmentSpell;
+        private bool _inspectedEnchantmentIsPlayerControlledCaster;
+        private LocalizedString _inspectedEnchantmentDescriptionString;
+        private LocalizedString _inspectedEnchantmentOwnerLineString;
+        private LocalizedString _inspectedEnchantmentOwnerValueString;
+        private string _cachedEnchantmentDescription;
+        private string _cachedEnchantmentOwnerLine;
+        private string _cachedEnchantmentOwnerValue;
+
+        private enum DescriptionMode
+        {
+            None = 0,
+            Spell = 1,
+            Enchantment = 2
+        }
+
+        private DescriptionMode _descriptionMode = DescriptionMode.None;
 
         private void Awake()
         {
@@ -118,6 +153,7 @@ namespace SevenBattles.UI
                 Debug.LogWarning("BattleSpellsHUD: Please assign a controller (MonoBehaviour implementing ITurnOrderController).", this);
             _controller = _controllerBehaviour as ITurnOrderController;
             _spellSelectionController = _controllerBehaviour as ISpellSelectionController;
+            _enchantmentInspectionController = _controllerBehaviour as IEnchantmentInspectionController;
 
             _sfxPlayer = _sfxPlayerBehaviour as IUiSfxPlayer;
 
@@ -156,6 +192,11 @@ namespace SevenBattles.UI
                 _spellSelectionController = _controllerBehaviour as ISpellSelectionController;
             }
 
+            if (_enchantmentInspectionController == null && _controllerBehaviour != null)
+            {
+                _enchantmentInspectionController = _controllerBehaviour as IEnchantmentInspectionController;
+            }
+
             if (_sfxPlayer == null && _sfxPlayerBehaviour != null)
             {
                 _sfxPlayer = _sfxPlayerBehaviour as IUiSfxPlayer;
@@ -171,6 +212,11 @@ namespace SevenBattles.UI
             if (_spellSelectionController != null)
             {
                 _spellSelectionController.SelectedSpellChanged += HandleSelectedSpellChanged;
+            }
+
+            if (_enchantmentInspectionController != null)
+            {
+                _enchantmentInspectionController.InspectedEnchantmentChanged += HandleInspectedEnchantmentChanged;
             }
 
             if (_useFixedSlots)
@@ -195,9 +241,17 @@ namespace SevenBattles.UI
                 _spellSelectionController.SelectedSpellChanged -= HandleSelectedSpellChanged;
             }
 
+            if (_enchantmentInspectionController != null)
+            {
+                _enchantmentInspectionController.InspectedEnchantmentChanged -= HandleInspectedEnchantmentChanged;
+            }
+
             UnwireSlotClicks();
             UnbindSelectedSpellDescription();
+            UnbindEnchantmentInspectionDescription();
             _selectedSpell = null;
+            _inspectedEnchantmentSpell = null;
+            _descriptionMode = DescriptionMode.None;
             if (_selectedSpellDescriptionText != null)
             {
                 _selectedSpellDescriptionText.text = string.Empty;
@@ -218,7 +272,7 @@ namespace SevenBattles.UI
 
         private void HandleActiveUnitStatsChanged()
         {
-            RefreshSelectedSpellDescriptionValue();
+            RefreshDescriptionPanelValue();
         }
 
         private void HandleActiveUnitActionPointsChanged()
@@ -324,7 +378,7 @@ namespace SevenBattles.UI
                 }
             }
 
-            RefreshSelectedSpellDescription(shouldShow);
+            RefreshDescriptionPanel(shouldShow);
         }
 
         private void EnsureSlotCount(int required)
@@ -492,6 +546,11 @@ namespace SevenBattles.UI
                 return;
             }
 
+            if (_enchantmentInspectionController != null && _enchantmentInspectionController.HasInspectedEnchantment)
+            {
+                _enchantmentInspectionController.ClearInspectedEnchantment();
+            }
+
             if (index == _selectedIndex)
             {
                 SetSelectedIndex(-1);
@@ -510,6 +569,11 @@ namespace SevenBattles.UI
         private void HandleSelectedSpellChanged()
         {
             SyncSelectedIndexFromController();
+            Refresh();
+        }
+
+        private void HandleInspectedEnchantmentChanged()
+        {
             Refresh();
         }
 
@@ -541,34 +605,82 @@ namespace SevenBattles.UI
             return -1;
         }
 
-        private void RefreshSelectedSpellDescription(bool shouldShow)
+        private void RefreshDescriptionPanel(bool shouldShowSpells)
         {
             if (_selectedSpellDescriptionText == null)
             {
                 return;
             }
 
-            var spell = shouldShow && _selectedIndex >= 0 && _selectedIndex < _currentSpells.Length
+            var spell = shouldShowSpells && _selectedIndex >= 0 && _selectedIndex < _currentSpells.Length
                 ? _currentSpells[_selectedIndex]
                 : null;
 
-            if (ReferenceEquals(_selectedSpell, spell))
+            var enchantmentSpell = _enchantmentInspectionController != null && _enchantmentInspectionController.HasInspectedEnchantment
+                ? _enchantmentInspectionController.InspectedEnchantmentSpell
+                : null;
+            bool enchantmentOwnerIsPlayer = _enchantmentInspectionController != null && _enchantmentInspectionController.HasInspectedEnchantment
+                && _enchantmentInspectionController.InspectedEnchantmentIsPlayerControlledCaster;
+
+            if (spell != null)
+            {
+                if (ReferenceEquals(_selectedSpell, spell) && _descriptionMode == DescriptionMode.Spell)
+                {
+                    return;
+                }
+
+                _descriptionMode = DescriptionMode.Spell;
+                _selectedSpell = spell;
+                UnbindEnchantmentInspectionDescription();
+                BindSelectedSpellDescription(spell);
+                return;
+            }
+
+            if (enchantmentSpell != null)
+            {
+                bool isSameEnchantment = ReferenceEquals(_inspectedEnchantmentSpell, enchantmentSpell) &&
+                                         _inspectedEnchantmentIsPlayerControlledCaster == enchantmentOwnerIsPlayer;
+                if (_descriptionMode == DescriptionMode.Enchantment && isSameEnchantment)
+                {
+                    return;
+                }
+
+                _descriptionMode = DescriptionMode.Enchantment;
+                UnbindSelectedSpellDescription();
+                BindInspectedEnchantmentDescription(enchantmentSpell, enchantmentOwnerIsPlayer);
+                return;
+            }
+
+            if (_descriptionMode != DescriptionMode.None)
+            {
+                _descriptionMode = DescriptionMode.None;
+                UnbindSelectedSpellDescription();
+                UnbindEnchantmentInspectionDescription();
+                _selectedSpellDescriptionText.text = string.Empty;
+            }
+        }
+
+        private void RefreshDescriptionPanelValue()
+        {
+            if (_selectedSpellDescriptionText == null)
             {
                 return;
             }
 
-            _selectedSpell = spell;
-            BindSelectedSpellDescription(spell);
+            switch (_descriptionMode)
+            {
+                case DescriptionMode.Spell:
+                    RefreshSelectedSpellDescriptionValue();
+                    break;
+                case DescriptionMode.Enchantment:
+                    RefreshInspectedEnchantmentDescriptionValue();
+                    break;
+            }
         }
 
         private void RefreshSelectedSpellDescriptionValue()
         {
-            if (_selectedSpellDescriptionText == null)
-            {
-                return;
-            }
-
-            if (_selectedSpell == null)
+            if (_selectedSpellDescriptionText == null || _selectedSpell == null)
             {
                 return;
             }
@@ -581,6 +693,24 @@ namespace SevenBattles.UI
             }
 
             _selectedSpellDescriptionText.text = BuildFallbackSpellDescription(_selectedSpell);
+        }
+
+        private void RefreshInspectedEnchantmentDescriptionValue()
+        {
+            if (_selectedSpellDescriptionText == null || _inspectedEnchantmentSpell == null)
+            {
+                return;
+            }
+
+            if (_inspectedEnchantmentDescriptionString != null)
+            {
+                UpdateInspectedEnchantmentDescriptionArgs(_inspectedEnchantmentSpell);
+                _inspectedEnchantmentDescriptionString.RefreshString();
+                return;
+            }
+
+            _cachedEnchantmentDescription = BuildFallbackEnchantmentDescription(_inspectedEnchantmentSpell);
+            UpdateEnchantmentInfoText();
         }
 
         private void BindSelectedSpellDescription(SpellDefinition spell)
@@ -611,6 +741,80 @@ namespace SevenBattles.UI
 
             // Fallback for dev/debug when a spell asset is missing a localization key.
             _selectedSpellDescriptionText.text = BuildFallbackSpellDescription(spell);
+        }
+
+        private void BindInspectedEnchantmentDescription(SpellDefinition spell, bool isPlayerControlledCaster)
+        {
+            UnbindEnchantmentInspectionDescription();
+
+            if (_selectedSpellDescriptionText == null)
+            {
+                return;
+            }
+
+            _inspectedEnchantmentSpell = spell;
+            _inspectedEnchantmentIsPlayerControlledCaster = isPlayerControlledCaster;
+            _cachedEnchantmentDescription = string.Empty;
+            _cachedEnchantmentOwnerLine = string.Empty;
+            _cachedEnchantmentOwnerValue = string.Empty;
+
+            if (spell == null)
+            {
+                _selectedSpellDescriptionText.text = string.Empty;
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_spellDescriptionTable) && !string.IsNullOrWhiteSpace(_enchantmentOwnerLineKey))
+            {
+                EnsureSpellDescriptionEntryIsSmart(_enchantmentOwnerLineKey);
+                _inspectedEnchantmentOwnerLineString = new LocalizedString(_spellDescriptionTable, _enchantmentOwnerLineKey);
+                _inspectedEnchantmentOwnerLineString.Arguments = new object[]
+                {
+                    new OwnerLineArgs(string.Empty)
+                };
+                _inspectedEnchantmentOwnerLineString.StringChanged += HandleEnchantmentOwnerLineChanged;
+            }
+
+            var ownerKey = isPlayerControlledCaster ? _enchantmentOwnerPlayerKey : _enchantmentOwnerEnemyKey;
+            if (!string.IsNullOrWhiteSpace(_spellDescriptionTable) && !string.IsNullOrWhiteSpace(ownerKey))
+            {
+                _inspectedEnchantmentOwnerValueString = new LocalizedString(_spellDescriptionTable, ownerKey);
+                _inspectedEnchantmentOwnerValueString.StringChanged += HandleEnchantmentOwnerValueChanged;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_spellDescriptionTable) && !string.IsNullOrWhiteSpace(spell.DescriptionLocalizationKey))
+            {
+                EnsureSpellDescriptionEntryIsSmart(spell.DescriptionLocalizationKey);
+                _inspectedEnchantmentDescriptionString = new LocalizedString(_spellDescriptionTable, spell.DescriptionLocalizationKey);
+                UpdateInspectedEnchantmentDescriptionArgs(spell);
+                _inspectedEnchantmentDescriptionString.StringChanged += HandleInspectedEnchantmentDescriptionChanged;
+            }
+            else
+            {
+                _cachedEnchantmentDescription = BuildFallbackEnchantmentDescription(spell);
+            }
+
+            RefreshInspectedEnchantmentStrings();
+            UpdateEnchantmentInfoText();
+        }
+
+        private void RefreshInspectedEnchantmentStrings()
+        {
+            if (_inspectedEnchantmentOwnerValueString != null)
+            {
+                _inspectedEnchantmentOwnerValueString.RefreshString();
+            }
+
+            UpdateEnchantmentOwnerLineArguments();
+            if (_inspectedEnchantmentOwnerLineString != null)
+            {
+                _inspectedEnchantmentOwnerLineString.RefreshString();
+            }
+
+            if (_inspectedEnchantmentDescriptionString != null)
+            {
+                _inspectedEnchantmentDescriptionString.RefreshString();
+            }
         }
 
         private void EnsureSpellDescriptionEntryIsSmart(string key)
@@ -645,6 +849,22 @@ namespace SevenBattles.UI
             var elementIcon = BuildPrimaryElementIconTag(spell);
             BuildSpellRangeStrings(spell, out var rangeMin, out var rangeMax, out var rangeTiles);
             _selectedSpellDescriptionString.Arguments = new object[]
+            {
+                new SpellDescriptionArgs(amount, elementIcon, rangeMin, rangeMax, rangeTiles)
+            };
+        }
+
+        private void UpdateInspectedEnchantmentDescriptionArgs(SpellDefinition spell)
+        {
+            if (_inspectedEnchantmentDescriptionString == null)
+            {
+                return;
+            }
+
+            var amount = BuildFormattedPrimaryAmountForEnchantment(spell);
+            var elementIcon = BuildPrimaryElementIconTag(spell);
+            BuildSpellRangeStrings(spell, out var rangeMin, out var rangeMax, out var rangeTiles);
+            _inspectedEnchantmentDescriptionString.Arguments = new object[]
             {
                 new SpellDescriptionArgs(amount, elementIcon, rangeMin, rangeMax, rangeTiles)
             };
@@ -701,9 +921,85 @@ namespace SevenBattles.UI
             return text;
         }
 
+        private string BuildFallbackEnchantmentDescription(SpellDefinition spell)
+        {
+            var template = spell != null ? (spell.Description ?? string.Empty) : string.Empty;
+            if (string.IsNullOrWhiteSpace(template))
+            {
+                return string.Empty;
+            }
+
+            var amount = BuildFormattedPrimaryAmountForEnchantment(spell);
+            var elementIcon = BuildPrimaryElementIconTag(spell);
+            BuildSpellRangeStrings(spell, out var rangeMin, out var rangeMax, out var rangeTiles);
+            var text = template;
+
+            if (text.Contains("{DamageNumber}", StringComparison.Ordinal))
+            {
+                text = text.Replace("{DamageNumber}", amount);
+            }
+
+            if (text.Contains("{PrimaryElementIcon}", StringComparison.Ordinal))
+            {
+                text = text.Replace("{PrimaryElementIcon}", elementIcon);
+            }
+
+            if (text.Contains("{RangeMin}", StringComparison.Ordinal))
+            {
+                text = text.Replace("{RangeMin}", rangeMin);
+            }
+
+            if (text.Contains("{RangeMax}", StringComparison.Ordinal))
+            {
+                text = text.Replace("{RangeMax}", rangeMax);
+            }
+
+            if (text.Contains("{RangeTiles}", StringComparison.Ordinal))
+            {
+                text = text.Replace("{RangeTiles}", rangeTiles);
+            }
+
+            if (text.Contains("{0}", StringComparison.Ordinal))
+            {
+                return string.Format(CultureInfo.InvariantCulture, text, amount);
+            }
+
+            if (text.Contains("X", StringComparison.Ordinal))
+            {
+                return text.Replace("X", amount);
+            }
+
+            return text;
+        }
+
         private string BuildFormattedPrimaryAmount(SpellDefinition spell)
         {
             if (_controller != null && spell != null && _controller.TryGetActiveUnitSpellAmountPreview(spell, out var preview))
+            {
+                int baseAmount = preview.BaseAmount;
+                int modifiedAmount = preview.ModifiedAmount;
+                string number = modifiedAmount.ToString(CultureInfo.InvariantCulture);
+
+                if (modifiedAmount > baseAmount)
+                {
+                    return $"<color=#00C853><b>{number}</b></color>";
+                }
+
+                if (modifiedAmount < baseAmount)
+                {
+                    return $"<color=#D50000><b>{number}</b></color>";
+                }
+
+                return number;
+            }
+
+            return "X";
+        }
+
+        private string BuildFormattedPrimaryAmountForEnchantment(SpellDefinition spell)
+        {
+            if (_enchantmentInspectionController != null && spell != null &&
+                _enchantmentInspectionController.TryGetInspectedEnchantmentSpellAmountPreview(out var preview))
             {
                 int baseAmount = preview.BaseAmount;
                 int modifiedAmount = preview.ModifiedAmount;
@@ -788,6 +1084,67 @@ namespace SevenBattles.UI
             _selectedSpellDescriptionText.text = value ?? string.Empty;
         }
 
+        private void HandleInspectedEnchantmentDescriptionChanged(string value)
+        {
+            _cachedEnchantmentDescription = value ?? string.Empty;
+            UpdateEnchantmentInfoText();
+        }
+
+        private void HandleEnchantmentOwnerLineChanged(string value)
+        {
+            _cachedEnchantmentOwnerLine = value ?? string.Empty;
+            UpdateEnchantmentInfoText();
+        }
+
+        private void HandleEnchantmentOwnerValueChanged(string value)
+        {
+            _cachedEnchantmentOwnerValue = value ?? string.Empty;
+            UpdateEnchantmentOwnerLineArguments();
+            if (_inspectedEnchantmentOwnerLineString != null)
+            {
+                _inspectedEnchantmentOwnerLineString.RefreshString();
+            }
+            UpdateEnchantmentInfoText();
+        }
+
+        private void UpdateEnchantmentOwnerLineArguments()
+        {
+            if (_inspectedEnchantmentOwnerLineString == null)
+            {
+                return;
+            }
+
+            _inspectedEnchantmentOwnerLineString.Arguments = new object[]
+            {
+                new OwnerLineArgs(_cachedEnchantmentOwnerValue)
+            };
+        }
+
+        private void UpdateEnchantmentInfoText()
+        {
+            if (_selectedSpellDescriptionText == null || _descriptionMode != DescriptionMode.Enchantment)
+            {
+                return;
+            }
+
+            var ownerLine = _cachedEnchantmentOwnerLine ?? string.Empty;
+            var description = _cachedEnchantmentDescription ?? string.Empty;
+
+            if (!string.IsNullOrWhiteSpace(ownerLine) && !string.IsNullOrWhiteSpace(description))
+            {
+                _selectedSpellDescriptionText.text = $"{ownerLine}\n{description}";
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(ownerLine))
+            {
+                _selectedSpellDescriptionText.text = ownerLine;
+                return;
+            }
+
+            _selectedSpellDescriptionText.text = description;
+        }
+
         private void UnbindSelectedSpellDescription()
         {
             if (_selectedSpellDescriptionString != null)
@@ -795,6 +1152,33 @@ namespace SevenBattles.UI
                 _selectedSpellDescriptionString.StringChanged -= HandleSelectedSpellDescriptionChanged;
                 _selectedSpellDescriptionString = null;
             }
+        }
+
+        private void UnbindEnchantmentInspectionDescription()
+        {
+            if (_inspectedEnchantmentDescriptionString != null)
+            {
+                _inspectedEnchantmentDescriptionString.StringChanged -= HandleInspectedEnchantmentDescriptionChanged;
+                _inspectedEnchantmentDescriptionString = null;
+            }
+
+            if (_inspectedEnchantmentOwnerLineString != null)
+            {
+                _inspectedEnchantmentOwnerLineString.StringChanged -= HandleEnchantmentOwnerLineChanged;
+                _inspectedEnchantmentOwnerLineString = null;
+            }
+
+            if (_inspectedEnchantmentOwnerValueString != null)
+            {
+                _inspectedEnchantmentOwnerValueString.StringChanged -= HandleEnchantmentOwnerValueChanged;
+                _inspectedEnchantmentOwnerValueString = null;
+            }
+
+            _cachedEnchantmentDescription = string.Empty;
+            _cachedEnchantmentOwnerLine = string.Empty;
+            _cachedEnchantmentOwnerValue = string.Empty;
+            _inspectedEnchantmentSpell = null;
+            _inspectedEnchantmentIsPlayerControlledCaster = false;
         }
 
         private SlotView CreateSlot(int index)

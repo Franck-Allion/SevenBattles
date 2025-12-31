@@ -155,6 +155,44 @@ namespace SevenBattles.Battle.Spells
             return false;
         }
 
+        public bool TryGetActiveEnchantmentSnapshot(int quadIndex, out EnchantmentSnapshot snapshot)
+        {
+            snapshot = default;
+            if (!_activeEnchantments.TryGetValue(quadIndex, out var active) || active == null || active.Spell == null)
+            {
+                return false;
+            }
+
+            snapshot = new EnchantmentSnapshot
+            {
+                Spell = active.Spell,
+                QuadIndex = active.QuadIndex,
+                CasterInstanceId = active.CasterInstanceId,
+                CasterUnitId = active.CasterUnitId,
+                IsPlayerControlledCaster = active.IsPlayerControlledCaster
+            };
+            return true;
+        }
+
+        public bool TryGetActiveEnchantmentAtScreenPosition(Vector2 screenPosition, out EnchantmentSnapshot snapshot, out int quadIndex)
+        {
+            snapshot = default;
+            quadIndex = -1;
+
+            if (!TryGetHoveredQuadIndex(screenPosition, out var hoveredIndex))
+            {
+                return false;
+            }
+
+            if (!TryGetActiveEnchantmentSnapshot(hoveredIndex, out snapshot))
+            {
+                return false;
+            }
+
+            quadIndex = hoveredIndex;
+            return true;
+        }
+
         public void ClearHoverHighlight()
         {
             if (_highlightRenderer != null && _highlightRenderer.gameObject.activeSelf)
