@@ -176,13 +176,15 @@ namespace SevenBattles.Battle.Turn
         
         [SerializeField, Tooltip("Service managing unit lifecycle (discovery, sorting, compaction, healing subscriptions).")]
         private BattleUnitLifecycleService _lifecycleService;
+        
+        [SerializeField, Tooltip("Service managing turn progression (turn advancement, round tracking, battle outcome evaluation).")]
+        private BattleTurnProgressionService _turnProgressionService;
 
         // Cursor state is now managed by BattleCursorController
         private SpellDefinition _selectedSpell;
         private SpellDefinition[] _activeUnitDrawnSpells = Array.Empty<SpellDefinition>();
         private readonly HashSet<SpellDefinition> _spentActiveUnitSpells = new HashSet<SpellDefinition>();
-        private bool _battleEnded;
-        private BattleOutcome _battleOutcome = BattleOutcome.None;
+        // Battle state is now managed by BattleTurnProgressionService
 
         private void Awake()
         {
@@ -257,6 +259,15 @@ namespace SevenBattles.Battle.Turn
                 }
             }
 
+            if (_turnProgressionService == null)
+            {
+                _turnProgressionService = GetComponent<BattleTurnProgressionService>();
+                if (_turnProgressionService == null)
+                {
+                    _turnProgressionService = gameObject.AddComponent<BattleTurnProgressionService>();
+                }
+            }
+
             ResolveBattlefieldService();
         }
 
@@ -266,6 +277,10 @@ namespace SevenBattles.Battle.Turn
             if (_battlefieldService != null)
             {
                 _battlefieldService.BattlefieldChanged += HandleBattlefieldChanged;
+            }
+            if (_turnProgressionService != null)
+            {
+                _turnProgressionService.BattleEnded += HandleBattleEnded;
             }
         }
 
@@ -279,6 +294,10 @@ namespace SevenBattles.Battle.Turn
             {
                 _battlefieldService.BattlefieldChanged -= HandleBattlefieldChanged;
             }
+            if (_turnProgressionService != null)
+            {
+                _turnProgressionService.BattleEnded -= HandleBattleEnded;
+            }
         }
 
         public bool HasActiveUnit => _hasActiveUnit;
@@ -287,11 +306,11 @@ namespace SevenBattles.Battle.Turn
 
         public bool IsInteractionLocked => _interactionLocked;
 
-        public int TurnIndex => _turnIndex;
+        public int TurnIndex => _turnProgressionService != null ? _turnProgressionService.TurnIndex : 0;
 
-        public bool HasBattleEnded => _battleEnded;
+        public bool HasBattleEnded => _turnProgressionService != null && _turnProgressionService.HasBattleEnded;
 
-        public BattleOutcome Outcome => _battleOutcome;
+        public BattleOutcome Outcome => _turnProgressionService != null ? _turnProgressionService.Outcome : BattleOutcome.None;
 
         public SpellDefinition[] ActiveUnitSpells
         {
@@ -490,7 +509,7 @@ namespace SevenBattles.Battle.Turn
 
         private void LateUpdate()
         {
-            if (_battleEnded) return;
+            if (HasBattleEnded) return;
             if (_interactionLocked) return;
             if (!HasActiveUnit) return;
             if (_movementAnimating) return;
@@ -530,8 +549,13 @@ namespace SevenBattles.Battle.Turn
         // Internal rebuild used by StartBattle and tests.
         private void BeginBattle()
         {
-            _battleEnded = false;
-            _battleOutcome = BattleOutcome.None;
+            if (_turnProgressionService == null)
+            {
+                Debug.LogError("[SimpleTurnOrderController] Turn progression service not initialized!");
+                return;
+            }
+
+            _turnProgressionService.InitializeForBattle();
             RebuildUnits();
             ApplyTileStatBonusesForAllUnits();
             ResetSpellDecksForBattle();
@@ -539,7 +563,6 @@ namespace SevenBattles.Battle.Turn
             {
                 _enchantmentController.ResetForBattle();
             }
-            _turnIndex = 0;
             ConfigureBoardForBattle();
             if (_cursorController != null)
             {
@@ -550,7 +573,7 @@ namespace SevenBattles.Battle.Turn
 
         public void RequestEndTurn()
         {
-            if (_battleEnded) return;
+            if (HasBattleEnded) return;
             // Treat any positive lock count as authoritative for blocking interaction,
             // even if the cached bool is temporarily out of sync.
             if (_interactionLockCount > 0 || _interactionLocked) return;
@@ -669,6 +692,16 @@ namespace SevenBattles.Battle.Turn
             ApplyTileStatBonusesForAllUnits();
         }
 
+        private void HandleBattleEnded(BattleOutcome outcome)
+        {
+            // Forward the event to public BattleEnded event
+            var handler = BattleEnded;
+            if (handler != null)
+            {
+                handler(outcome);
+            }
+        }
+
         private void RebuildUnits()
         {
             if (_lifecycleService == null)
@@ -781,7 +814,10 @@ namespace SevenBattles.Battle.Turn
         {
             if (_units.Count == 0)
             {
-                _turnIndex = 0;
+                if (_turnProgressionService != null)
+                {
+                    _turnProgressionService.SetTurnIndex(0);
+                }
                 SetActiveIndex(-1);
                 return;
             }
@@ -790,13 +826,19 @@ namespace SevenBattles.Battle.Turn
             {
                 if (IsUnitValid(_units[i]))
                 {
-                    _turnIndex = 1;
+                    if (_turnProgressionService != null)
+                    {
+                        _turnProgressionService.SetTurnIndex(1);
+                    }
                     SetActiveIndex(i);
                     return;
                 }
             }
 
-            _turnIndex = 0;
+            if (_turnProgressionService != null)
+            {
+                _turnProgressionService.SetTurnIndex(0);
+            }
             SetActiveIndex(-1);
         }
 
@@ -840,7 +882,7 @@ namespace SevenBattles.Battle.Turn
 
             // After compaction, always evaluate battle outcome
             EvaluateBattleOutcomeAndStop();
-            if (_battleEnded)
+            if (HasBattleEnded)
             {
                 return;
             }
@@ -1097,74 +1139,33 @@ namespace SevenBattles.Battle.Turn
 
         private void EvaluateBattleOutcomeAndStop()
         {
-            if (_battleEnded)
+            if (_turnProgressionService == null)
             {
+                Debug.LogError("[SimpleTurnOrderController] Turn progression service not initialized!");
                 return;
             }
 
-            int playerAlive = 0;
-            int enemyAlive = 0;
+            // Delegate outcome evaluation to turn progression service
+            bool ended = _turnProgressionService.EvaluateOutcome(
+                _units,
+                IsUnitValid,
+                unit => unit.Metadata != null && unit.Metadata.IsPlayerControlled
+            );
 
-            for (int i = 0; i < _units.Count; i++)
+            if (ended)
             {
-                var unit = _units[i];
-                if (!IsUnitValid(unit))
-                {
-                    continue;
-                }
-
-                if (unit.Metadata != null && unit.Metadata.IsPlayerControlled)
-                {
-                    playerAlive++;
-                }
-                else
-                {
-                    enemyAlive++;
-                }
-            }
-
-            // Determine outcome. If both sides reach zero simultaneously, treat as defeat.
-            BattleOutcome outcome;
-            if (playerAlive <= 0 && enemyAlive > 0)
-            {
-                outcome = BattleOutcome.PlayerDefeat;
-                Debug.Log("[Battle] Player defeated. All player units are dead.", this);
-            }
-            else if (enemyAlive <= 0 && playerAlive > 0)
-            {
-                outcome = BattleOutcome.PlayerVictory;
-                Debug.Log("[Battle] Player victory. All enemy units are dead.", this);
-            }
-            else
-            {
-                // Both zero or still mixed; for MVP treat simultaneous zero as defeat for consistency.
-                if (playerAlive <= 0 && enemyAlive <= 0)
-                {
-                    outcome = BattleOutcome.PlayerDefeat;
-                    Debug.Log("[Battle] Player defeated (simultaneous wipe). Both squads have no units remaining.", this);
-                }
-                else
-                {
-                    // No terminal condition reached; keep battle running.
-                    return;
-                }
-            }
-
-            _battleEnded = true;
-            _battleOutcome = outcome;
-
-            _turnIndex = 0;
-            SetActiveIndex(-1);
-
-            var handler = BattleEnded;
-            if (handler != null)
-            {
-                handler(outcome);
+                SetActiveIndex(-1);
             }
         }
 
         private void AdvanceToNextUnit()
         {
+            if (_turnProgressionService == null)
+            {
+                Debug.LogError("[SimpleTurnOrderController] Turn progression service not initialized!");
+                return;
+            }
+
             CompactUnits();
 
             if (_units.Count == 0)
@@ -1176,33 +1177,15 @@ namespace SevenBattles.Battle.Turn
             _advancing = true;
             try
             {
-                int startIndex = _activeIndex;
-                int count = _units.Count;
-                if (startIndex < 0 || startIndex >= count)
-                {
-                    startIndex = -1;
-                }
+                // Delegate turn advancement to turn progression service
+                int newIndex = _turnProgressionService.AdvanceToNext(
+                    _units,
+                    _activeIndex,
+                    _advancing,
+                    IsUnitValid
+                );
 
-                int attempts = 0;
-                int idx = startIndex;
-                while (attempts < count)
-                {
-                    idx = (idx + 1) % count;
-                    if (IsUnitValid(_units[idx]))
-                    {
-                        if (startIndex >= 0 && idx <= startIndex)
-                        {
-                            _turnIndex = Mathf.Max(1, _turnIndex + 1);
-                        }
-                        SetActiveIndex(idx);
-                        return;
-                    }
-                    attempts++;
-                }
-
-                // No valid units remain.
-                _turnIndex = 0;
-                SetActiveIndex(-1);
+                SetActiveIndex(newIndex);
             }
             finally
             {
@@ -1265,7 +1248,10 @@ namespace SevenBattles.Battle.Turn
 
             if (targetIndex < 0)
             {
-                _turnIndex = 0;
+                if (_turnProgressionService != null)
+                {
+                    _turnProgressionService.SetTurnIndex(0);
+                }
                 SetActiveIndex(-1);
                 return;
             }
@@ -1405,7 +1391,7 @@ namespace SevenBattles.Battle.Turn
 
         private void BeginAiTurnForActiveUnit()
         {
-            if (_battleEnded) return;
+            if (HasBattleEnded) return;
             if (_aiMovePendingCompletion || _aiDecisionInProgress) return;
             if (_advancing) return;
             if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return;
@@ -1474,7 +1460,7 @@ namespace SevenBattles.Battle.Turn
                 () =>
                 {
                     CompactUnits();
-                    if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                    if (!HasBattleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                     {
                         RebuildAttackableEnemyTiles();
                     }
@@ -1515,7 +1501,7 @@ namespace SevenBattles.Battle.Turn
                 () =>
                 {
                     CompactUnits();
-                    if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                    if (!HasBattleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                     {
                         RebuildAttackableEnemyTiles();
                     }
@@ -1628,7 +1614,7 @@ namespace SevenBattles.Battle.Turn
             _aiMovePendingCompletion = false;
             _aiDecisionInProgress = false;
 
-            if (_battleEnded) return;
+            if (HasBattleEnded) return;
             if (!_hasActiveUnit || IsActiveUnitPlayerControlledInternal()) return;
             if (_movementAnimating || _attackAnimating || _shootAnimating || _spellAnimating) return;
             if (_advancing) return;
@@ -1744,7 +1730,7 @@ namespace SevenBattles.Battle.Turn
                         () =>
                         {
                             CompactUnits();
-                            if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                            if (!HasBattleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                             {
                                 RebuildAttackableEnemyTiles();
                             }
@@ -1785,7 +1771,7 @@ namespace SevenBattles.Battle.Turn
                         () => { ConsumeActiveUnitActionPoint(); },
                         () => { 
                             CompactUnits(); 
-                            if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                            if (!HasBattleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                             {
                                 RebuildAttackableEnemyTiles();
                             }
@@ -2396,7 +2382,7 @@ namespace SevenBattles.Battle.Turn
                 () =>
                 {
                     CompactUnits();
-                    if (!_battleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                    if (!HasBattleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
                     {
                         RebuildAttackableEnemyTiles();
                     }
