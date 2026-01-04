@@ -136,7 +136,6 @@ namespace SevenBattles.Battle.Turn
         }
 
         private readonly List<TurnUnit> _units = new List<TurnUnit>();
-        private readonly HashSet<UnitStats> _healingSubscriptions = new HashSet<UnitStats>();
         private readonly Dictionary<UnitStats, TileStatBonus> _tileStatBonuses = new Dictionary<UnitStats, TileStatBonus>();
         private IBattlefieldService _battlefieldService;
         private TurnUnit _inspectedUnit;
@@ -174,6 +173,9 @@ namespace SevenBattles.Battle.Turn
         private BattleAiTurnService _aiTurnService;
         private readonly List<UnitBattleMetadata> _aiAllUnitsBuffer = new List<UnitBattleMetadata>();
         private readonly TurnUnitProvider _unitProvider = new TurnUnitProvider();
+        
+        [SerializeField, Tooltip("Service managing unit lifecycle (discovery, sorting, compaction, healing subscriptions).")]
+        private BattleUnitLifecycleService _lifecycleService;
 
         // Cursor state is now managed by BattleCursorController
         private SpellDefinition _selectedSpell;
@@ -244,6 +246,15 @@ namespace SevenBattles.Battle.Turn
             if (_aiTurnService != null && _movementController != null)
             {
                 _aiTurnService.SetMovementController(_movementController);
+            }
+
+            if (_lifecycleService == null)
+            {
+                _lifecycleService = GetComponent<BattleUnitLifecycleService>();
+                if (_lifecycleService == null)
+                {
+                    _lifecycleService = gameObject.AddComponent<BattleUnitLifecycleService>();
+                }
             }
 
             ResolveBattlefieldService();
@@ -660,38 +671,26 @@ namespace SevenBattles.Battle.Turn
 
         private void RebuildUnits()
         {
+            if (_lifecycleService == null)
+            {
+                Debug.LogError("[SimpleTurnOrderController] Lifecycle service not initialized!");
+                return;
+            }
+
             ClearHealingSubscriptions();
             _units.Clear();
             _activeIndex = -1;
             _tileStatBonuses.Clear();
 
-            var metas = UnityEngine.Object.FindObjectsByType<UnitBattleMetadata>(FindObjectsSortMode.None);
-            for (int i = 0; i < metas.Length; i++)
+            // Delegate discovery and sorting to lifecycle service
+            var entries = _lifecycleService.DiscoverAndSortUnits();
+            for (int i = 0; i < entries.Count; i++)
             {
-                var meta = metas[i];
-                if (meta == null || !meta.isActiveAndEnabled) continue;
-                var stats = meta.GetComponent<UnitStats>();
-                if (stats == null) continue;
-                _units.Add(new TurnUnit { Metadata = meta, Stats = stats });
-                SubscribeToHealing(stats);
+                _units.Add(new TurnUnit { Metadata = entries[i].Metadata, Stats = entries[i].Stats });
             }
 
-            _units.Sort((a, b) =>
-            {
-                int ia = a.Stats != null ? a.Stats.Initiative : 0;
-                int ib = b.Stats != null ? b.Stats.Initiative : 0;
-                // Higher initiative acts first.
-                int cmp = ib.CompareTo(ia);
-                if (cmp != 0) return cmp;
-                // Stable tie-breaker based on persisted SaveInstanceId so ordering
-                // is deterministic across save/load and between runs.
-                string ida = a.Metadata != null ? a.Metadata.SaveInstanceId : null;
-                string idb = b.Metadata != null ? b.Metadata.SaveInstanceId : null;
-                if (ida == null && idb == null) return 0;
-                if (ida == null) return -1;
-                if (idb == null) return 1;
-                return string.CompareOrdinal(ida, idb);
-            });
+            // Subscribe to healing events via lifecycle service
+            _lifecycleService.SubscribeToHealingEvents(entries, _visualFeedback);
 
             if (_logTurns)
             {
@@ -803,23 +802,43 @@ namespace SevenBattles.Battle.Turn
 
         private void CompactUnits()
         {
-            // Remove units that are no longer valid (e.g., destroyed) to keep the list in sync.
+            if (_lifecycleService == null)
+            {
+                Debug.LogError("[SimpleTurnOrderController] Lifecycle service not initialized!");
+                return;
+            }
+
+            // Convert units to entries for lifecycle service
+            var entries = new List<BattleUnitLifecycleService.UnitEntry>();
+            for (int i = 0; i < _units.Count; i++)
+            {
+                entries.Add(new BattleUnitLifecycleService.UnitEntry 
+                { 
+                    Metadata = _units[i].Metadata, 
+                    Stats = _units[i].Stats 
+                });
+            }
+
+            // Delegate compaction to lifecycle service
+            int oldActiveIndex = _activeIndex;
+            _activeIndex = _lifecycleService.CompactDeadUnits(entries, _activeIndex);
+
+            // Update local units list and clean up tile bonuses for removed units
             for (int i = _units.Count - 1; i >= 0; i--)
             {
-                if (!IsUnitValid(_units[i]))
+                if (i >= entries.Count || !_lifecycleService.IsAlive(entries[i]))
                 {
-                    UnsubscribeFromHealing(_units[i].Stats);
                     _tileStatBonuses.Remove(_units[i].Stats);
-                    _units.RemoveAt(i);
-                    if (i <= _activeIndex)
-                    {
-                        _activeIndex--;
-                    }
                 }
             }
 
-            // After compaction, always evaluate battle outcome in case an entire squad
-            // has been wiped out even if some units remain (e.g., enemy-only or player-only).
+            _units.Clear();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                _units.Add(new TurnUnit { Metadata = entries[i].Metadata, Stats = entries[i].Stats });
+            }
+
+            // After compaction, always evaluate battle outcome
             EvaluateBattleOutcomeAndStop();
             if (_battleEnded)
             {
@@ -831,9 +850,9 @@ namespace SevenBattles.Battle.Turn
                 return;
             }
 
+            // Ensure active index points to a valid unit
             if (_activeIndex < 0 || _activeIndex >= _units.Count || !IsUnitValid(_units[_activeIndex]))
             {
-                // Clamp to first valid unit if any remain; otherwise mark as no active unit.
                 int firstValid = -1;
                 for (int i = 0; i < _units.Count; i++)
                 {
@@ -849,47 +868,25 @@ namespace SevenBattles.Battle.Turn
                     _activeIndex = firstValid;
                     _hasActiveUnit = true;
                 }
-                // If firstValid < 0 here, _units would be empty and handled above.
             }
         }
 
         private void ClearHealingSubscriptions()
         {
-            foreach (var stats in _healingSubscriptions)
+            if (_lifecycleService != null)
             {
-                if (stats != null)
-                {
-                    stats.Healed -= HandleUnitHealed;
-                }
+                _lifecycleService.UnsubscribeFromHealingEvents();
             }
-
-            _healingSubscriptions.Clear();
         }
 
         private void SubscribeToHealing(UnitStats stats)
         {
-            if (stats == null)
-            {
-                return;
-            }
-
-            if (_healingSubscriptions.Add(stats))
-            {
-                stats.Healed += HandleUnitHealed;
-            }
+            // Now handled by lifecycle service
         }
 
         private void UnsubscribeFromHealing(UnitStats stats)
         {
-            if (stats == null)
-            {
-                return;
-            }
-
-            if (_healingSubscriptions.Remove(stats))
-            {
-                stats.Healed -= HandleUnitHealed;
-            }
+            // Now handled by lifecycle service during CompactUnits
         }
 
         private void SetInspectedEnemy(TurnUnit unit)

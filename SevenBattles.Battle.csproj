@@ -84,6 +84,7 @@
     <Compile Include="Assets\Scripts\Battle\Start\SquadPlacementModel.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleEnchantmentGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\Save\BattleSessionLoadHandler.cs" />
+    <Compile Include="Assets\Scripts\Battle\Turn\BattleUnitLifecycleService.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\BattlefieldBackgroundRenderer.cs" />
     <Compile Include="Assets\Scripts\Battle\AI\BattleAiTurnService.cs" />
     <Compile Include="Assets\Scripts\Battle\Spells\UnitSpellDeck.cs" />
