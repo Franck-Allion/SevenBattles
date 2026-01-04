@@ -142,8 +142,9 @@ namespace SevenBattles.Battle.Progression
 
             var playerMetas = FindPlayerUnitMetas();
             var survivors = FindSurvivors(playerMetas);
+            var survivorIndices = MapSurvivorsToSquadIndices(playerSquad, survivors);
 
-            int alivePlayerUnits = Mathf.Min(survivors.Count, totalPlayerUnits);
+            int alivePlayerUnits = Mathf.Min(survivorIndices.Count, totalPlayerUnits);
             int actualTurns = _turnController != null ? Mathf.Max(1, _turnController.TurnIndex) : 1;
 
             int totalXp = BattleXpCalculator.CalculateTotalXp(
@@ -154,7 +155,8 @@ namespace SevenBattles.Battle.Progression
                 totalPlayerUnits,
                 actualTurns);
 
-            var awards = AwardToSurvivors(playerSquad, survivors, totalXp);
+            var awards = AwardToSurvivors(playerSquad, survivorIndices, totalXp);
+            var unitResults = BuildUnitResults(playerSquad, survivorIndices, awards);
 
             if (_syncToPlayerContextAssets)
             {
@@ -172,7 +174,7 @@ namespace SevenBattles.Battle.Progression
                 AlivePlayerUnits = alivePlayerUnits,
                 TotalPlayerUnits = totalPlayerUnits,
                 ActualTurns = actualTurns,
-                Units = awards.ToArray()
+                Units = unitResults.ToArray()
             };
 
             if (_logAward)
@@ -267,17 +269,11 @@ namespace SevenBattles.Battle.Progression
             return result;
         }
 
-        private List<BattleXpAwardResult.UnitAward> AwardToSurvivors(UnitSpellLoadout[] playerSquad, List<UnitBattleMetadata> survivors, int totalXp)
+        private List<BattleXpAwardResult.UnitAward> AwardToSurvivors(UnitSpellLoadout[] playerSquad, List<int> survivorIndices, int totalXp)
         {
             var awards = new List<BattleXpAwardResult.UnitAward>();
 
-            if (playerSquad == null || playerSquad.Length == 0 || survivors == null || survivors.Count == 0 || totalXp <= 0)
-            {
-                return awards;
-            }
-
-            var survivorIndices = MapSurvivorsToSquadIndices(playerSquad, survivors);
-            if (survivorIndices.Count == 0)
+            if (playerSquad == null || playerSquad.Length == 0 || survivorIndices == null || survivorIndices.Count == 0 || totalXp <= 0)
             {
                 return awards;
             }
@@ -320,6 +316,7 @@ namespace SevenBattles.Battle.Progression
                     SquadIndex = squadIndex,
                     UnitId = loadout.Definition.Id,
                     Portrait = loadout.Definition.Portrait,
+                    IsAlive = true,
                     XpAwarded = xpAwarded,
                     XpApplied = applyResult.XpApplied,
                     XpBefore = xpBefore,
@@ -336,6 +333,86 @@ namespace SevenBattles.Battle.Progression
 
             awards.Sort((a, b) => a.SquadIndex.CompareTo(b.SquadIndex));
             return awards;
+        }
+
+        private static List<BattleXpAwardResult.UnitAward> BuildUnitResults(UnitSpellLoadout[] playerSquad, List<int> survivorIndices, List<BattleXpAwardResult.UnitAward> awards)
+        {
+            var results = new List<BattleXpAwardResult.UnitAward>();
+
+            if (playerSquad == null || playerSquad.Length == 0)
+            {
+                return results;
+            }
+
+            var aliveSet = new HashSet<int>();
+            if (survivorIndices != null)
+            {
+                for (int i = 0; i < survivorIndices.Count; i++)
+                {
+                    aliveSet.Add(survivorIndices[i]);
+                }
+            }
+
+            var awardByIndex = new Dictionary<int, BattleXpAwardResult.UnitAward>();
+            if (awards != null)
+            {
+                for (int i = 0; i < awards.Count; i++)
+                {
+                    awardByIndex[awards[i].SquadIndex] = awards[i];
+                }
+            }
+
+            for (int i = 0; i < playerSquad.Length; i++)
+            {
+                var loadout = playerSquad[i];
+                if (loadout == null || loadout.Definition == null)
+                {
+                    continue;
+                }
+
+                bool isAlive = aliveSet.Contains(i);
+                if (awardByIndex.TryGetValue(i, out var award))
+                {
+                    award.IsAlive = isAlive;
+                    results.Add(award);
+                    continue;
+                }
+
+                results.Add(BuildNoAwardUnitResult(loadout, i, isAlive));
+            }
+
+            return results;
+        }
+
+        private static BattleXpAwardResult.UnitAward BuildNoAwardUnitResult(UnitSpellLoadout loadout, int squadIndex, bool isAlive)
+        {
+            var def = loadout.Definition;
+            int level = loadout.EffectiveLevel;
+            int xp = loadout.EffectiveXp;
+
+            int maxLevel = def != null ? Mathf.Max(1, def.MaxLevel) : level;
+            int[] thresholds = def != null ? (def.XpToNextLevel ?? Array.Empty<int>()) : Array.Empty<int>();
+            int xpToNext = UnitXpProgressionUtil.GetXpToNextLevel(level, maxLevel, thresholds);
+            bool reachedMax = maxLevel > 0 && level >= maxLevel;
+
+            return new BattleXpAwardResult.UnitAward
+            {
+                SquadIndex = squadIndex,
+                UnitId = def != null ? def.Id : null,
+                Portrait = def != null ? def.Portrait : null,
+                IsAlive = isAlive,
+                XpAwarded = 0,
+                XpApplied = 0,
+                XpBefore = xp,
+                XpAfter = xp,
+                XpToNextBefore = xpToNext,
+                XpToNextAfter = xpToNext,
+                LevelBefore = level,
+                LevelAfter = level,
+                MaxLevel = maxLevel,
+                ReachedMaxLevel = reachedMax,
+                XpSteps = Array.Empty<UnitXpProgressionStep>()
+            };
         }
 
         private static List<int> MapSurvivorsToSquadIndices(UnitSpellLoadout[] squad, List<UnitBattleMetadata> survivors)

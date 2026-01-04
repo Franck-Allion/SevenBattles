@@ -27,6 +27,8 @@ namespace SevenBattles.UI
             public GameObject Root;
             [Tooltip("Optional Image to display the unit portrait (Sprite comes from the unit definition).")]
             public Image PortraitImage;
+            [Tooltip("Optional root GameObject for the XP widgets (slider/labels).")]
+            public GameObject XpWidgetsRoot;
             [Tooltip("Progress slider (0..1).")]
             public Slider ProgressSlider;
             [Tooltip("Level label (TMP).")]
@@ -66,6 +68,12 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("Localized label for max level. Defaults to UI.Common/BattleResult.MaxLevelShort.")]
         private LocalizedString _maxLevelLocalized;
 
+        [Header("Dead Unit Styling")]
+        [SerializeField, Tooltip("Tint applied to dead unit portraits (used when no grayscale material is assigned).")]
+        private Color _deadPortraitTint = new Color(0.55f, 0.55f, 0.55f, 0.7f);
+        [SerializeField, Tooltip("Optional alpha multiplier applied to row CanvasGroup for dead units.")]
+        private float _deadRowAlpha = 0.6f;
+
         [Header("Animation")]
         [SerializeField, Tooltip("Delay between starting each row animation (seconds). Uses unscaled time.")]
         private float _rowStaggerSeconds = 0.08f;
@@ -85,6 +93,9 @@ namespace SevenBattles.UI
         private float _finalHoldSeconds = 0.15f;
 
         private readonly List<Coroutine> _running = new List<Coroutine>();
+        private readonly Dictionary<Image, Color> _portraitColorCache = new Dictionary<Image, Color>();
+        private readonly Dictionary<Image, Material> _portraitMaterialCache = new Dictionary<Image, Material>();
+        private readonly Dictionary<CanvasGroup, float> _rowAlphaCache = new Dictionary<CanvasGroup, float>();
 
         private string _xpProgressFormat;
         private string _maxLevelLabel;
@@ -101,6 +112,7 @@ namespace SevenBattles.UI
                 return;
             }
 
+            EnsureDeadStylingDefaults();
             CacheLocalization();
             ResolveSessionService();
             ResolveSfxPlayer();
@@ -151,8 +163,16 @@ namespace SevenBattles.UI
 
                 row.Root.SetActive(true);
                 ApplyPortrait(row, award);
+                ApplyDeadStyling(row, award.IsAlive);
 
                 bool hasXpWidgets = row.ProgressSlider != null && row.LevelText != null && row.XpText != null;
+
+                if (!award.IsAlive)
+                {
+                    SetXpWidgetsVisible(row, false);
+                    continue;
+                }
+
                 if (!hasXpWidgets)
                 {
                     if (_hideRowsWithMissingXpWidgets)
@@ -162,11 +182,16 @@ namespace SevenBattles.UI
                     continue;
                 }
 
+                SetXpWidgetsVisible(row, true);
+
                 var view = new RowView(row.ProgressSlider, row.LevelText, row.XpText);
                 ApplyInstantState(view, award.LevelBefore, award.XpBefore, award.XpToNextBefore, award.MaxLevel, isMax: award.LevelBefore >= award.MaxLevel && award.MaxLevel > 0);
 
                 float delay = Mathf.Max(0f, _rowStaggerSeconds) * i;
-                _running.Add(StartCoroutine(AnimateRow(view, award, delay)));
+                if (award.XpApplied > 0 && award.XpSteps != null && award.XpSteps.Length > 0)
+                {
+                    _running.Add(StartCoroutine(AnimateRow(view, award, delay)));
+                }
             }
         }
 
@@ -263,6 +288,139 @@ namespace SevenBattles.UI
             {
                 // Preserve any authoring-time sprite if present; otherwise hide the Image to avoid showing a blank.
                 row.PortraitImage.enabled = row.PortraitImage.sprite != null;
+            }
+        }
+
+        private void ApplyDeadStyling(UnitRow row, bool isAlive)
+        {
+            if (row == null)
+            {
+                return;
+            }
+
+            var image = row.PortraitImage;
+            if (image != null)
+            {
+                CachePortraitDefaults(image);
+                if (isAlive)
+                {
+                    image.color = _portraitColorCache[image];
+                    image.material = _portraitMaterialCache[image];
+                }
+                else
+                {
+                    image.color = _deadPortraitTint;
+                }
+            }
+
+            if (row.Root != null)
+            {
+                var canvasGroup = row.Root.GetComponent<CanvasGroup>();
+                if (canvasGroup != null)
+                {
+                    CacheRowAlpha(canvasGroup);
+                    canvasGroup.alpha = isAlive ? _rowAlphaCache[canvasGroup] : Mathf.Clamp01(_deadRowAlpha);
+                }
+            }
+        }
+
+        private void SetXpWidgetsVisible(UnitRow row, bool visible)
+        {
+            if (row == null)
+            {
+                return;
+            }
+
+            var root = ResolveXpWidgetsRoot(row);
+            if (root != null)
+            {
+                root.SetActive(visible);
+                return;
+            }
+
+            if (row.ProgressSlider != null)
+            {
+                row.ProgressSlider.gameObject.SetActive(visible);
+            }
+
+            if (row.LevelText != null)
+            {
+                row.LevelText.gameObject.SetActive(visible);
+            }
+
+            if (row.XpText != null)
+            {
+                row.XpText.gameObject.SetActive(visible);
+            }
+        }
+
+        private static GameObject ResolveXpWidgetsRoot(UnitRow row)
+        {
+            if (row == null)
+            {
+                return null;
+            }
+
+            if (row.XpWidgetsRoot != null)
+            {
+                return row.XpWidgetsRoot;
+            }
+
+            if (row.ProgressSlider != null && row.ProgressSlider.transform.parent != null)
+            {
+                return row.ProgressSlider.transform.parent.gameObject;
+            }
+
+            if (row.LevelText != null && row.LevelText.transform.parent != null)
+            {
+                return row.LevelText.transform.parent.gameObject;
+            }
+
+            if (row.XpText != null && row.XpText.transform.parent != null)
+            {
+                return row.XpText.transform.parent.gameObject;
+            }
+
+            return null;
+        }
+
+        private void EnsureDeadStylingDefaults()
+        {
+            if (_deadPortraitTint.a <= 0f)
+            {
+                _deadPortraitTint = new Color(0.55f, 0.55f, 0.55f, 0.7f);
+            }
+
+            if (_deadRowAlpha <= 0f)
+            {
+                _deadRowAlpha = 0.6f;
+            }
+        }
+
+        private void CachePortraitDefaults(Image image)
+        {
+            if (image == null)
+            {
+                return;
+            }
+
+            if (!_portraitColorCache.ContainsKey(image))
+            {
+                _portraitColorCache[image] = image.color;
+                _portraitMaterialCache[image] = image.material;
+            }
+        }
+
+        private void CacheRowAlpha(CanvasGroup canvasGroup)
+        {
+            if (canvasGroup == null)
+            {
+                return;
+            }
+
+            if (!_rowAlphaCache.ContainsKey(canvasGroup))
+            {
+                _rowAlphaCache[canvasGroup] = canvasGroup.alpha;
             }
         }
 

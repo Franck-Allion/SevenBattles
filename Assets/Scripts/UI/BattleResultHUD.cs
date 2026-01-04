@@ -275,7 +275,8 @@ namespace SevenBattles.UI
 
         private void ShowDefeatPopup()
         {
-            if (_defeatPopup == null)
+            var popup = ResolveDefeatPopup(out var presenterOverride);
+            if (popup == null)
             {
                 Debug.LogWarning("BattleResultHUD: Defeat popup is not assigned.", this);
                 ReleaseInteractionLock();
@@ -283,16 +284,20 @@ namespace SevenBattles.UI
             }
 
             var xpMessage = _showXpSummaryMessage ? BuildXpSummaryMessage() : null;
-            if (_defeatTitle != null || _defeatMessage != null || _defeatConfirmLabel != null || xpMessage != null)
+            var title = ResolveLocalizedOverride(_defeatTitle, "BattleDefeat.Title");
+            var message = ResolveLocalizedOverride(_defeatMessage, "BattleDefeat.Message");
+            var confirm = ResolveLocalizedOverride(_defeatConfirmLabel, "Common.Continue");
+
+            if (title != null || message != null || confirm != null || xpMessage != null)
             {
-                _defeatPopup.ShowWithOverrides(_defeatTitle, xpMessage ?? _defeatMessage, _defeatConfirmLabel, null, OnPopupConfirmed, OnPopupCancelled);
+                popup.ShowWithOverrides(title, xpMessage ?? message, confirm, null, OnPopupConfirmed, OnPopupCancelled);
             }
             else
             {
-                _defeatPopup.Show(OnPopupConfirmed, OnPopupCancelled);
+                popup.Show(OnPopupConfirmed, OnPopupCancelled);
             }
 
-            TryPlayXpProgress(_defeatPopup, _defeatXpPresenter);
+            TryPlayXpProgress(popup, presenterOverride);
         }
 
         private void TryPlayXpProgress(ConfirmationMessageBoxHUD popup, BattleResultXpProgressPresenter presenterOverride)
@@ -408,6 +413,10 @@ namespace SevenBattles.UI
             for (int i = 0; i < result.Units.Length; i++)
             {
                 var u = result.Units[i];
+                if (!u.IsAlive)
+                {
+                    continue;
+                }
 
                 string key = u.ReachedMaxLevel
                     ? "BattleResult.UnitLineMaxLevel"
@@ -434,6 +443,84 @@ namespace SevenBattles.UI
             }
 
             return sb.ToString();
+        }
+
+        private ConfirmationMessageBoxHUD ResolveDefeatPopup(out BattleResultXpProgressPresenter presenterOverride)
+        {
+            presenterOverride = _defeatXpPresenter;
+
+            if (_defeatPopup != null)
+            {
+                var presenter = ResolveXpPresenter(_defeatPopup, presenterOverride);
+                if (presenter != null)
+                {
+                    presenterOverride = presenterOverride != null ? presenterOverride : presenter;
+                    return _defeatPopup;
+                }
+            }
+
+            if (_victoryPopup != null)
+            {
+                presenterOverride = _victoryXpPresenter;
+                return _victoryPopup;
+            }
+
+            return _defeatPopup;
+        }
+
+        private static BattleResultXpProgressPresenter ResolveXpPresenter(ConfirmationMessageBoxHUD popup, BattleResultXpProgressPresenter presenterOverride)
+        {
+            if (presenterOverride != null)
+            {
+                return presenterOverride;
+            }
+
+            if (popup == null)
+            {
+                return null;
+            }
+
+            var presenter = popup.GetComponent<BattleResultXpProgressPresenter>();
+            if (presenter != null)
+            {
+                return presenter;
+            }
+
+            return popup.GetComponentInChildren<BattleResultXpProgressPresenter>(true);
+        }
+
+        private static LocalizedString ResolveLocalizedOverride(LocalizedString candidate, string defaultUiCommonKey)
+        {
+            if (HasLocalizedValue(candidate))
+            {
+                return candidate;
+            }
+
+            if (string.IsNullOrEmpty(defaultUiCommonKey))
+            {
+                return null;
+            }
+
+            return new LocalizedString
+            {
+                TableReference = "UI.Common",
+                TableEntryReference = defaultUiCommonKey
+            };
+        }
+
+        private static bool HasLocalizedValue(LocalizedString localized)
+        {
+            if (localized == null)
+            {
+                return false;
+            }
+
+            var tableRef = localized.TableReference;
+            var entryRef = localized.TableEntryReference;
+
+            bool hasTable = !string.IsNullOrEmpty(tableRef.TableCollectionName);
+            bool hasEntry = entryRef.KeyId != 0 || !string.IsNullOrEmpty(entryRef.Key);
+            return hasTable && hasEntry;
         }
 
         private static string GetUiCommonLocalized(string entryKey, params object[] args)

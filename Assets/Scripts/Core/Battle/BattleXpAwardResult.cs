@@ -12,6 +12,7 @@ namespace SevenBattles.Core.Battle
             public int SquadIndex;
             public string UnitId;
             public Sprite Portrait;
+            public bool IsAlive;
             public int XpAwarded;
             public int XpApplied;
             public int XpBefore;
