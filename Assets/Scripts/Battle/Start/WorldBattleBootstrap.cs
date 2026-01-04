@@ -235,6 +235,37 @@ namespace SevenBattles.Battle.Start
             }
         }
 
+        /// <summary>
+        /// Applies the "battle phase" UI state (battle HUD visible, placement HUD hidden) after a save/load restore.
+        /// This intentionally does not call StartBattle() because the turn controller may have already restored its
+        /// active unit/turn state from the save file.
+        /// </summary>
+        public void ApplyLoadedBattleUiState()
+        {
+            if (_transitionRoutine != null)
+            {
+                StopCoroutine(_transitionRoutine);
+                _transitionRoutine = null;
+            }
+
+            if (_fadeCanvasGroup != null)
+            {
+                _fadeCanvasGroup.alpha = 0f;
+                _fadeCanvasGroup.blocksRaycasts = false;
+                _fadeCanvasGroup.gameObject.SetActive(false);
+            }
+
+            if (_placementHudRoot != null)
+            {
+                _placementHudRoot.SetActive(false);
+            }
+
+            if (_battleHudRoot != null)
+            {
+                _battleHudRoot.SetActive(true);
+            }
+        }
+
         private IEnumerator PlacementToBattleRoutine()
         {
             if (_turnController != null)

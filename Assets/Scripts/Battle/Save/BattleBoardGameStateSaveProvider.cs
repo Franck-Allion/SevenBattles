@@ -22,7 +22,19 @@ namespace SevenBattles.Battle.Save
         private MonoBehaviour _battlefieldServiceBehaviour;
         [SerializeField, Tooltip("Optional enchantment controller used to strip active enchantment bonuses from saved stats.")]
         private BattleEnchantmentController _enchantmentController;
+        [SerializeField, Tooltip("Optional battle session service used to persist BattleSessionSaveData if missing.")]
+        private MonoBehaviour _sessionServiceBehaviour;
         private IBattlefieldService _battlefieldService;
+        private IBattleSessionService _sessionService;
+
+        private readonly List<BattleEnchantmentController.EnchantmentSnapshot> _enchantmentSnapshotBuffer =
+            new List<BattleEnchantmentController.EnchantmentSnapshot>();
+        private readonly List<BattleEnchantmentSaveData> _enchantmentSaveBuffer =
+            new List<BattleEnchantmentSaveData>();
+        private readonly List<UnitSpellLoadoutSaveData> _sessionUnitBuffer =
+            new List<UnitSpellLoadoutSaveData>();
+        private readonly List<string> _sessionUnitIdBuffer =
+            new List<string>();
 
         public void PopulateGameState(SaveGameData data)
         {
@@ -129,6 +141,207 @@ namespace SevenBattles.Battle.Save
             }
 
             data.UnitPlacements = placements.ToArray();
+
+            PopulateBattleEnchantmentsIfMissing(data);
+            PopulateBattleSessionIfMissing(data);
+        }
+
+        private void PopulateBattleEnchantmentsIfMissing(SaveGameData data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            if (data.BattleEnchantments != null && data.BattleEnchantments.Length > 0)
+            {
+                return;
+            }
+
+            ResolveEnchantmentController();
+            if (_enchantmentController == null)
+            {
+                return;
+            }
+
+            _enchantmentController.CopyActiveEnchantments(_enchantmentSnapshotBuffer);
+            if (_enchantmentSnapshotBuffer.Count == 0)
+            {
+                return;
+            }
+
+            _enchantmentSaveBuffer.Clear();
+            for (int i = 0; i < _enchantmentSnapshotBuffer.Count; i++)
+            {
+                var snapshot = _enchantmentSnapshotBuffer[i];
+                var spell = snapshot.Spell;
+                if (spell == null || string.IsNullOrEmpty(spell.Id))
+                {
+                    continue;
+                }
+
+                _enchantmentSaveBuffer.Add(new BattleEnchantmentSaveData
+                {
+                    SpellId = spell.Id,
+                    QuadIndex = snapshot.QuadIndex,
+                    CasterInstanceId = snapshot.CasterInstanceId,
+                    CasterUnitId = snapshot.CasterUnitId,
+                    CasterTeam = snapshot.IsPlayerControlledCaster ? "player" : "enemy"
+                });
+            }
+
+            data.BattleEnchantments = _enchantmentSaveBuffer.Count == 0
+                ? Array.Empty<BattleEnchantmentSaveData>()
+                : _enchantmentSaveBuffer.ToArray();
+        }
+
+        private void PopulateBattleSessionIfMissing(SaveGameData data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            if (HasAnySessionSquadData(data.BattleSession))
+            {
+                return;
+            }
+
+            ResolveSessionService();
+            var session = _sessionService != null ? _sessionService.CurrentSession : null;
+            if (session == null)
+            {
+                return;
+            }
+
+            var playerSquad = session.PlayerSquad ?? Array.Empty<UnitSpellLoadout>();
+            var enemySquad = session.EnemySquad ?? Array.Empty<UnitSpellLoadout>();
+            if (playerSquad.Length == 0 && enemySquad.Length == 0)
+            {
+                return;
+            }
+
+            data.BattleSession = new BattleSessionSaveData
+            {
+                PlayerSquadIds = BuildUnitIdArray(playerSquad),
+                EnemySquadIds = BuildUnitIdArray(enemySquad),
+                PlayerSquadUnits = BuildUnitLoadoutSaveData(playerSquad),
+                EnemySquadUnits = BuildUnitLoadoutSaveData(enemySquad),
+                BattleType = session.BattleType,
+                Difficulty = session.Difficulty,
+                CampaignMissionId = session.CampaignMissionId,
+                BattlefieldId = ResolveBattlefieldId(session)
+            };
+        }
+
+        private static bool HasAnySessionSquadData(BattleSessionSaveData session)
+        {
+            if (session == null)
+            {
+                return false;
+            }
+
+            if (session.PlayerSquadUnits != null && session.PlayerSquadUnits.Length > 0)
+            {
+                return true;
+            }
+
+            if (session.EnemySquadUnits != null && session.EnemySquadUnits.Length > 0)
+            {
+                return true;
+            }
+
+            if (session.PlayerSquadIds != null && session.PlayerSquadIds.Length > 0)
+            {
+                return true;
+            }
+
+            if (session.EnemySquadIds != null && session.EnemySquadIds.Length > 0)
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private string[] BuildUnitIdArray(UnitSpellLoadout[] squad)
+        {
+            _sessionUnitIdBuffer.Clear();
+
+            if (squad == null || squad.Length == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            for (int i = 0; i < squad.Length; i++)
+            {
+                var loadout = squad[i];
+                if (loadout == null || loadout.Definition == null || string.IsNullOrEmpty(loadout.Definition.Id))
+                {
+                    continue;
+                }
+                _sessionUnitIdBuffer.Add(loadout.Definition.Id);
+            }
+
+            return _sessionUnitIdBuffer.Count == 0 ? Array.Empty<string>() : _sessionUnitIdBuffer.ToArray();
+        }
+
+        private UnitSpellLoadoutSaveData[] BuildUnitLoadoutSaveData(UnitSpellLoadout[] squad)
+        {
+            _sessionUnitBuffer.Clear();
+
+            if (squad == null || squad.Length == 0)
+            {
+                return Array.Empty<UnitSpellLoadoutSaveData>();
+            }
+
+            for (int i = 0; i < squad.Length; i++)
+            {
+                var loadout = squad[i];
+                if (loadout == null || loadout.Definition == null || string.IsNullOrEmpty(loadout.Definition.Id))
+                {
+                    continue;
+                }
+
+                var spells = loadout.Spells;
+                var spellIds = new List<string>(spells != null ? spells.Length : 0);
+                if (spells != null)
+                {
+                    for (int s = 0; s < spells.Length; s++)
+                    {
+                        var spell = spells[s];
+                        if (spell != null && !string.IsNullOrEmpty(spell.Id))
+                        {
+                            spellIds.Add(spell.Id);
+                        }
+                    }
+                }
+
+                _sessionUnitBuffer.Add(new UnitSpellLoadoutSaveData
+                {
+                    UnitId = loadout.Definition.Id,
+                    SpellIds = spellIds.Count == 0 ? Array.Empty<string>() : spellIds.ToArray(),
+                    Level = loadout.EffectiveLevel,
+                    Xp = loadout.EffectiveXp
+                });
+            }
+
+            return _sessionUnitBuffer.Count == 0 ? Array.Empty<UnitSpellLoadoutSaveData>() : _sessionUnitBuffer.ToArray();
+        }
+
+        private static string ResolveBattlefieldId(BattleSessionConfig session)
+        {
+            if (session == null)
+            {
+                return null;
+            }
+
+            if (session.Battlefield != null && !string.IsNullOrEmpty(session.Battlefield.Id))
+            {
+                return session.Battlefield.Id;
+            }
+
+            return string.IsNullOrEmpty(session.BattlefieldId) ? null : session.BattlefieldId;
         }
 
         private void ResolveBattlefieldService()
@@ -166,6 +379,33 @@ namespace SevenBattles.Battle.Save
             }
 
             _enchantmentController = UnityEngine.Object.FindFirstObjectByType<BattleEnchantmentController>();
+        }
+
+        private void ResolveSessionService()
+        {
+            if (_sessionService != null)
+            {
+                return;
+            }
+
+            if (_sessionServiceBehaviour != null)
+            {
+                _sessionService = _sessionServiceBehaviour as IBattleSessionService;
+            }
+
+            if (_sessionService == null)
+            {
+                var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is IBattleSessionService service)
+                    {
+                        _sessionService = service;
+                        _sessionServiceBehaviour = behaviours[i];
+                        break;
+                    }
+                }
+            }
         }
 
         private static string QuantizeFacing(Vector2 facing)

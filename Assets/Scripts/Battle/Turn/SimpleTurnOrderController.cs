@@ -1200,12 +1200,30 @@ namespace SevenBattles.Battle.Turn
                 return;
             }
 
+            if (_turnProgressionService == null)
+            {
+                _turnProgressionService = GetComponent<BattleTurnProgressionService>();
+                if (_turnProgressionService == null)
+                {
+                    _turnProgressionService = gameObject.AddComponent<BattleTurnProgressionService>();
+                }
+            }
+
             RebuildUnits();
             ApplyTileStatBonusesForAllUnits();
-            _turnIndex = Mathf.Max(0, battleTurn.TurnIndex);
+            int restoredTurnIndex = Mathf.Max(0, battleTurn.TurnIndex);
+            if (_turnProgressionService != null)
+            {
+                _turnProgressionService.InitializeForBattle();
+                _turnProgressionService.SetTurnIndex(restoredTurnIndex);
+            }
 
             if (_units.Count == 0)
             {
+                if (_turnProgressionService != null)
+                {
+                    _turnProgressionService.SetTurnIndex(0);
+                }
                 SetActiveIndex(-1);
                 return;
             }

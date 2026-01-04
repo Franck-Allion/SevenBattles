@@ -71,6 +71,116 @@ namespace SevenBattles.Tests.Battle.Save
                 UnityEngine.Object.DestroyImmediate(go);
             }
         }
+
+        [Test]
+        public void ApplyLoadedGame_UsesDeprecatedPlayerSquadWizardIds_WhenBattleSessionIdsMissing()
+        {
+            var unitDef = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitDef.Id = "UnitA";
+
+            var registry = ScriptableObject.CreateInstance<UnitDefinitionRegistry>();
+            typeof(UnitDefinitionRegistry)
+                .GetField("_definitions", BindingFlags.NonPublic | BindingFlags.Instance)
+                ?.SetValue(registry, new[] { unitDef });
+
+            var go = new GameObject("BattleSessionLoadHandlerTests");
+            try
+            {
+                var service = go.AddComponent<BattleSessionService>();
+                var handler = go.AddComponent<BattleSessionLoadHandler>();
+
+                typeof(BattleSessionLoadHandler)
+                    .GetField("_sessionServiceBehaviour", BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?.SetValue(handler, service);
+
+                typeof(BattleSessionLoadHandler)
+                    .GetField("_unitRegistry", BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?.SetValue(handler, registry);
+
+                var data = new SaveGameData
+                {
+                    PlayerSquad = new PlayerSquadSaveData
+                    {
+                        WizardIds = new[] { "UnitA" }
+                    },
+                    BattleSession = new BattleSessionSaveData
+                    {
+                        PlayerSquadUnits = System.Array.Empty<UnitSpellLoadoutSaveData>(),
+                        EnemySquadUnits = System.Array.Empty<UnitSpellLoadoutSaveData>(),
+                        PlayerSquadIds = System.Array.Empty<string>(),
+                        EnemySquadIds = System.Array.Empty<string>(),
+                        BattleType = "test",
+                        Difficulty = 0
+                    }
+                };
+
+                handler.ApplyLoadedGame(data);
+
+                Assert.IsNotNull(service.CurrentSession);
+                Assert.AreEqual(1, service.CurrentSession.PlayerSquad.Length);
+                Assert.IsNotNull(service.CurrentSession.PlayerSquad[0].Definition);
+                Assert.AreEqual("UnitA", service.CurrentSession.PlayerSquad[0].Definition.Id);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        [Test]
+        public void ApplyLoadedGame_DoesNotOverwriteRuntimeSession_WhenSaveHasNoSquadData()
+        {
+            var unitDef = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitDef.Id = "UnitA";
+
+            var go = new GameObject("BattleSessionLoadHandlerTests");
+            try
+            {
+                var service = go.AddComponent<BattleSessionService>();
+                service.InitializeSession(new BattleSessionConfig(
+                    new[]
+                    {
+                        new UnitSpellLoadout
+                        {
+                            Definition = unitDef,
+                            Level = 3,
+                            Xp = 5,
+                            Spells = System.Array.Empty<SpellDefinition>()
+                        }
+                    },
+                    System.Array.Empty<UnitSpellLoadout>(),
+                    "existing",
+                    0));
+
+                var handler = go.AddComponent<BattleSessionLoadHandler>();
+                typeof(BattleSessionLoadHandler)
+                    .GetField("_sessionServiceBehaviour", BindingFlags.NonPublic | BindingFlags.Instance)
+                    ?.SetValue(handler, service);
+
+                var data = new SaveGameData
+                {
+                    BattleSession = new BattleSessionSaveData
+                    {
+                        PlayerSquadUnits = System.Array.Empty<UnitSpellLoadoutSaveData>(),
+                        EnemySquadUnits = System.Array.Empty<UnitSpellLoadoutSaveData>(),
+                        PlayerSquadIds = System.Array.Empty<string>(),
+                        EnemySquadIds = System.Array.Empty<string>()
+                    },
+                    PlayerSquad = null
+                };
+
+                handler.ApplyLoadedGame(data);
+
+                Assert.IsNotNull(service.CurrentSession);
+                Assert.AreEqual(1, service.CurrentSession.PlayerSquad.Length);
+                Assert.AreEqual(3, service.CurrentSession.PlayerSquad[0].Level);
+                Assert.AreEqual(5, service.CurrentSession.PlayerSquad[0].Xp);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+                UnityEngine.Object.DestroyImmediate(unitDef);
+            }
+        }
     }
 }
-

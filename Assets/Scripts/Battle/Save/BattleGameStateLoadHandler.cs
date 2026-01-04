@@ -299,6 +299,12 @@ namespace SevenBattles.Battle.Save
                 }
 
                 _turnController.RestoreFromSave(data.BattleTurn);
+
+                var bootstrap = UnityEngine.Object.FindFirstObjectByType<WorldBattleBootstrap>();
+                if (bootstrap != null)
+                {
+                    bootstrap.ApplyLoadedBattleUiState();
+                }
             }
         }
 

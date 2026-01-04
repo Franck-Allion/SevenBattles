@@ -66,12 +66,61 @@ namespace SevenBattles.Battle.Save
                 return;
             }
 
+            // If a save is missing all squad identity data, do not overwrite an existing runtime session with an empty one.
+            // This commonly happens when BattleSessionSaveProvider was not wired into the save pipeline for older saves.
+            if (!HasAnySquadData(data))
+            {
+                if (_sessionService.CurrentSession != null)
+                {
+                    Debug.LogWarning("BattleSessionLoadHandler: Save contains no BattleSession squad data; keeping existing runtime session.");
+                    return;
+                }
+
+                Debug.LogWarning("BattleSessionLoadHandler: Save contains no BattleSession squad data and no runtime session exists; skipping session restore.");
+                return;
+            }
+
             _spellLookup.Clear();
             _unitLookup.Clear();
+
+            var existing = _sessionService.CurrentSession;
+
+            var playerIds = data.BattleSession.PlayerSquadIds;
+            if ((playerIds == null || playerIds.Length == 0) && data.PlayerSquad != null && data.PlayerSquad.WizardIds != null && data.PlayerSquad.WizardIds.Length > 0)
+            {
+                playerIds = data.PlayerSquad.WizardIds;
+            }
+
+            var resolvedPlayer = ResolveLoadouts(data.BattleSession.PlayerSquadUnits, playerIds);
+            var resolvedEnemy = ResolveLoadouts(data.BattleSession.EnemySquadUnits, data.BattleSession.EnemySquadIds);
+
+            if ((resolvedPlayer == null || resolvedPlayer.Length == 0) && existing != null && existing.PlayerSquad != null && existing.PlayerSquad.Length > 0)
+            {
+                resolvedPlayer = UnitSpellLoadout.CloneArray(existing.PlayerSquad);
+            }
+
+            if ((resolvedEnemy == null || resolvedEnemy.Length == 0) && existing != null && existing.EnemySquad != null && existing.EnemySquad.Length > 0)
+            {
+                resolvedEnemy = UnitSpellLoadout.CloneArray(existing.EnemySquad);
+            }
+
+            if ((resolvedPlayer == null || resolvedPlayer.Length == 0) && (resolvedEnemy == null || resolvedEnemy.Length == 0))
+            {
+                if (existing != null)
+                {
+                    Debug.LogWarning("BattleSessionLoadHandler: Unable to resolve any squads from save; keeping existing runtime session.");
+                }
+                else
+                {
+                    Debug.LogWarning("BattleSessionLoadHandler: Unable to resolve any squads from save and no runtime session exists; skipping session restore.");
+                }
+                return;
+            }
+
             var config = new BattleSessionConfig
             {
-                PlayerSquad = ResolveLoadouts(data.BattleSession.PlayerSquadUnits, data.BattleSession.PlayerSquadIds),
-                EnemySquad = ResolveLoadouts(data.BattleSession.EnemySquadUnits, data.BattleSession.EnemySquadIds),
+                PlayerSquad = resolvedPlayer ?? System.Array.Empty<UnitSpellLoadout>(),
+                EnemySquad = resolvedEnemy ?? System.Array.Empty<UnitSpellLoadout>(),
                 BattleType = data.BattleSession.BattleType ?? "unknown",
                 Difficulty = data.BattleSession.Difficulty,
                 CampaignMissionId = data.BattleSession.CampaignMissionId,
@@ -80,6 +129,24 @@ namespace SevenBattles.Battle.Save
 
             _sessionService.InitializeSession(config);
             Debug.Log($"BattleSessionLoadHandler: Restored session with {config.PlayerSquad.Length} player units, {config.EnemySquad.Length} enemy units.");
+        }
+
+        private static bool HasAnySquadData(SaveGameData data)
+        {
+            if (data == null || data.BattleSession == null)
+            {
+                return false;
+            }
+
+            var session = data.BattleSession;
+            if (session.PlayerSquadUnits != null && session.PlayerSquadUnits.Length > 0) return true;
+            if (session.EnemySquadUnits != null && session.EnemySquadUnits.Length > 0) return true;
+            if (session.PlayerSquadIds != null && session.PlayerSquadIds.Length > 0) return true;
+            if (session.EnemySquadIds != null && session.EnemySquadIds.Length > 0) return true;
+
+            if (data.PlayerSquad != null && data.PlayerSquad.WizardIds != null && data.PlayerSquad.WizardIds.Length > 0) return true;
+
+            return false;
         }
 
         private UnitSpellLoadout[] ResolveLoadouts(UnitSpellLoadoutSaveData[] savedUnits, string[] legacyIds)

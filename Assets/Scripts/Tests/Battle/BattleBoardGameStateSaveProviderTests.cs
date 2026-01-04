@@ -1,8 +1,11 @@
+using System;
 using NUnit.Framework;
 using UnityEngine;
+using Object = UnityEngine.Object;
 using SevenBattles.Battle.Save;
 using SevenBattles.Battle.Units;
 using SevenBattles.Battle.Spells;
+using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
@@ -11,12 +14,31 @@ namespace SevenBattles.Tests.Battle
 {
     public class BattleBoardGameStateSaveProviderTests
     {
+        private sealed class FakeBattlefieldService : MonoBehaviour, IBattlefieldService
+        {
+            public BattlefieldDefinition Current { get; set; }
+            public event Action<BattlefieldDefinition> BattlefieldChanged;
+
+            public bool TryGetTileColor(Vector2Int tile, out BattlefieldTileColor color)
+            {
+                color = BattlefieldTileColor.None;
+                return false;
+            }
+        }
+
         private static void SetPrivate(object target, string fieldName, object value)
         {
             var type = target.GetType();
             var field = type.GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
             Assert.IsNotNull(field, $"Field '{fieldName}' was not found on type '{type.FullName}'.");
             field.SetValue(target, value);
+        }
+
+        private static void CallPrivate(object target, string methodName)
+        {
+            var method = target.GetType().GetMethod(methodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.IsNotNull(method, $"Method '{methodName}' was not found on type '{target.GetType().FullName}'.");
+            method.Invoke(target, null);
         }
 
         [Test]
@@ -97,6 +119,62 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(def);
             Object.DestroyImmediate(spellA);
             Object.DestroyImmediate(spellB);
+        }
+
+        [Test]
+        public void PopulateGameState_CapturesBattleEnchantments_WhenPresent()
+        {
+            var battlefield = ScriptableObject.CreateInstance<BattlefieldDefinition>();
+            var quad = new EnchantmentQuadDefinition
+            {
+                TopLeft = new Vector2(-1f, 1f),
+                TopRight = new Vector2(1f, 1f),
+                BottomRight = new Vector2(1f, -1f),
+                BottomLeft = new Vector2(-1f, -1f),
+                Scale = 1f
+            };
+            SetPrivate(battlefield, "_enchantmentQuads", new[] { quad });
+
+            var serviceGo = new GameObject("BattlefieldService");
+            var service = serviceGo.AddComponent<FakeBattlefieldService>();
+            service.Current = battlefield;
+
+            var controllerGo = new GameObject("EnchantmentController");
+            var controller = controllerGo.AddComponent<BattleEnchantmentController>();
+            SetPrivate(controller, "_battlefieldServiceBehaviour", service);
+            CallPrivate(controller, "Awake");
+
+            var spell = ScriptableObject.CreateInstance<SpellDefinition>();
+            spell.Id = "spell.enchant.attack";
+            spell.IsEnchantment = true;
+
+            Assert.IsTrue(controller.TryRestoreEnchantment(
+                spell,
+                quadIndex: 0,
+                isPlayerControlledCaster: true,
+                casterInstanceId: "caster-1",
+                casterUnitId: "unit-1",
+                skipVisual: true));
+
+            var providerGo = new GameObject("Provider");
+            var provider = providerGo.AddComponent<BattleBoardGameStateSaveProvider>();
+
+            var data = new SaveGameData();
+            provider.PopulateGameState(data);
+
+            Assert.IsNotNull(data.BattleEnchantments);
+            Assert.AreEqual(1, data.BattleEnchantments.Length);
+            Assert.AreEqual("spell.enchant.attack", data.BattleEnchantments[0].SpellId);
+            Assert.AreEqual(0, data.BattleEnchantments[0].QuadIndex);
+            Assert.AreEqual("caster-1", data.BattleEnchantments[0].CasterInstanceId);
+            Assert.AreEqual("unit-1", data.BattleEnchantments[0].CasterUnitId);
+            Assert.AreEqual("player", data.BattleEnchantments[0].CasterTeam);
+
+            Object.DestroyImmediate(spell);
+            Object.DestroyImmediate(battlefield);
+            Object.DestroyImmediate(providerGo);
+            Object.DestroyImmediate(controllerGo);
+            Object.DestroyImmediate(serviceGo);
         }
 
         [Test]
