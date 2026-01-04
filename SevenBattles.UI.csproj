@@ -70,6 +70,7 @@
     <Compile Include="Assets\Scripts\UI\BattleSpellsHUD.cs" />
     <Compile Include="Assets\Scripts\UI\SaveLoadHUD.cs" />
     <Compile Include="Assets\Scripts\UI\BattlePauseHUD.cs" />
+    <Compile Include="Assets\Scripts\UI\BattleResultXpProgressPresenter.cs" />
     <Compile Include="Assets\Scripts\UI\BattleResultHUD.cs" />
     <Compile Include="Assets\Scripts\UI\TurnOrderHUD.cs" />
   </ItemGroup>

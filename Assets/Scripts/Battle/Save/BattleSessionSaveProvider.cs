@@ -93,7 +93,8 @@ namespace SevenBattles.Battle.Save
                 {
                     UnitId = loadout.Definition.Id,
                     SpellIds = spellIds,
-                    Level = loadout.EffectiveLevel
+                    Level = loadout.EffectiveLevel,
+                    Xp = loadout.EffectiveXp
                 });
             }
 

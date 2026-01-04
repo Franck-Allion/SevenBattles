@@ -69,6 +69,7 @@
     <Compile Include="Assets\Scripts\Battle\Save\BattleTurnGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Battle\BattlefieldService.cs" />
     <Compile Include="Assets\Scripts\Battle\Spells\BattleSpellController.cs" />
+    <Compile Include="Assets\Scripts\Battle\Progression\BattleXpAwarder.cs" />
     <Compile Include="Assets\Scripts\Battle\Spells\SpellProjectileImpactRelay.cs" />
     <Compile Include="Assets\Scripts\Battle\Board\EnchantmentQuadAuthoring.cs" />
     <Compile Include="Assets\Scripts\Battle\Spells\BattleEnchantmentController.cs" />

@@ -12,6 +12,16 @@ namespace SevenBattles.Core.Units
         [Header("Presentation")]
         public Sprite Portrait;
 
+        [Header("Progression")]
+        [Min(0f), Tooltip("Threat factor used for end-of-battle XP calculation. This is data-driven and can be tuned per unit type (e.g., Common=0.7, Uncommon=1.0, Rare=1.4, Epic=2.0, Legend=3.0).")]
+        public float ThreatFactor = 1f;
+
+        [Min(1), Tooltip("Maximum level this unit can reach.")]
+        public int MaxLevel = 10;
+
+        [Tooltip("XP thresholds required to advance from level N to level N+1. Index 0 = level 1 -> 2.")]
+        public int[] XpToNextLevel = System.Array.Empty<int>();
+
         [Header("Audio")]
         [Tooltip("Optional SFX played when a unit of this type dies (e.g., Assets/Art/SFX/Wizard_Death.wav).")]
         public AudioClip DeathSfx;

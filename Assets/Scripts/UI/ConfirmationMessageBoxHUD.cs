@@ -66,10 +66,20 @@ namespace SevenBattles.UI
         private Action _confirmCallback;
         private Action _cancelCallback;
 
+        private LocalizedString _defaultTitleString;
+        private LocalizedString _defaultMessageString;
+        private LocalizedString _defaultConfirmLabel;
+        private LocalizedString _defaultCancelLabel;
+
         public bool IsVisible => _isVisible;
 
         private void Awake()
         {
+            _defaultTitleString = _titleString;
+            _defaultMessageString = _messageString;
+            _defaultConfirmLabel = _confirmLabel;
+            _defaultCancelLabel = _cancelLabel;
+
             EnsureCanvasReferences();
             AutoDiscoverTextTargets();
             WireButtonsIfNeeded();
@@ -140,6 +150,20 @@ namespace SevenBattles.UI
             _messageString = message;
             _confirmLabel = confirmLabel;
             _cancelLabel = cancelLabel;
+
+            Show(onConfirm, onCancel);
+        }
+
+        /// <summary>
+        /// Shows the confirmation box using per-call overrides, while falling back to the component defaults for any null overrides.
+        /// This avoids forcing callers to provide title/confirm/cancel when only the message needs to be dynamic.
+        /// </summary>
+        public void ShowWithOverrides(LocalizedString titleOverride, LocalizedString messageOverride, LocalizedString confirmLabelOverride, LocalizedString cancelLabelOverride, Action onConfirm, Action onCancel = null)
+        {
+            _titleString = titleOverride ?? _defaultTitleString;
+            _messageString = messageOverride ?? _defaultMessageString;
+            _confirmLabel = confirmLabelOverride ?? _defaultConfirmLabel;
+            _cancelLabel = cancelLabelOverride ?? _defaultCancelLabel;
 
             Show(onConfirm, onCancel);
         }
@@ -526,6 +550,7 @@ namespace SevenBattles.UI
             _cancelCallback = null;
 
             callback?.Invoke();
+            RestoreDefaults();
             StartTransition(false);
         }
 
@@ -556,7 +581,16 @@ namespace SevenBattles.UI
             _cancelCallback = null;
 
             callback?.Invoke();
+            RestoreDefaults();
             StartTransition(false);
+        }
+
+        private void RestoreDefaults()
+        {
+            _titleString = _defaultTitleString;
+            _messageString = _defaultMessageString;
+            _confirmLabel = _defaultConfirmLabel;
+            _cancelLabel = _defaultCancelLabel;
         }
     }
 }

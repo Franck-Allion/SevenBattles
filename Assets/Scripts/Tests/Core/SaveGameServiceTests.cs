@@ -60,7 +60,8 @@ namespace SevenBattles.Tests.Core
                         {
                             UnitId = "UnitA",
                             SpellIds = Array.Empty<string>(),
-                            Level = 3
+                            Level = 3,
+                            Xp = 42
                         }
                     },
                     EnemySquadUnits = Array.Empty<UnitSpellLoadoutSaveData>(),
@@ -240,6 +241,8 @@ namespace SevenBattles.Tests.Core
             Assert.AreEqual(2, data.UnitPlacements[0].Stats.Level);
             Assert.IsNotNull(data.BattleSession);
             Assert.AreEqual(3, data.BattleSession.PlayerSquadUnits[0].Level);
+            Assert.AreEqual(42, data.BattleSession.PlayerSquadUnits[0].Xp);
+            StringAssert.Contains("\"Xp\": 42", json);
         }
 
         [Test]

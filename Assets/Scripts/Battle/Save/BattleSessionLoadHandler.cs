@@ -26,6 +26,7 @@ namespace SevenBattles.Battle.Save
 
         private IBattleSessionService _sessionService;
         private readonly Dictionary<string, SpellDefinition> _spellLookup = new Dictionary<string, SpellDefinition>(System.StringComparer.Ordinal);
+        private readonly Dictionary<string, UnitDefinition> _unitLookup = new Dictionary<string, UnitDefinition>(System.StringComparer.Ordinal);
         private bool _warnedMissingUnitRegistry;
 
         private void Awake()
@@ -66,6 +67,7 @@ namespace SevenBattles.Battle.Save
             }
 
             _spellLookup.Clear();
+            _unitLookup.Clear();
             var config = new BattleSessionConfig
             {
                 PlayerSquad = ResolveLoadouts(data.BattleSession.PlayerSquadUnits, data.BattleSession.PlayerSquadIds),
@@ -134,6 +136,7 @@ namespace SevenBattles.Battle.Save
                 {
                     Definition = def,
                     Level = saved.Level > 0 ? saved.Level : UnitSpellLoadout.DefaultLevel,
+                    Xp = saved.Xp > 0 ? saved.Xp : 0,
                     Spells = spells
                 });
             }
@@ -143,18 +146,43 @@ namespace SevenBattles.Battle.Save
 
         private UnitDefinition ResolveUnitDefinition(string id)
         {
-            if (string.IsNullOrEmpty(id) || _unitRegistry == null)
+            if (string.IsNullOrEmpty(id))
             {
-                if (_unitRegistry == null && !_warnedMissingUnitRegistry)
-                {
-                    _warnedMissingUnitRegistry = true;
-                    Debug.LogWarning("BattleSessionLoadHandler: No UnitDefinitionRegistry assigned. Cannot resolve unit IDs.");
-                }
-
                 return null;
             }
 
-            return _unitRegistry.GetById(id);
+            if (_unitRegistry != null)
+            {
+                return _unitRegistry.GetById(id);
+            }
+
+            if (!_warnedMissingUnitRegistry)
+            {
+                _warnedMissingUnitRegistry = true;
+                Debug.LogWarning("BattleSessionLoadHandler: No UnitDefinitionRegistry assigned. Falling back to scanning loaded UnitDefinition assets (slower).");
+            }
+
+            if (_unitLookup.TryGetValue(id, out var cached))
+            {
+                return cached;
+            }
+
+            var allDefs = Resources.FindObjectsOfTypeAll<UnitDefinition>();
+            for (int i = 0; i < allDefs.Length; i++)
+            {
+                var def = allDefs[i];
+                if (def == null || string.IsNullOrEmpty(def.Id))
+                {
+                    continue;
+                }
+
+                if (!_unitLookup.ContainsKey(def.Id))
+                {
+                    _unitLookup.Add(def.Id, def);
+                }
+            }
+
+            return _unitLookup.TryGetValue(id, out var resolved) ? resolved : null;
         }
 
         private SpellDefinition[] ResolveSpells(string[] ids)

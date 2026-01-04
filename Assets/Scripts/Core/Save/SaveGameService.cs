@@ -125,6 +125,7 @@ namespace SevenBattles.Core.Save
         public string UnitId;
         public string[] SpellIds;
         public int Level;
+        public int Xp;
     }
 
     [Serializable]

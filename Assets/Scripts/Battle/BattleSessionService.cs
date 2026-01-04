@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
@@ -34,7 +35,9 @@ namespace SevenBattles.Battle
                 throw new ArgumentNullException(nameof(config), "BattleSessionService: Cannot initialize with null config.");
             }
 
-            _currentSession = config;
+            // Clone squads to ensure runtime progression changes (XP/levels/spells) do not mutate authored assets
+            // like PlayerSquad ScriptableObjects when a legacy session is built from scene references.
+            _currentSession = CloneConfig(config);
             Debug.Log($"BattleSessionService: Session initialized. BattleType={config.BattleType}, " +
                       $"PlayerSquad={config.PlayerSquad?.Length ?? 0}, EnemySquad={config.EnemySquad?.Length ?? 0}");
         }
@@ -53,6 +56,32 @@ namespace SevenBattles.Battle
         {
             // Auto-clear session when service is destroyed
             ClearSession();
+        }
+
+        private static BattleSessionConfig CloneConfig(BattleSessionConfig source)
+        {
+            if (source == null)
+            {
+                return null;
+            }
+
+            var clone = new BattleSessionConfig(
+                UnitSpellLoadout.CloneArray(source.PlayerSquad),
+                UnitSpellLoadout.CloneArray(source.EnemySquad),
+                source.BattleType,
+                source.Difficulty)
+            {
+                CampaignMissionId = source.CampaignMissionId,
+                Battlefield = source.Battlefield,
+                BattlefieldId = source.BattlefieldId
+            };
+
+            if (source.CustomData != null && source.CustomData.Count > 0)
+            {
+                clone.CustomData = new Dictionary<string, object>(source.CustomData);
+            }
+
+            return clone;
         }
     }
 }
