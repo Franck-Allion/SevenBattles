@@ -322,6 +322,15 @@ For more details on the current save/load architecture and JSON format, see:
 
 ---
 
+### Battle Result XP Presenter
+
+- `BattleResultXpProgressPresenter` is UI-only; it animates per-unit XP bars with unscaled time when `BattleResultHUD` calls `Play(BattleXpAwardResult)`.
+- Wire one row per squad slot in `_rows` (root + portrait + slider + level + XP text; optional `XpWidgetsRoot` to hide the XP group).
+- Rows bind by `SquadIndex`; portraits come from `UnitAward.Portrait` or the current session/registry.
+- Dead units (`UnitAward.IsAlive == false`) keep a dimmed portrait and hide XP widgets; `_hideRowsWithoutAward` controls rows without XP.
+
+---
+
 ## 12. ENEMY INSPECTION HUD INVARIANTS
 
 - UI must access enemy inspection data only via the Core interface `IUnitInspectionController` (no direct references to Battle domain types from UI).  
