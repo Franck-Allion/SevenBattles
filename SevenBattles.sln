@@ -135,6 +135,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KinoBloom.Runtime", "KinoBl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.Profiling.Core", "Unity.Profiling.Core.csproj", "{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenBattles.Preparation", "SevenBattles.Preparation.csproj", "{646C86CB-8C74-8C4D-9C99-EB1100799E72}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenBattles.Battle.Editor", "SevenBattles.Battle.Editor.csproj", "{C5A5488D-0622-18A5-243C-DC3EAC584ADA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.2D.Common.Runtime", "Unity.2D.Common.Runtime.csproj", "{F865A40B-1AF1-8EC5-A48F-336B2DECC99C}"
@@ -427,6 +429,10 @@ Global
 		{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2580C5D4-9AFB-84C7-FBBE-F1074D89F1F0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{646C86CB-8C74-8C4D-9C99-EB1100799E72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{646C86CB-8C74-8C4D-9C99-EB1100799E72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{646C86CB-8C74-8C4D-9C99-EB1100799E72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{646C86CB-8C74-8C4D-9C99-EB1100799E72}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C5A5488D-0622-18A5-243C-DC3EAC584ADA}.Release|Any CPU.ActiveCfg = Release|Any CPU

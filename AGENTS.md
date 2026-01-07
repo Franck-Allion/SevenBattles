@@ -1,13 +1,13 @@
-﻿# AGENTS.md — Engineering Governance Rules for AI Contributions
+# AGENTS.md � Engineering Governance Rules for AI Contributions
 
-## 🎯 Purpose
+## ?? Purpose
 
 This document defines mandatory rules for all **AI agents** and automation systems contributing to the **SevenBattles** Unity 6 LTS project.  
-Its goal is to ensure every generated code or documentation artifact aligns with the studio’s engineering standards: **reuse first**, **tested code**, and **traceable commits**.
+Its goal is to ensure every generated code or documentation artifact aligns with the studio�s engineering standards: **reuse first**, **tested code**, and **traceable commits**.
 
 ---
 
-## 1. 🔁 REUSE SCAN — Always check before coding
+## 1. ?? REUSE SCAN � Always check before coding
 
 Before implementing anything new, the agent **must scan the repository** for reusable or extensible code.
 
@@ -26,7 +26,7 @@ Before implementing anything new, the agent **must scan the repository** for reu
 
 ---
 
-## 2. 🧩 PLAN — Integration before invention
+## 2. ?? PLAN � Integration before invention
 
 After the reuse scan, the agent must propose a **short implementation plan**:
 
@@ -38,7 +38,7 @@ After the reuse scan, the agent must propose a **short implementation plan**:
 
 ---
 
-## 3. 📜 CONTRACTS — Declare dependencies clearly
+## 3. ?? CONTRACTS � Declare dependencies clearly
 
 Every implementation must list:
 
@@ -47,7 +47,7 @@ Every implementation must list:
 
 ---
 
-## 4. 🔌 UNITY WIRING CHECKLIST — How to Wire in Unity
+## 4. ?? UNITY WIRING CHECKLIST � How to Wire in Unity
 
 Every feature that touches Unity **Scenes, Prefabs, ScriptableObjects, Addressables, or Localization**  
 must include a `Unity Wiring` section in its design document and/or PR description.
@@ -70,13 +70,13 @@ Use exact project paths (`Assets/...`) and concrete component names as they appe
     - Add components:
       - `<ComponentName>` (e.g., `TurnOrderHUD`)
     - Inspector references:
-      - `<ComponentName>._someField` → `<SceneOrPrefabHierarchyPath>`
+      - `<ComponentName>._someField` ? `<SceneOrPrefabHierarchyPath>`
 - Prefabs created:
   - `Assets/Prefabs/.../NewPrefabName.prefab`
     - Root components:
       - `Canvas`, `CanvasGroup`, `GraphicRaycaster`, `<MainBehaviour>`
     - Child objects:
-      - `ChildName` → `ComponentType` (purpose)
+      - `ChildName` ? `ComponentType` (purpose)
 
 #### C. ScriptableObject Setup
 - ScriptableObjects modified:
@@ -91,7 +91,7 @@ Use exact project paths (`Assets/...`) and concrete component names as they appe
 #### D. Addressables & LifetimeContentService Scopes
 - Addressables:
   - Labels/keys added or changed:
-    - `Assets/Prefabs/.../SomeHUD.prefab` → label(s): `...`
+    - `Assets/Prefabs/.../SomeHUD.prefab` ? label(s): `...`
 - LifetimeContentService:
   - Scope registrations:
     - `<ScopeName>` loads `Assets/.../SomeAsset.prefab` from Addressables key `"some_key"`
@@ -103,8 +103,8 @@ Use exact project paths (`Assets/...`) and concrete component names as they appe
   - Table: `UI/...`
     - Key: `<KeyName>`
       - EN: `"English text"`
-      - FR: `"Texte français"`
-      - ES: `"Texto en español"`
+      - FR: `"Texte fran�ais"`
+      - ES: `"Texto en espa�ol"`
 - Scripts using localization:
   - `<TypeName>` field/property `LocalizedString <FieldName>` uses key `<KeyName>`
 
@@ -117,25 +117,25 @@ Use exact project paths (`Assets/...`) and concrete component names as they appe
 ```
 
 If a change does **not** touch any Unity assets (pure code / tests), explicitly write in the PR:  
-**Unity Wiring:** Not applicable — pure code utility.
+**Unity Wiring:** Not applicable � pure code utility.
 
-### 4.2 Example — New Battle HUD Element (Turn Order)
+### 4.2 Example � New Battle HUD Element (Turn Order)
 
 Unity Wiring (example only):
 
 - Scenes:
-  - `Assets/Scenes/Battle/BattleScene.unity` — no direct scene modification (HUD is prefab-based).
+  - `Assets/Scenes/Battle/BattleScene.unity` � no direct scene modification (HUD is prefab-based).
 - Prefabs:
   - `Assets/Prefabs/UI/Battle/TurnOrderHUD.prefab`
     - Root components:
       - `Canvas`, `CanvasGroup`, `GraphicRaycaster`, `TurnOrderHUD`
     - `TurnOrderHUD` Inspector references:
-      - `_controllerBehaviour` → `BattleSystemsRoot/SimpleTurnOrderController` (object implementing `IBattleTurnController`)
-      - `_endTurnButton` → child `EndTurnButton` (`Button`)
-      - `_actionPointBarRoot` → child `ActionPointBarRoot` (`RectTransform`)
-      - `_actionPointSlots` → images under `ActionPointBarRoot`
+      - `_controllerBehaviour` ? `BattleSystemsRoot/SimpleTurnOrderController` (object implementing `IBattleTurnController`)
+      - `_endTurnButton` ? child `EndTurnButton` (`Button`)
+      - `_actionPointBarRoot` ? child `ActionPointBarRoot` (`RectTransform`)
+      - `_actionPointSlots` ? images under `ActionPointBarRoot`
 - ScriptableObjects:
-  - Not applicable — HUD uses runtime controller data only.
+  - Not applicable � HUD uses runtime controller data only.
 - Addressables & LifetimeContentService:
   - `TurnOrderHUD.prefab` marked Addressable with label `battle-hud`.
   - `BattleHUDScope` in `LifetimeContentService` loads `TurnOrderHUD.prefab` by key `"ui_battle_turn_order_hud"`.
@@ -153,7 +153,8 @@ Review rule: any PR that changes Scenes, Prefabs, ScriptableObjects, Addressable
 
 Each Unity scene with gameplay significance must have a short structure document under `Docs/Scenes/`.
 
-- Example: `Assets/Scenes/BattleScene.unity` → `Docs/Scenes/BattleScene.md`.
+- Example: `Assets/Scenes/BattleScene.unity` -> `Docs/Scenes/BattleScene.md`.
+- Example: `Assets/Scenes/PreparationScene.unity` -> `Docs/Scenes/PreparationScene.md` (include `TournamentPathPreview` and `TournamentPathPreviewRenderer` wiring).
 - Before adding or modifying GameObjects/components in a scene:
   - Read the corresponding `Docs/Scenes/<SceneName>.md` to understand existing roots and extension points.
   - Prefer attaching new controllers/services/HUDs to documented roots (e.g., `BattleSystemsRoot`, `HUDRoot`) instead of creating new top-level objects.
@@ -164,7 +165,7 @@ Each Unity scene with gameplay significance must have a short structure document
 
 ---
 
-## 5. 🧪 AGENTS.md SUGGESTIONS — Improve Governance
+## 5. ?? AGENTS.md SUGGESTIONS � Improve Governance
 
 Each implementation must propose optional improvements to AGENTS.md based on the feature (unless none).
 
@@ -174,11 +175,11 @@ Example improvements:
 - Suggest documentation additions.
 
 If none:  
-**“AGENTS.md Suggestions: None.”**
+**�AGENTS.md Suggestions: None.�**
 
 ---
 
-## 6. 🧾 COMMIT MESSAGE — MANDATORY - Follow Conventional Commits
+## 6. ?? COMMIT MESSAGE � MANDATORY - Follow Conventional Commits
 
 Provide the commit message to set:
 `<type>(<scope>): <short description>`
@@ -187,22 +188,22 @@ Types: feat, fix, test, refactor, chore, docs.
 
 ---
 
-## 7. ⚙️ UNITY CODE QUALITY RULES
+## 7. ?? UNITY CODE QUALITY RULES
 
 - Respect SOLID.  
 - Unity naming conventions:
-  - PascalCase → types/methods  
-  - _camelCase → private fields  
-  - ALL_CAPS → constants  
+  - PascalCase ? types/methods  
+  - _camelCase ? private fields  
+  - ALL_CAPS ? constants  
 - All comments in English.  
 - Optimize memory & performance.  
 - Use correct asmdefs.  
 - Never hardcode UI strings (must use Localization).  
-- Avoid complex inspector UnityEvent wiring — prefer C# events.
+- Avoid complex inspector UnityEvent wiring � prefer C# events.
 
 ---
 
-## 8. 🧭 GAME DOMAINS — Functional Architecture
+## 8. ?? GAME DOMAINS � Functional Architecture
 
 To maintain modularity and enforce clean code organization, all systems in **SevenBattles** must belong to a defined **domain**.  
 Each domain represents a functional area of the game, with its own folder, assembly definition, and test suite.
@@ -221,39 +222,39 @@ Each domain represents a functional area of the game, with its own folder, assem
 ### Folder & Assembly Structure
 
 Assets/
-├── Scripts/
-│ ├── Core/
-│ ├── Menu/
-│ ├── Preparation/
-│ ├── Battle/
-│ ├── UI/
-│ ├── AI/
-│ └── Tests/
-└── Art/
-│ ├── Sprites/
-│ ├── Fonts/
-│ ├── SFX/
-│ ├── Music/
-│ ├── VFX/
-└── Localization/
-    ├── UI/
-    │   ├── Common/
-    │   └── Menu/
-    ├── Battle/
-    ├── Preparation/
-    ├── Core/
-    └── Shared/
++-- Scripts/
+� +-- Core/
+� +-- Menu/
+� +-- Preparation/
+� +-- Battle/
+� +-- UI/
+� +-- AI/
+� +-- Tests/
++-- Art/
+� +-- Sprites/
+� +-- Fonts/
+� +-- SFX/
+� +-- Music/
+� +-- VFX/
++-- Localization/
+    +-- UI/
+    �   +-- Common/
+    �   +-- Menu/
+    +-- Battle/
+    +-- Preparation/
+    +-- Core/
+    +-- Shared/
 
 **Rules**
 - Each domain has its **own `.asmdef`** and optional `Tests.asmdef`.  
 - `Core` must not depend on any other domain.  
 - Other domains may depend on `Core`, but never on each other directly (only via interfaces).  
 - Place shared logic (helpers, services) in `Core/`.  
-- Tests should mirror the runtime structure (`Battle → BattleTests`, etc.).  
+- Tests should mirror the runtime structure (`Battle ? BattleTests`, etc.).  
 
 ---
 
-## 9. 🌐 LOCALIZATION RULES
+## 9. ?? LOCALIZATION RULES
 
 - All displayed text must use `LocalizedString`.  
 - Organize in functional string tables.  
@@ -265,7 +266,7 @@ Assets/
 
 ---
 
-## 10. 💾 GAME STATE PERSISTENCE INVARIANTS
+## 10. ?? GAME STATE PERSISTENCE INVARIANTS
 
 Whenever gameplay code introduces, removes, or changes any **game state** that must survive across sessions (e.g., current squad, campaign progress, difficulty, unlocked content, options that affect gameplay), the agent must:
 
@@ -312,7 +313,7 @@ For more details on the current save/load architecture and JSON format, see:
 
 ---
 
-## 11. 🖼 UI MODAL OVERLAY INVARIANTS
+## 11. ?? UI MODAL OVERLAY INVARIANTS
 
 - All blocking overlays (pause menus, confirmation dialogs, turn banners, etc.) must be driven by a `CanvasGroup` that controls both `alpha` and `blocksRaycasts`.  
 - While visible, modal overlays must use `blocksRaycasts = true` to prevent clicks on underlying HUD or world UI; when hidden, they must restore `blocksRaycasts = false` and any related HUD `CanvasGroup.alpha` state.  
@@ -348,7 +349,7 @@ For more details on the current save/load architecture and JSON format, see:
 
 ---
 
-## 13. 🧬 DOMAIN-SPECIFIC BATTLE INVARIANTS
+## 13. ?? DOMAIN-SPECIFIC BATTLE INVARIANTS
 
 ### Movement
 - **BattleMovementController** is the **single source of truth** for unit movement.
@@ -365,7 +366,7 @@ For more details on the current save/load architecture and JSON format, see:
 - General rule: Primary highlight = active unit only; Secondary highlight = cursor preview only.
 
 ### AP (Action Points)
-- Only from `UnitStatsData.ActionPoints` → HUD.  
+- Only from `UnitStatsData.ActionPoints` ? HUD.  
 - Never repurpose other stats.
 
 ### HeroEditor4D
@@ -422,7 +423,7 @@ For more details on the current save/load architecture and JSON format, see:
   - **Backward Compatibility**: Existing scenes continue to work during migration.
 - **Production workflow**: External systems (campaign, menu, SceneFlow) must create `BattleSessionConfig` programmatically and inject it before loading BattleScene.
 
-## 14. 🧹 REFACTORING & SAFE DELETION
+## 14. ?? REFACTORING & SAFE DELETION
 
 To prevent "Name does not exist in the current context" errors and broken references during refactoring:
 
@@ -440,5 +441,19 @@ To prevent "Name does not exist in the current context" errors and broken refere
 
 ---
 
+## 15. DOCUMENTATION EVOLUTION GUIDELINES
+
+When the AI introduces or changes behavior, it must keep documentation aligned for future evolution.
+
+- **Docs Impact**: Every response includes a short "Docs Impact" line that lists updated docs or says "Docs Impact: None."
+- **Scene changes**: Update `Docs/Scenes/<SceneName>.md` when adding, removing, or rewiring scene roots, controllers, or HUD entry points.
+- **New systems**: Add or update a focused doc under `Docs/` describing ownership, entry points, and extension hooks.
+- **Data assets**: Document new or changed ScriptableObjects, Addressables, and Localization tables with exact `Assets/...` paths.
+- **Save changes**: Update `Docs/SaveSystem.md` for any new persistent state or save DTO changes.
+- **Deprecations**: Include a short migration note that describes old to new, compatibility behavior, and removal timing.
+- **Domain changes**: If adding a new domain or asmdef, update the domain table and folder structure section.
+
+---
+
 # SevenBattles Engineering | Unity 6  
-**“Reuse first, wire clean, test always, commit clean.”**
+**"Reuse first, wire clean, test always, commit clean."**

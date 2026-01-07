@@ -96,6 +96,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldTileColor.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinitionRegistry.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\TournamentDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitLevelBonusData.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
