@@ -73,6 +73,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.2D.Tilemap.Extras.Edi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.InternalAPIEngineBridge.013", "Unity.InternalAPIEngineBridge.013.csproj", "{E5AB35E0-CE5F-8186-1FF4-C0CEE39A0485}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SevenBattles.Preparation.Editor", "SevenBattles.Preparation.Editor.csproj", "{3BC114DB-FEE0-7BA5-4443-40E3124387B3}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PsdPlugin", "PsdPlugin.csproj", "{4D72F566-D048-4F70-5D4A-E5488F43EECC}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unity.2D.IK.Editor", "Unity.2D.IK.Editor.csproj", "{C2E80572-E2C4-DD05-055E-BDB02DDFACFC}"
@@ -305,6 +307,10 @@ Global
 		{E5AB35E0-CE5F-8186-1FF4-C0CEE39A0485}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E5AB35E0-CE5F-8186-1FF4-C0CEE39A0485}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E5AB35E0-CE5F-8186-1FF4-C0CEE39A0485}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3BC114DB-FEE0-7BA5-4443-40E3124387B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3BC114DB-FEE0-7BA5-4443-40E3124387B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3BC114DB-FEE0-7BA5-4443-40E3124387B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3BC114DB-FEE0-7BA5-4443-40E3124387B3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4D72F566-D048-4F70-5D4A-E5488F43EECC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4D72F566-D048-4F70-5D4A-E5488F43EECC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4D72F566-D048-4F70-5D4A-E5488F43EECC}.Release|Any CPU.ActiveCfg = Release|Any CPU

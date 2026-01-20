@@ -17,6 +17,8 @@
   - `Main Camera`
   - `TournamentPathPreview` (`TournamentPathPreviewRenderer`)
     - `SpriteRenderer` displays the tournament path image.
+    - `TournamentBattleMapPresenter` spawns battle ellipses and enemy prefabs from the tournament definition.
+    - `TournamentBattleEllipseGizmo` draws ellipse layout gizmos for authoring.
 
 **Extension Points:**
 - New preparation controllers attach as new roots or under a future `_System` root if added.
@@ -26,3 +28,10 @@
 - `TournamentPathPreview` (`TournamentPathPreviewRenderer`)
   - `_tournament` -> `Assets/Data/Tournaments/Tournament-Default.asset` (or another `TournamentDefinition`).
   - `_spriteRenderer` -> `SpriteRenderer` on the same GameObject.
+- `TournamentPathPreview` (`TournamentBattleMapPresenter`)
+  - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.
+  - `_camera` -> `Main Camera`.
+  - `_battleRoot` -> `TournamentPathPreview` (`Transform`).
+  - `_currentRoundIndex` -> `1` (current round highlight target).
+- `TournamentPathPreview` (`TournamentBattleEllipseGizmo`)
+  - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.

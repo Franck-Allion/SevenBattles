@@ -1379,6 +1379,10 @@
       <Project>{2B0A6D0B-CC6B-F241-52FD-2D4AB2DD2DF0}</Project>
       <Name>Unity.Timeline.Editor</Name>
     </ProjectReference>
+    <ProjectReference Include="SevenBattles.Preparation.csproj">
+      <Project>{646C86CB-8C74-8C4D-9C99-EB1100799E72}</Project>
+      <Name>SevenBattles.Preparation</Name>
+    </ProjectReference>
     <ProjectReference Include="Unity.Timeline.csproj">
       <Project>{5EBE54CA-B85C-CF88-E5FA-CB0A5737FCB6}</Project>
       <Name>Unity.Timeline</Name>

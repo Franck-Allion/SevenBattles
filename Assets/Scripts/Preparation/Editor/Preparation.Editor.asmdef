@@ -1,0 +1,16 @@
+{
+  "name": "SevenBattles.Preparation.Editor",
+  "rootNamespace": "SevenBattles.Preparation.Editor",
+  "references": [
+    "SevenBattles.Preparation",
+    "SevenBattles.Core"
+  ],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "noEngineReferences": false
+}

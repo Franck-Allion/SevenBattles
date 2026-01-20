@@ -9,11 +9,11 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <RootNamespace>SevenBattles.Tests</RootNamespace>
-    <ProjectGuid>{7216B2B2-E4DF-D5A2-F8C5-2F70EE1A4B15}</ProjectGuid>
+    <RootNamespace>SevenBattles.Preparation.Editor</RootNamespace>
+    <ProjectGuid>{3BC114DB-FEE0-7BA5-4443-40E3124387B3}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <AssemblyName>SevenBattles.Tests</AssemblyName>
+    <AssemblyName>SevenBattles.Preparation.Editor</AssemblyName>
     <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <BaseDirectory>.</BaseDirectory>
@@ -50,7 +50,7 @@
     <UnityProjectGenerator>Package</UnityProjectGenerator>
     <UnityProjectGeneratorVersion>2.0.22</UnityProjectGeneratorVersion>
     <UnityProjectGeneratorStyle>Legacy</UnityProjectGeneratorStyle>
-    <UnityProjectType>Game:1</UnityProjectType>
+    <UnityProjectType>Editor:5</UnityProjectType>
     <UnityBuildTarget>StandaloneWindows64:19</UnityBuildTarget>
     <UnityVersion>6000.0.39f1</UnityVersion>
   </PropertyGroup>
@@ -61,54 +61,10 @@
     <Analyzer Include="C:\Program Files\Unity\Hub\Editor\6000.0.39f1\Editor\Data\Tools\Unity.SourceGenerators\Unity.UIToolkit.SourceGenerator.dll" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\Scripts\Tests\Battle\WorldBattleBootstrapTransitionTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\BattleBoardGameStateSaveProviderTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\TurnOrderControllerTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\BattleCursorControllerTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\UnitDefinitionControllerTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\UI\TurnOrderHUDTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridBilinearTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\SpellAmountPreviewTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\UnitMovementTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsShootPersistenceTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Save\BattleSessionLoadHandlerTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\UI\SaveLoadHUDTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\BattleTurnGameStateSaveProviderTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsHealTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\BattlefieldDefinitionTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\TileColorEffectsTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\UnitShootTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridQuadTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerSpellTargetingTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\UI\ConfirmationMessageBoxHUDTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\EnemyRandomPlacementTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\TournamentDefinitionTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\UnitXpProgressionUtilTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\StartSquadControllerTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\WorldPerspectiveBoardHighlightTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\UI\BattleSpellsHUDTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\BattleGameStateLoadHandlerTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\BattleXpCalculatorTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\BattleVisualFeedbackServiceTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsDeckCapacityTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsChangedTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\UnitAttackTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\BattlefieldServiceTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Spells\UnitSpellDeckTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\UI\BattlePauseHUDTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerSpellCastTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsLevelScalingTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\UI\SquadPlacementHUDTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\Spells\BattleEnchantmentControllerDisenchantTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Battle\BattleEnchantmentGameStateSaveProviderTests.cs" />
+    <Compile Include="Assets\Scripts\Preparation\Editor\TournamentBattleEllipseGizmoEditor.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Assets\Scripts\Tests\Tests.asmdef" />
+    <None Include="Assets\Scripts\Preparation\Editor\Preparation.Editor.asmdef" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="UnityEngine">
@@ -591,8 +547,52 @@
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.39f1\Editor\Data\PlaybackEngines\WindowsStandaloneSupport\UnityEditor.WindowsStandalone.Extensions.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.VisualScripting.YamlDotNet">
+      <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Dependencies\YamlDotNet\Unity.VisualScripting.YamlDotNet.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Collections.LowLevel.ILSupport">
+      <HintPath>Library\PackageCache\com.unity.collections@56bff8827a7e\Unity.Collections.LowLevel.ILSupport\Unity.Collections.LowLevel.ILSupport.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="nunit.framework">
       <HintPath>Library\PackageCache\com.unity.ext.nunit@60ef35ffd3cd\net40\unity-custom\nunit.framework.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Plastic.Antlr3.Runtime">
+      <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\Unity.Plastic.Antlr3.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Plastic.Newtonsoft.Json">
+      <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\Unity.Plastic.Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="log4netPlastic">
+      <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\log4netPlastic.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VisualScripting.IonicZip">
+      <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Dependencies\DotNetZip\Unity.VisualScripting.IonicZip.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="unityplastic">
+      <HintPath>Library\PackageCache\com.unity.collab-proxy@3351acaba9c9\Lib\Editor\unityplastic.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VisualScripting.Antlr3.Runtime">
+      <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Runtime\VisualScripting.Flow\Dependencies\NCalc\Unity.VisualScripting.Antlr3.Runtime.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>Library\PackageCache\com.unity.nuget.newtonsoft-json@74deb55db2a0\Runtime\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.VisualScripting.TextureAssets">
+      <HintPath>Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\EditorAssetResources\Unity.VisualScripting.TextureAssets.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>Library\PackageCache\com.unity.nuget.mono-cecil@d6f9955a5d5f\Mono.Cecil.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="mscorlib">
@@ -1095,31 +1095,23 @@
       <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.39f1\Editor\Data\UnityReferenceAssemblies\unity-4.8-api\Facades\System.Xml.XPath.XDocument.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Unity.TextMeshPro">
-      <HintPath>Library\ScriptAssemblies\Unity.TextMeshPro.dll</HintPath>
+    <Reference Include="UnityEditor.UI">
+      <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.UI">
       <HintPath>Library\ScriptAssemblies\UnityEngine.UI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="UnityEditor.UI">
-      <HintPath>Library\ScriptAssemblies\UnityEditor.UI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="SevenBattles.Preparation.csproj">
+      <Project>{646C86CB-8C74-8C4D-9C99-EB1100799E72}</Project>
+      <Name>SevenBattles.Preparation</Name>
+    </ProjectReference>
     <ProjectReference Include="SevenBattles.Core.csproj">
       <Project>{3C4370D1-526A-1FB3-16B6-CD4D299CEEE3}</Project>
       <Name>SevenBattles.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="SevenBattles.Battle.csproj">
-      <Project>{36964088-0D0C-62F4-CC2A-05A0E1F5616C}</Project>
-      <Name>SevenBattles.Battle</Name>
-    </ProjectReference>
-    <ProjectReference Include="SevenBattles.UI.csproj">
-      <Project>{1A86DB10-03A8-55C0-F467-744673C46B2C}</Project>
-      <Name>SevenBattles.UI</Name>
     </ProjectReference>
     <ProjectReference Include="UnityEngine.TestRunner.csproj">
       <Project>{D8E363A2-283E-FCD4-F099-A3B17D6F5064}</Project>

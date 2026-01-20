@@ -6,13 +6,17 @@ namespace SevenBattles.Core.Battle
     [CreateAssetMenu(menuName = "SevenBattles/Battle/Tournament Definition", fileName = "TournamentDefinition")]
     public sealed class TournamentDefinition : ScriptableObject
     {
-        public const int BattlefieldCount = 7;
+        public const int BattleCount = 7;
+        public const int BattlefieldCount = BattleCount;
 
         [Header("Visuals")]
         [SerializeField] private Sprite _tournamentPathImage;
 
-        [Header("Battlefields (in order)")]
-        [SerializeField] private BattlefieldDefinition[] _battlefields = new BattlefieldDefinition[BattlefieldCount];
+        [Header("Battles (in order)")]
+        [SerializeField] private TournamentBattleDefinition[] _battles = new TournamentBattleDefinition[BattleCount];
+
+        [Header("Battlefields (legacy order)")]
+        [SerializeField] private BattlefieldDefinition[] _battlefields = new BattlefieldDefinition[BattleCount];
 
         public Sprite TournamentPathImage => _tournamentPathImage;
 
@@ -20,35 +24,63 @@ namespace SevenBattles.Core.Battle
         {
             get
             {
-                EnsureBattlefieldCount();
+                EnsureBattleCount();
                 return _battlefields;
+            }
+        }
+
+        public TournamentBattleDefinition[] Battles
+        {
+            get
+            {
+                EnsureBattleCount();
+                return _battles;
             }
         }
 
         private void OnEnable()
         {
-            EnsureBattlefieldCount();
+            EnsureBattleCount();
         }
 
         private void OnValidate()
         {
-            EnsureBattlefieldCount();
+            EnsureBattleCount();
         }
 
-        private void EnsureBattlefieldCount()
+        private void EnsureBattleCount()
         {
+            if (_battles == null)
+            {
+                _battles = new TournamentBattleDefinition[BattleCount];
+            }
+
+            if (_battles.Length != BattleCount)
+            {
+                var resizedBattles = new TournamentBattleDefinition[BattleCount];
+                Array.Copy(_battles, resizedBattles, Mathf.Min(_battles.Length, resizedBattles.Length));
+                _battles = resizedBattles;
+            }
+
+            for (int i = 0; i < _battles.Length; i++)
+            {
+                if (_battles[i] == null)
+                {
+                    _battles[i] = new TournamentBattleDefinition();
+                }
+            }
+
             if (_battlefields == null)
             {
-                _battlefields = new BattlefieldDefinition[BattlefieldCount];
-                return;
+                _battlefields = new BattlefieldDefinition[BattleCount];
             }
 
-            if (_battlefields.Length == BattlefieldCount)
+            if (_battlefields.Length == BattleCount)
             {
                 return;
             }
 
-            var resized = new BattlefieldDefinition[BattlefieldCount];
+            var resized = new BattlefieldDefinition[BattleCount];
             Array.Copy(_battlefields, resized, Mathf.Min(_battlefields.Length, resized.Length));
             _battlefields = resized;
         }

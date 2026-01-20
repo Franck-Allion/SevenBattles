@@ -223,6 +223,8 @@ GameObject:
   - component: {fileID: 984321003}
   - component: {fileID: 984321004}
   - component: {fileID: 984321005}
+  - component: {fileID: 984321006}
+  - component: {fileID: 984321007}
   m_Layer: 0
   m_Name: TournamentPathPreview
   m_TagString: Untagged
@@ -333,6 +335,48 @@ MonoBehaviour:
   _overscan: 1
   _pixelPadding: 2
   _fitEveryFrame: 1
+--- !u!114 &984321006
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 984321001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 471f602534d04814a9d83785ce9f1afd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _tournament: {fileID: 11400000, guid: e53ebc1d0bbb4751b47cfac623c441a0, type: 2}
+  _camera: {fileID: 470502799}
+  _battleRoot: {fileID: 984321002}
+  _segments: 48
+  _outlineWidth: 0.04
+  _hoverWidth: 0.08
+  _outlineColor: {r: 0.9, g: 0.8, b: 0.6, a: 0.65}
+  _hoverColor: {r: 1, g: 0.9, b: 0.35, a: 1}
+  _hoverOtherColor: {r: 0.7, g: 0.7, b: 0.7, a: 0.9}
+  _hoverSpeed: 10
+  _sortingOrder: 1
+  _ellipseZOffset: -0.05
+  _lineMaterial: {fileID: 0}
+  _currentRoundIndex: 1
+--- !u!114 &984321007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 984321001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77449e785dbe427689774ecb4f88c92a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _tournament: {fileID: 11400000, guid: e53ebc1d0bbb4751b47cfac623c441a0, type: 2}
+  _segments: 48
+  _gizmoColor: {r: 0.95, g: 0.8, b: 0.3, a: 0.7}
+  _drawCenters: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
