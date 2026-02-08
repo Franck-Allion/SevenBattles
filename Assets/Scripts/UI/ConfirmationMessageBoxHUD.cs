@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization;
 using TMPro;
+using SevenBattles.Core.Contracts;
 
 namespace SevenBattles.UI
 {
@@ -10,7 +11,7 @@ namespace SevenBattles.UI
     /// Reusable confirmation message box with localized title/message and confirm/cancel buttons.
     /// Uses a CanvasGroup for fade/scale animation and to block input behind the dialog.
     /// </summary>
-    public class ConfirmationMessageBoxHUD : MonoBehaviour
+    public class ConfirmationMessageBoxHUD : MonoBehaviour, IConfirmationMessageBox
     {
         [Header("Root")]
         [SerializeField, Tooltip("CanvasGroup controlling the entire confirmation overlay (alpha and input).")]
@@ -82,6 +83,7 @@ namespace SevenBattles.UI
 
             EnsureCanvasReferences();
             AutoDiscoverTextTargets();
+            AutoDiscoverButtons();
             WireButtonsIfNeeded();
             HideImmediate();
         }
@@ -245,6 +247,26 @@ namespace SevenBattles.UI
                 {
                     _cancelTMP = tmps[3];
                 }
+            }
+        }
+
+        private void AutoDiscoverButtons()
+        {
+            if (_confirmButton != null && _cancelButton != null)
+            {
+                return;
+            }
+
+            var searchRoot = _dialogRoot != null ? _dialogRoot : transform;
+            var buttons = searchRoot.GetComponentsInChildren<Button>(true);
+            if (_confirmButton == null && buttons.Length > 0)
+            {
+                _confirmButton = buttons[0];
+            }
+
+            if (_cancelButton == null && buttons.Length > 1)
+            {
+                _cancelButton = buttons[1];
             }
         }
 

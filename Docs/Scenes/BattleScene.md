@@ -87,6 +87,7 @@
   - Extension point:
     - Any system needing battle configuration should depend on `IBattleSessionService`, not ScriptableObject references.
     - Session must be initialized before any controllers spawn units (`WorldBattleBootstrap.Awake` ensures this).
+    - Scene starters can pass data via `BattleSessionConfigTransfer` before loading BattleScene (e.g., tournament flow).
   - **Debugging workflow**:
     - When pressing Play directly in BattleScene (no previous scene), `WorldBattleBootstrap` auto-generates a session from inspector-assigned ScriptableObject references.
     - This allows rapid iteration without setting up a full scene flow.

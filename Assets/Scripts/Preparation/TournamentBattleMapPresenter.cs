@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Core.Battle;
@@ -24,8 +25,21 @@ namespace SevenBattles.Preparation
         [SerializeField] private Material _lineMaterial;
         [SerializeField, Min(1)] private int _currentRoundIndex = 1;
 
+        [Header("Cursor")]
+        [SerializeField, Tooltip("Cursor texture shown when hovering the next battle ellipse.")]
+        private Texture2D _nextBattleCursorTexture;
+        [SerializeField, Tooltip("Hotspot for the next battle cursor texture.")]
+        private Vector2 _nextBattleCursorHotspot = new Vector2(16f, 16f);
+
         private readonly List<BattleView> _views = new List<BattleView>();
         private Material _runtimeLineMaterial;
+        private bool _interactionsEnabled = true;
+        private bool _cursorActive;
+
+        public event Action<TournamentBattleDefinition, int> BattleClicked;
+
+        public TournamentDefinition TournamentDefinition => _tournament;
+        public int CurrentRoundIndex => GetClampedRoundIndex();
 
         private void Awake()
         {
@@ -40,6 +54,7 @@ namespace SevenBattles.Preparation
         private void OnDisable()
         {
             ClearViews();
+            ClearHoverCursor();
         }
 
         private void OnDestroy()
@@ -49,12 +64,15 @@ namespace SevenBattles.Preparation
                 Destroy(_runtimeLineMaterial);
                 _runtimeLineMaterial = null;
             }
+
+            ClearHoverCursor();
         }
 
         private void Update()
         {
-            if (_camera == null || _battleRoot == null || _views.Count == 0)
+            if (!_interactionsEnabled || _camera == null || _battleRoot == null || _views.Count == 0)
             {
+                ClearHoverCursor();
                 return;
             }
 
@@ -66,6 +84,8 @@ namespace SevenBattles.Preparation
             var local = _battleRoot.InverseTransformPoint(world);
             var localPoint = new Vector2(local.x, local.y);
 
+            BattleView hoveredView = null;
+
             for (int i = 0; i < _views.Count; i++)
             {
                 var view = _views[i];
@@ -73,6 +93,18 @@ namespace SevenBattles.Preparation
                 float target = hovered ? 1f : 0f;
                 view.Hover = Mathf.MoveTowards(view.Hover, target, _hoverSpeed * Time.deltaTime);
                 ApplyHover(view, currentRoundIndex);
+                if (hovered)
+                {
+                    hoveredView = view;
+                }
+            }
+
+            bool isNextBattleHovered = hoveredView != null && hoveredView.Index == currentRoundIndex;
+            UpdateHoverCursor(isNextBattleHovered);
+
+            if (hoveredView != null && Input.GetMouseButtonDown(0))
+            {
+                BattleClicked?.Invoke(hoveredView.Definition, hoveredView.Index);
             }
         }
 
@@ -85,6 +117,53 @@ namespace SevenBattles.Preparation
         public void SetCurrentRoundIndex(int roundIndex)
         {
             _currentRoundIndex = Mathf.Max(1, roundIndex);
+        }
+
+        public void SetInteractionsEnabled(bool enabled)
+        {
+            _interactionsEnabled = enabled;
+
+            if (!_interactionsEnabled)
+            {
+                int currentRoundIndex = GetClampedRoundIndex();
+                for (int i = 0; i < _views.Count; i++)
+                {
+                    var view = _views[i];
+                    view.Hover = 0f;
+                    ApplyHover(view, currentRoundIndex);
+                }
+
+                ClearHoverCursor();
+            }
+        }
+
+        private void UpdateHoverCursor(bool show)
+        {
+            if (_nextBattleCursorTexture == null)
+            {
+                return;
+            }
+
+            if (show == _cursorActive)
+            {
+                return;
+            }
+
+            _cursorActive = show;
+            Cursor.SetCursor(show ? _nextBattleCursorTexture : null,
+                show ? _nextBattleCursorHotspot : Vector2.zero,
+                CursorMode.Auto);
+        }
+
+        private void ClearHoverCursor()
+        {
+            if (!_cursorActive)
+            {
+                return;
+            }
+
+            _cursorActive = false;
+            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
         }
 
         private void EnsureReferences()

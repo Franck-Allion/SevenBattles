@@ -85,6 +85,13 @@ namespace SevenBattles.Battle.Start
                 return;
             }
 
+            if (BattleSessionConfigTransfer.TryConsume(out var pendingConfig))
+            {
+                sessionService.InitializeSession(pendingConfig);
+                Debug.Log("WorldBattleBootstrap: Initialized battle session from pending config.");
+                return;
+            }
+
             // Fallback: create session from legacy ScriptableObject references
             var config = BuildLegacyBattleSessionConfig();
             if (config != null)

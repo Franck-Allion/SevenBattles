@@ -1506,6 +1506,10 @@
       <Project>{22CB855D-374D-A11C-634E-8903565AC2EC}</Project>
       <Name>Unity.VisualScripting.Core.Editor</Name>
     </ProjectReference>
+    <ProjectReference Include="SevenBattles.Preparation.Editor.csproj">
+      <Project>{3BC114DB-FEE0-7BA5-4443-40E3124387B3}</Project>
+      <Name>SevenBattles.Preparation.Editor</Name>
+    </ProjectReference>
     <ProjectReference Include="Unity.VisualScripting.Flow.Editor.csproj">
       <Project>{07CDD740-9201-192B-B099-68021FFD776A}</Project>
       <Name>Unity.VisualScripting.Flow.Editor</Name>

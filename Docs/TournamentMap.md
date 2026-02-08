@@ -18,6 +18,9 @@
   - Forces HeroEditor4D character prefabs to face down for consistent preview.
   - Uses `_currentRoundIndex` to color hover highlights (current = yellow, others = gray).
   - Uses `EllipseDefinition.ContainsPoint` for hover hit testing.
+  - Optional cursor texture for the next battle hover (assign in inspector).
+- `Assets/Scripts/Preparation/TournamentBattleStartController.cs`
+  - Listens for clicks on the current battle ellipse, shows confirmation, and starts BattleScene with injected battle data.
 - `Assets/Scripts/Preparation/TournamentBattleEllipseGizmo.cs`
   - Draws ellipse gizmos in the scene view for authoring.
 - `Assets/Scripts/Preparation/Editor/TournamentBattleEllipseGizmoEditor.cs`

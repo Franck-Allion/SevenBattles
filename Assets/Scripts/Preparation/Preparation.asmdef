@@ -2,7 +2,8 @@
   "name": "SevenBattles.Preparation",
   "rootNamespace": "SevenBattles.Preparation",
   "references": [
-    "SevenBattles.Core"
+    "SevenBattles.Core",
+    "Unity.Localization"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

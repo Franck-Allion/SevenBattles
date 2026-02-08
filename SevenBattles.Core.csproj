@@ -91,6 +91,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpTuning.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGrid.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinition.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\BattleSessionConfigTransfer.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellAmountPreview.cs" />
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISpellSelectionController.cs" />
@@ -99,6 +100,7 @@
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentDefinition.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\IConfirmationMessageBox.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitLevelBonusData.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
@@ -1129,6 +1131,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="Unity.Localization.csproj">
+      <Project>{D71028B7-CB19-EF3E-3E02-3ACC563BEEBE}</Project>
+      <Name>Unity.Localization</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="GenerateTargetFrameworkMonikerAttribute" />

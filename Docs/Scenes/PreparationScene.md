@@ -18,7 +18,10 @@
   - `TournamentPathPreview` (`TournamentPathPreviewRenderer`)
     - `SpriteRenderer` displays the tournament path image.
     - `TournamentBattleMapPresenter` spawns battle ellipses and enemy prefabs from the tournament definition.
+    - `TournamentBattleStartController` handles click -> confirmation -> battle start.
     - `TournamentBattleEllipseGizmo` draws ellipse layout gizmos for authoring.
+  - `ConfirmationHUD`
+    - `ConfirmationMessageBoxHUD` (copied from BattleScene).
 
 **Extension Points:**
 - New preparation controllers attach as new roots or under a future `_System` root if added.
@@ -33,5 +36,12 @@
   - `_camera` -> `Main Camera`.
   - `_battleRoot` -> `TournamentPathPreview` (`Transform`).
   - `_currentRoundIndex` -> `1` (current round highlight target).
+  - `_nextBattleCursorTexture` -> cursor texture asset for the next battle hover (optional).
+  - `_nextBattleCursorHotspot` -> set to match the cursor texture hotspot.
+- `TournamentPathPreview` (`TournamentBattleStartController`)
+  - `_mapPresenter` -> `TournamentPathPreview` (`TournamentBattleMapPresenter`).
+  - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
+  - `_confirmationBehaviour` -> `ConfirmationHUD/ConfirmationPanel` (`ConfirmationMessageBoxHUD`).
+  - `_battleSceneName` -> `BattleScene`.
 - `TournamentPathPreview` (`TournamentBattleEllipseGizmo`)
   - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.

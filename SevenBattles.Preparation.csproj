@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Preparation\TournamentPathPreviewRenderer.cs" />
+    <Compile Include="Assets\Scripts\Preparation\TournamentBattleStartController.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleEllipseGizmo.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleMapPresenter.cs" />
   </ItemGroup>
@@ -1090,6 +1091,10 @@
     <ProjectReference Include="SevenBattles.Core.csproj">
       <Project>{3C4370D1-526A-1FB3-16B6-CD4D299CEEE3}</Project>
       <Name>SevenBattles.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.Localization.csproj">
+      <Project>{D71028B7-CB19-EF3E-3E02-3ACC563BEEBE}</Project>
+      <Name>Unity.Localization</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
