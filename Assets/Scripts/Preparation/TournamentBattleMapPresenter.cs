@@ -26,6 +26,10 @@ namespace SevenBattles.Preparation
         [SerializeField, Min(1)] private int _currentRoundIndex = 1;
 
         [Header("Cursor")]
+        [SerializeField, Tooltip("Default cursor texture used in the preparation scene.")]
+        private Texture2D _defaultCursorTexture;
+        [SerializeField, Tooltip("Hotspot for the default cursor texture.")]
+        private Vector2 _defaultCursorHotspot = new Vector2(4f, 4f);
         [SerializeField, Tooltip("Cursor texture shown when hovering the next battle ellipse.")]
         private Texture2D _nextBattleCursorTexture;
         [SerializeField, Tooltip("Hotspot for the next battle cursor texture.")]
@@ -35,6 +39,7 @@ namespace SevenBattles.Preparation
         private Material _runtimeLineMaterial;
         private bool _interactionsEnabled = true;
         private bool _cursorActive;
+        private bool _defaultCursorApplied;
 
         public event Action<TournamentBattleDefinition, int> BattleClicked;
 
@@ -49,12 +54,13 @@ namespace SevenBattles.Preparation
         private void OnEnable()
         {
             BuildViews();
+            ApplyDefaultCursor();
         }
 
         private void OnDisable()
         {
             ClearViews();
-            ClearHoverCursor();
+            ApplyDefaultCursor();
         }
 
         private void OnDestroy()
@@ -65,14 +71,14 @@ namespace SevenBattles.Preparation
                 _runtimeLineMaterial = null;
             }
 
-            ClearHoverCursor();
+            ApplyDefaultCursor();
         }
 
         private void Update()
         {
             if (!_interactionsEnabled || _camera == null || _battleRoot == null || _views.Count == 0)
             {
-                ClearHoverCursor();
+                ApplyDefaultCursor();
                 return;
             }
 
@@ -133,7 +139,7 @@ namespace SevenBattles.Preparation
                     ApplyHover(view, currentRoundIndex);
                 }
 
-                ClearHoverCursor();
+                ApplyDefaultCursor();
             }
         }
 
@@ -141,29 +147,42 @@ namespace SevenBattles.Preparation
         {
             if (_nextBattleCursorTexture == null)
             {
+                ApplyDefaultCursor();
                 return;
             }
 
             if (show == _cursorActive)
             {
+                if (!show && !_defaultCursorApplied)
+                {
+                    ApplyDefaultCursor();
+                }
                 return;
             }
 
             _cursorActive = show;
-            Cursor.SetCursor(show ? _nextBattleCursorTexture : null,
-                show ? _nextBattleCursorHotspot : Vector2.zero,
-                CursorMode.Auto);
+            _defaultCursorApplied = false;
+            if (show)
+            {
+                Cursor.SetCursor(_nextBattleCursorTexture, _nextBattleCursorHotspot, CursorMode.Auto);
+            }
+            else
+            {
+                ApplyDefaultCursor();
+            }
         }
 
-        private void ClearHoverCursor()
+        private void ApplyDefaultCursor()
         {
-            if (!_cursorActive)
+            if (!_cursorActive && _defaultCursorApplied)
             {
+                Cursor.SetCursor(_defaultCursorTexture, _defaultCursorHotspot, CursorMode.Auto);
                 return;
             }
 
             _cursorActive = false;
-            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
+            _defaultCursorApplied = true;
+            Cursor.SetCursor(_defaultCursorTexture, _defaultCursorHotspot, CursorMode.Auto);
         }
 
         private void EnsureReferences()

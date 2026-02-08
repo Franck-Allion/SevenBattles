@@ -36,6 +36,8 @@
   - `_camera` -> `Main Camera`.
   - `_battleRoot` -> `TournamentPathPreview` (`Transform`).
   - `_currentRoundIndex` -> `1` (current round highlight target).
+  - `_defaultCursorTexture` -> `Assets/Art/Cursors/pointer002.png` (or the desired default cursor asset).
+  - `_defaultCursorHotspot` -> set to match the cursor tip (e.g., `4,4`).
   - `_nextBattleCursorTexture` -> cursor texture asset for the next battle hover (optional).
   - `_nextBattleCursorHotspot` -> set to match the cursor texture hotspot.
 - `TournamentPathPreview` (`TournamentBattleStartController`)
