@@ -255,26 +255,13 @@ namespace SevenBattles.Battle.Combat
                 return;
             }
 
-            // Find the target unit on the target tile
-            T? targetUnit = null;
-            for (int i = 0; i < allUnits.Count; i++)
+            if (!TryResolveLegalMeleeTarget(targetTile, attackerMeta, allUnits, getMetadata, getStats, out var target))
             {
-                var targetMeta = getMetadata(allUnits[i]);
-                if (targetMeta == null || !targetMeta.HasTile) continue;
-                if (targetMeta.Tile == targetTile)
-                {
-                    targetUnit = allUnits[i];
-                    break;
-                }
-            }
-
-            if (!targetUnit.HasValue)
-            {
+                SBLog.Warn($"[Combat] Rejected melee attack on tile ({targetTile.x},{targetTile.y}) because the target is no longer a legal adjacent enemy.", this);
                 onComplete?.Invoke();
                 return;
             }
 
-            var target = targetUnit.Value;
             var targetStats = getStats(target);
             if (targetStats == null)
             {
@@ -288,6 +275,50 @@ namespace SevenBattles.Battle.Combat
             // Start the attack sequence coroutine
             onAttackStarted?.Invoke();
             StartCoroutine(ExecuteAttackRoutine(attacker, target, damage, getMetadata, getStats, onAPConsumed, onUnitDied, onComplete));
+        }
+
+        private static bool TryResolveLegalMeleeTarget<T>(
+            Vector2Int targetTile,
+            UnitBattleMetadata attackerMeta,
+            List<T> allUnits,
+            Func<T, UnitBattleMetadata> getMetadata,
+            Func<T, UnitStats> getStats,
+            out T targetUnit) where T : struct
+        {
+            targetUnit = default;
+
+            if (attackerMeta == null || !attackerMeta.HasTile)
+            {
+                return false;
+            }
+
+            if (!IsCardinallyAdjacent(attackerMeta.Tile, targetTile))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < allUnits.Count; i++)
+            {
+                var candidateMeta = getMetadata(allUnits[i]);
+                if (candidateMeta == null || !candidateMeta.HasTile) continue;
+                if (candidateMeta.Tile != targetTile) continue;
+                if (candidateMeta.IsPlayerControlled == attackerMeta.IsPlayerControlled) continue;
+
+                var candidateStats = getStats(allUnits[i]);
+                if (candidateStats == null || candidateStats.Life <= 0) continue;
+
+                targetUnit = allUnits[i];
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsCardinallyAdjacent(Vector2Int a, Vector2Int b)
+        {
+            int dx = Mathf.Abs(a.x - b.x);
+            int dy = Mathf.Abs(a.y - b.y);
+            return dx + dy == 1;
         }
 
         /// <summary>
@@ -658,3 +689,4 @@ namespace SevenBattles.Battle.Combat
         }
     }
 }
+

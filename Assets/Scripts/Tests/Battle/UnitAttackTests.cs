@@ -245,6 +245,59 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(def);
         }
 
+        [UnityTest]
+        public IEnumerator TryExecuteAttack_DoesNotHit_WhenCachedTargetIsNoLongerAdjacent()
+        {
+            var boardGo = new GameObject("Board");
+            var board = boardGo.AddComponent<WorldPerspectiveBoard>();
+
+            SetPrivate(board, "_columns", 5);
+            SetPrivate(board, "_rows", 5);
+            SetPrivate(board, "_topLeft", new Vector2(0, 5));
+            SetPrivate(board, "_topRight", new Vector2(5, 5));
+            SetPrivate(board, "_bottomRight", new Vector2(5, 0));
+            SetPrivate(board, "_bottomLeft", new Vector2(0, 0));
+            CallPrivate(board, "RebuildGrid");
+
+            var attackerGo = new GameObject("Attacker");
+            var attackerStats = attackerGo.AddComponent<UnitStats>();
+            attackerGo.AddComponent<SpriteRenderer>();
+            attackerStats.ApplyBase(new UnitStatsData { Attack = 10, ActionPoints = 2, Speed = 2, Initiative = 10 });
+
+            var targetGo = new GameObject("Target");
+            var targetStats = targetGo.AddComponent<UnitStats>();
+            targetGo.AddComponent<SpriteRenderer>();
+            targetStats.ApplyBase(new UnitStatsData { Defense = 0, Life = 30, ActionPoints = 2, Speed = 2, Initiative = 5 });
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Portrait = null;
+
+            var attackerMeta = UnitBattleMetadata.Ensure(attackerGo, true, def, new Vector2Int(2, 2));
+            UnitBattleMetadata.Ensure(targetGo, false, def, new Vector2Int(2, 3)); // Adjacent at cache-build time
+
+            var ctrlGo = new GameObject("TurnController");
+            var ctrl = ctrlGo.AddComponent<SimpleTurnOrderController>();
+
+            SetPrivate(ctrl, "_board", board);
+            CallPrivate(ctrl, "BeginBattle");
+
+            int initialLife = targetStats.Life;
+
+            // Simulate runtime position change without rebuilding the cached attackable set.
+            attackerMeta.Tile = new Vector2Int(0, 0);
+
+            CallPrivate(ctrl, "TryExecuteAttack", new Vector2Int(2, 3));
+            yield return new WaitForSeconds(0.6f);
+
+            Assert.AreEqual(initialLife, targetStats.Life, "Melee attack should be rejected when the target is no longer adjacent at execution time.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(attackerGo);
+            Object.DestroyImmediate(targetGo);
+            Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(def);
+        }
+
         [Test]
         public void SuccessfulAttack_DealsDamageUsingFormula()
         {
