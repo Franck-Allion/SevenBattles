@@ -197,6 +197,8 @@ Types: feat, fix, test, refactor, chore, docs.
   - ALL_CAPS ? constants  
 - All comments in English.  
 - Optimize memory & performance.  
+- Coroutine wait caching must use a shared Core utility: Assets/Scripts/Core/CoroutineWaitCache.cs.
+  Do not duplicate WaitForSeconds cache dictionaries/services in Battle, UI, Menu, Preparation, or AI domains.
 - Use correct asmdefs.  
 - Never hardcode UI strings (must use Localization).  
 - Avoid complex inspector UnityEvent wiring — prefer C# events.

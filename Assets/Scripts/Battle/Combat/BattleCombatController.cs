@@ -15,6 +15,8 @@ namespace SevenBattles.Battle.Combat
     public class BattleCombatController : MonoBehaviour
     {
         private const int MIN_SHOOT_GAP = 1;
+        private static readonly WaitForSeconds WaitQuarterSecond = new(0.25f);
+        private static readonly WaitForSeconds WaitHalfSecond = new(0.5f);
 
         [Header("Attack Configuration")]
         [SerializeField, Tooltip("Audio clip played when an attack hits (one-shot).")]
@@ -53,6 +55,10 @@ namespace SevenBattles.Battle.Combat
         // Internal state
         private readonly HashSet<Vector2Int> _attackableEnemyTiles = new HashSet<Vector2Int>();
         private readonly HashSet<Vector2Int> _shootableEnemyTiles = new HashSet<Vector2Int>();
+        private WaitForSeconds _waitShootRecovery;
+        private float _waitShootRecoverySeconds = float.NaN;
+        private WaitForSeconds _waitDeathAnimation;
+        private float _waitDeathAnimationSeconds = float.NaN;
 
         public Color AttackCursorColor => _attackCursorColor;
         public Color ShootCursorColor => _shootCursorColor;
@@ -387,7 +393,7 @@ namespace SevenBattles.Battle.Combat
             }
 
             // 3. Wait for impact
-            yield return new WaitForSeconds(0.25f);
+            yield return WaitQuarterSecond;
 
             // 4. Play "Hit" on target
             if (targetMeta != null)
@@ -421,7 +427,7 @@ namespace SevenBattles.Battle.Combat
             Debug.Log($"[Combat] {attackerName} hit {targetName} for {damage} damage.");
 
             // 6. Wait for completion
-            yield return new WaitForSeconds(0.5f);
+            yield return WaitHalfSecond;
 
             // 7. Reset to "Idle" or play death, spawn VFX, and schedule removal
             if (attackerMeta != null)
@@ -549,7 +555,7 @@ namespace SevenBattles.Battle.Combat
             float recovery = Mathf.Max(0f, _shootRecoverySeconds);
             if (recovery > 0f)
             {
-                yield return new WaitForSeconds(recovery);
+                yield return GetShootRecoveryWait(recovery);
             }
 
             if (attackerMeta != null)
@@ -602,7 +608,7 @@ namespace SevenBattles.Battle.Combat
 
         private IEnumerator HandleUnitDeathCleanup(UnitBattleMetadata targetMeta, Action onUnitDied)
         {
-            yield return new WaitForSeconds(_deathAnimationDurationSeconds);
+            yield return GetDeathAnimationWait(_deathAnimationDurationSeconds);
 
             if (targetMeta != null && targetMeta.gameObject != null)
             {
@@ -627,6 +633,27 @@ namespace SevenBattles.Battle.Combat
             {
                 return delta.y > 0 ? Vector2.up : Vector2.down;
             }
+        }
+
+        private WaitForSeconds GetShootRecoveryWait(float seconds)
+        {
+            return GetOrCreateCachedWait(ref _waitShootRecovery, ref _waitShootRecoverySeconds, seconds);
+        }
+
+        private WaitForSeconds GetDeathAnimationWait(float seconds)
+        {
+            return GetOrCreateCachedWait(ref _waitDeathAnimation, ref _waitDeathAnimationSeconds, seconds);
+        }
+
+        private static WaitForSeconds GetOrCreateCachedWait(ref WaitForSeconds wait, ref float cachedSeconds, float seconds)
+        {
+            if (wait == null || !Mathf.Approximately(cachedSeconds, seconds))
+            {
+                wait = new WaitForSeconds(seconds);
+                cachedSeconds = seconds;
+            }
+
+            return wait;
         }
     }
 }

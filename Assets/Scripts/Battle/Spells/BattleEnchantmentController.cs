@@ -13,6 +13,8 @@ namespace SevenBattles.Battle.Spells
     /// </summary>
     public sealed class BattleEnchantmentController : MonoBehaviour
     {
+        private static readonly Dictionary<float, WaitForSeconds> WaitByDurationSeconds = new Dictionary<float, WaitForSeconds>();
+
         public struct EnchantmentSnapshot
         {
             public SpellDefinition Spell;
@@ -605,7 +607,7 @@ namespace SevenBattles.Battle.Spells
         {
             if (delay > 0f)
             {
-                yield return new WaitForSeconds(delay);
+                yield return GetOrCreateCachedWait(delay);
             }
 
             if (renderer == null)
@@ -1067,7 +1069,7 @@ namespace SevenBattles.Battle.Spells
         {
             if (delay > 0f)
             {
-                yield return new WaitForSeconds(delay);
+                yield return GetOrCreateCachedWait(delay);
             }
 
             if (instance == null)
@@ -1129,6 +1131,17 @@ namespace SevenBattles.Battle.Spells
             }
 
             return data;
+        }
+
+        private static WaitForSeconds GetOrCreateCachedWait(float seconds)
+        {
+            if (!WaitByDurationSeconds.TryGetValue(seconds, out var wait))
+            {
+                wait = new WaitForSeconds(seconds);
+                WaitByDurationSeconds[seconds] = wait;
+            }
+
+            return wait;
         }
 
         private static List<VfxRendererFadeData> BuildVfxRendererData(Renderer[] renderers)

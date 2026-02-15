@@ -168,6 +168,8 @@ namespace SevenBattles.Battle.Turn
         private bool _hasSelectedMoveTile;
         private Vector2Int _selectedMoveTile;
         private bool _aiMovePendingCompletion;
+        private WaitForSeconds _waitDeathAnimation;
+        private float _waitDeathAnimationSeconds = float.NaN;
         private bool _aiDecisionInProgress;
         [SerializeField, Tooltip("Service responsible for evaluating AI turns.")]
         private BattleAiTurnService _aiTurnService;
@@ -2683,7 +2685,7 @@ namespace SevenBattles.Battle.Turn
             float waitSeconds = Mathf.Max(0f, _deathAnimationDurationSeconds);
             if (waitSeconds > 0f)
             {
-                yield return new WaitForSeconds(waitSeconds);
+                yield return GetOrCreateDeathAnimationWait(waitSeconds);
             }
 
             if (targetMeta != null)
@@ -2700,6 +2702,17 @@ namespace SevenBattles.Battle.Turn
         private int CalculateDamage(int attack, int defense)
         {
             return SevenBattles.Battle.Combat.BattleDamageCalculator.Calculate(attack, defense);
+        }
+
+        private WaitForSeconds GetOrCreateDeathAnimationWait(float seconds)
+        {
+            if (_waitDeathAnimation == null || !Mathf.Approximately(_waitDeathAnimationSeconds, seconds))
+            {
+                _waitDeathAnimation = new WaitForSeconds(seconds);
+                _waitDeathAnimationSeconds = seconds;
+            }
+
+            return _waitDeathAnimation;
         }
 
     }
