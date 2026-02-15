@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.AI;
+using SevenBattles.Battle.Input;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core;
 using SevenBattles.Battle.Spells;
@@ -16,7 +17,7 @@ namespace SevenBattles.Battle.Turn
     // Basic initiative-based turn controller for wizards.
     // Discovers UnitBattleMetadata instances at battle start, sorts by UnitStats.Initiative,
     // and advances turns for player and AI units.
-    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController, ISpellSelectionController, IUnitInspectionController, IEnchantmentInspectionController
+    public class SimpleTurnOrderController : MonoBehaviour, IBattleTurnController, ISpellSelectionController, IUnitInspectionController, IEnchantmentInspectionController, IBattlePlayerInputCommands
     {
         [Header("Board Highlight (delegated)")]
         [SerializeField] private WorldPerspectiveBoard _board; // Kept for other initialization if needed, or remove if unused. Checking usage needed. 
@@ -25,7 +26,6 @@ namespace SevenBattles.Battle.Turn
         [Header("Battlefield (optional)")]
         [SerializeField, Tooltip("Optional battlefield service used to resolve tile bonuses. If null, will be auto-found at runtime.")]
         private MonoBehaviour _battlefieldServiceBehaviour;
-        [Header("Movement")]
         [Header("Movement")]
         [SerializeField, Tooltip("Duration in seconds for the active unit movement animation between tiles.")]
         private float _moveDurationSeconds = 0.35f;
@@ -65,6 +65,10 @@ namespace SevenBattles.Battle.Turn
         [Header("Cursor Management")]
         [SerializeField, Tooltip("Service managing battle cursor states (move, attack, selection, spell). Should reference a BattleCursorController component.")]
         private SevenBattles.Battle.Cursors.BattleCursorController _cursorController;
+
+        [Header("Input Management")]
+        [SerializeField, Tooltip("Service handling player click/hover input during player turns.")]
+        private BattlePlayerInputController _playerInputController;
 
         [Header("Visual Feedback")]
         [SerializeField, Tooltip("Service managing battle visual effects like damage numbers. Should reference the BattleVisualFeedbackService on _System GameObject.")]
@@ -269,6 +273,36 @@ namespace SevenBattles.Battle.Turn
                 {
                     _turnProgressionService = gameObject.AddComponent<BattleTurnProgressionService>();
                 }
+            }
+
+            if (_playerInputController == null)
+            {
+                _playerInputController = GetComponent<BattlePlayerInputController>();
+                if (_playerInputController == null)
+                {
+                    _playerInputController = gameObject.AddComponent<BattlePlayerInputController>();
+                }
+            }
+
+            if (_playerInputController != null)
+            {
+                _playerInputController.Bind(
+                    this,
+                    _board,
+                    _highlightController,
+                    _cursorController,
+                    _combatController,
+                    _movementController,
+                    _spellController,
+                    _enchantmentController,
+                    _moveCursorTexture,
+                    _moveCursorHotspot,
+                    _selectionCursorTexture,
+                    _selectionCursorHotspot,
+                    _attackCursorTexture,
+                    _attackCursorHotspot,
+                    _shootCursorTexture,
+                    _shootCursorHotspot);
             }
 
             ResolveBattlefieldService();
@@ -500,6 +534,79 @@ namespace SevenBattles.Battle.Turn
             }
         }
 
+        bool IBattlePlayerInputCommands.HasSelectedMoveTile => _hasSelectedMoveTile;
+
+        Vector2Int IBattlePlayerInputCommands.SelectedMoveTile => _selectedMoveTile;
+
+        void IBattlePlayerInputCommands.SetSelectedMoveTileState(bool hasSelection, Vector2Int selectedTile)
+        {
+            _hasSelectedMoveTile = hasSelection;
+            if (hasSelection)
+            {
+                _selectedMoveTile = selectedTile;
+            }
+        }
+
+        bool IBattlePlayerInputCommands.CanActiveUnitMoveForInput()
+        {
+            return CanActiveUnitMove();
+        }
+
+        bool IBattlePlayerInputCommands.CanActiveUnitAttackForInput()
+        {
+            return CanActiveUnitAttack();
+        }
+
+        bool IBattlePlayerInputCommands.CanActiveUnitShootForInput()
+        {
+            return CanActiveUnitShoot();
+        }
+
+        bool IBattlePlayerInputCommands.IsTileLegalMoveDestinationForInput(Vector2Int tile)
+        {
+            return IsTileLegalMoveDestination(tile);
+        }
+
+        void IBattlePlayerInputCommands.TryExecuteActiveUnitMoveForInput(Vector2Int destinationTile)
+        {
+            TryExecuteActiveUnitMove(destinationTile);
+        }
+
+        void IBattlePlayerInputCommands.TryExecuteAttackForInput(Vector2Int targetTile)
+        {
+            TryExecuteAttack(targetTile);
+        }
+
+        void IBattlePlayerInputCommands.TryExecuteShootForInput(Vector2Int targetTile)
+        {
+            TryExecuteShootForPlayerInput(targetTile);
+        }
+
+        void IBattlePlayerInputCommands.UpdateBoardHighlightForInput()
+        {
+            UpdateBoardHighlight();
+        }
+
+        bool IBattlePlayerInputCommands.TryBuildActiveSpellContextForInput(out SpellCastContext context)
+        {
+            return TryBuildActiveSpellContext(out context);
+        }
+
+        void IBattlePlayerInputCommands.TryExecuteSpellEffectForInput(SpellDefinition spell, SpellTargetSelection target)
+        {
+            TryExecuteSpellEffect(spell, target);
+        }
+
+        bool IBattlePlayerInputCommands.TryInspectUnitAtTileForInput(Vector2Int tile, bool allowPlayerUnits)
+        {
+            return TryInspectUnitAtTileInternal(tile, allowPlayerUnits);
+        }
+
+        bool IBattlePlayerInputCommands.TryToggleEnchantmentInspectionForInput(BattleEnchantmentController.EnchantmentSnapshot snapshot, int quadIndex)
+        {
+            return TryToggleEnchantmentInspectionInternal(snapshot, quadIndex);
+        }
+
 
 
         private void Start()
@@ -522,8 +629,21 @@ namespace SevenBattles.Battle.Turn
 
             if (IsActiveUnitPlayerControlled)
             {
-                UpdatePlayerTurnInput();
+                if (_playerInputController != null)
+                {
+                    if (!_playerInputController.enabled)
+                    {
+                        _playerInputController.enabled = true;
+                    }
+
+                    _playerInputController.UpdatePlayerTurnInput();
+                }
                 return;
+            }
+
+            if (_playerInputController != null && _playerInputController.enabled)
+            {
+                _playerInputController.enabled = false;
             }
 
             BeginAiTurnForActiveUnit();
@@ -1644,250 +1764,13 @@ namespace SevenBattles.Battle.Turn
         }
 
 
-        private void UpdatePlayerTurnInput()
-        {
-            if (_selectedSpell != null)
-            {
-                UpdateSpellTargetingInput(_selectedSpell);
-                return;
-            }
-
-            if (_board == null) return;
-
-            if (Input.GetMouseButtonDown(0) && _hasInspectedEnchantment)
-            {
-                ClearInspectedEnchantmentInternal(true);
-            }
-
-            if (Input.GetMouseButtonDown(1))
-            {
-                if (TryInspectEnchantmentAtScreenPosition(Input.mousePosition))
-                {
-                    return;
-                }
-
-                if (TryInspectUnitAtScreenPosition(Input.mousePosition, allowPlayerUnits: true))
-                {
-                    ClearInspectedEnchantmentInternal(true);
-                    return;
-                }
-
-                if (_hasInspectedEnchantment)
-                {
-                    ClearInspectedEnchantmentInternal(true);
-                }
-            }
-
-            // First check if we can do anything at all
-            bool canMove = CanActiveUnitMove();
-            bool canAttack = _combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count
-                && !_shootAnimating
-                && _combatController.CanAttack(_units[_activeIndex].Stats, _activeUnitCurrentActionPoints, IsActiveUnitPlayerControlledInternal(), _movementAnimating, _attackAnimating);
-            bool canShoot = _combatController != null && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count
-                && _combatController.CanShoot(_units[_activeIndex].Stats, _activeUnitCurrentActionPoints, IsActiveUnitPlayerControlledInternal(), _movementAnimating, _attackAnimating, _shootAnimating);
-
-            if (!canMove && !canAttack && !canShoot)
-            {
-                if (_highlightController != null)
-                {
-                    _highlightController.HideSecondaryHighlight();
-                }
-                _hasSelectedMoveTile = false;
-                if (_cursorController != null)
-                {
-                    _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
-                    _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
-                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
-                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
-                }
-                UpdateBoardHighlight();
-                return;
-            }
-
-            if (!_board.TryScreenToTile(Input.mousePosition, out var x, out var y))
-            {
-                if (!_hasSelectedMoveTile)
-                {
-                    UpdateBoardHighlight();
-                }
-                if (_cursorController != null)
-                {
-                    _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
-                    _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
-                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
-                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
-                }
-                return;
-            }
-
-            var hoveredTile = new Vector2Int(x, y);
-
-            // PRIORITY 1: Shoot input handling (takes priority over movement)
-            if (canShoot && _combatController != null && _combatController.IsShootableEnemyTile(hoveredTile))
-            {
-                if (_cursorController != null)
-                {
-                    _cursorController.SetShootCursor(true, _shootCursorTexture, _shootCursorHotspot);
-                    _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
-                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
-                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
-                }
-
-                if (_highlightController != null)
-                {
-                    _highlightController.SetSecondaryHighlight(hoveredTile, true);
-                }
-
-                if (Input.GetMouseButtonDown(0) && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
-                {
-                    _combatController.TryExecuteShoot(
-                        hoveredTile,
-                        _units[_activeIndex],
-                        _units,
-                        u => u.Metadata,
-                        u => u.Stats,
-                        () => { _shootAnimating = true; },
-                        () => { ConsumeActiveUnitActionPoint(); },
-                        () =>
-                        {
-                            CompactUnits();
-                            if (!HasBattleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
-                            {
-                                RebuildAttackableEnemyTiles();
-                            }
-                        },
-                        () => { _shootAnimating = false; UpdateBoardHighlight(); }
-                    );
-                }
-
-                return;
-            }
-
-            // PRIORITY 2: Attack input handling
-            if (canAttack && _combatController != null && _combatController.IsAttackableEnemyTile(hoveredTile))
-            {
-                // Show attack cursor and highlight
-                if (_cursorController != null)
-                {
-                    _cursorController.SetAttackCursor(true, _attackCursorTexture, _attackCursorHotspot);
-                    _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
-                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
-                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
-                }
-
-                if (_highlightController != null)
-                {
-                    _highlightController.SetSecondaryHighlight(hoveredTile, _combatController.AttackCursorColor);
-                }
-
-                if (Input.GetMouseButtonDown(0) && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
-                {
-                    _combatController.TryExecuteAttack(
-                        hoveredTile,
-                        _units[_activeIndex],
-                        _units,
-                        u => u.Metadata,
-                        u => u.Stats,
-                        () => { _attackAnimating = true; },
-                        () => { ConsumeActiveUnitActionPoint(); },
-                        () => { 
-                            CompactUnits(); 
-                            if (!HasBattleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
-                            {
-                                RebuildAttackableEnemyTiles();
-                            }
-                        },
-                        () => { _attackAnimating = false; UpdateBoardHighlight(); }
-                    );
-                }
-
-                return;
-            }
-
-            // Reset attack cursor if not hovering attackable enemy
-            if (_cursorController != null)
-            {
-                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
-            }
-
-            // Reset shoot cursor if not hovering shootable enemy
-            if (_cursorController != null)
-            {
-                _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
-            }
-
-            // PRIORITY 3: Movement input handling (fallback if not attacking or shooting)
-            if (!canMove)
-            {
-                if (_highlightController != null)
-                {
-                    _highlightController.HideSecondaryHighlight();
-                }
-                _hasSelectedMoveTile = false;
-                if (_cursorController != null)
-                {
-                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
-                    _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
-                }
-                UpdateBoardHighlight();
-                return;
-            }
-
-            if (_hasSelectedMoveTile)
-            {
-                bool stillValid = IsTileLegalMoveDestination(_selectedMoveTile);
-                if (_highlightController != null)
-                {
-                    _highlightController.SetSecondaryHighlight(_selectedMoveTile, stillValid);
-                }
-                
-                if (_cursorController != null)
-                {
-                    _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
-                    _cursorController.SetSelectionCursor(true, _selectionCursorTexture, _selectionCursorHotspot);
-                }
-
-                if (Input.GetMouseButtonDown(0))
-                {
-                    if (hoveredTile == _selectedMoveTile)
-                    {
-                        TryExecuteActiveUnitMove(_selectedMoveTile);
-                    }
-                    else
-                    {
-                        // Reset selection when clicking any other tile
-                        _hasSelectedMoveTile = false;
-                        if (_cursorController != null)
-                        {
-                            _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
-                        }
-                    }
-                }
-
-                return;
-            }
-
-            bool legal = IsTileLegalMoveDestination(hoveredTile);
-            if (_highlightController != null)
-            {
-                _highlightController.SetSecondaryHighlight(hoveredTile, legal);
-            }
-
-            // Show move cursor only when hovering a legal movement tile
-            if (_cursorController != null)
-            {
-                _cursorController.SetMoveCursor(legal, _moveCursorTexture, _moveCursorHotspot);
-            }
-
-            if (Input.GetMouseButtonDown(0) && legal)
-            {
-                _hasSelectedMoveTile = true;
-                _selectedMoveTile = hoveredTile;
-            }
-        }
-
         private bool TryInspectEnchantmentAtScreenPosition(Vector2 screenPosition)
         {
+            if (_playerInputController != null)
+            {
+                return _playerInputController.TryInspectEnchantmentAtScreenPosition(screenPosition);
+            }
+
             if (_enchantmentController == null)
             {
                 return false;
@@ -1898,28 +1781,36 @@ namespace SevenBattles.Battle.Turn
                 return false;
             }
 
-            if (_hasInspectedEnchantment && _inspectedEnchantmentQuadIndex == quadIndex)
-            {
-                ClearInspectedEnchantmentInternal(true);
-                return true;
-            }
-
-            SetInspectedEnchantment(snapshot);
-            return true;
+            return TryToggleEnchantmentInspectionInternal(snapshot, quadIndex);
         }
 
         private bool TryInspectEnemyAtScreenPosition(Vector2 screenPosition)
         {
+            if (_playerInputController != null)
+            {
+                return _playerInputController.TryInspectEnemyAtScreenPosition(screenPosition);
+            }
+
             return TryInspectUnitAtScreenPosition(screenPosition, allowPlayerUnits: false);
         }
 
         private bool TryInspectEnemyAtTile(Vector2Int tile)
         {
-            return TryInspectUnitAtTile(tile, allowPlayerUnits: false);
+            if (_playerInputController != null)
+            {
+                return _playerInputController.TryInspectEnemyAtTile(tile);
+            }
+
+            return TryInspectUnitAtTileInternal(tile, allowPlayerUnits: false);
         }
 
         private bool TryInspectUnitAtScreenPosition(Vector2 screenPosition, bool allowPlayerUnits)
         {
+            if (_playerInputController != null)
+            {
+                return _playerInputController.TryInspectUnitAtScreenPosition(screenPosition, allowPlayerUnits);
+            }
+
             if (_board == null)
             {
                 return false;
@@ -1930,10 +1821,15 @@ namespace SevenBattles.Battle.Turn
                 return false;
             }
 
-            return TryInspectUnitAtTile(new Vector2Int(x, y), allowPlayerUnits);
+            return TryInspectUnitAtTileInternal(new Vector2Int(x, y), allowPlayerUnits);
         }
 
         private bool TryInspectUnitAtTile(Vector2Int tile, bool allowPlayerUnits)
+        {
+            return TryInspectUnitAtTileInternal(tile, allowPlayerUnits);
+        }
+
+        private bool TryInspectUnitAtTileInternal(Vector2Int tile, bool allowPlayerUnits)
         {
             if (!TryGetValidUnitAtTile(tile, out var unit))
             {
@@ -1954,146 +1850,16 @@ namespace SevenBattles.Battle.Turn
             return true;
         }
 
-        private void UpdateSpellTargetingInput(SpellDefinition spell)
+        private bool TryToggleEnchantmentInspectionInternal(BattleEnchantmentController.EnchantmentSnapshot snapshot, int quadIndex)
         {
-            if (_board == null)
+            if (_hasInspectedEnchantment && _inspectedEnchantmentQuadIndex == quadIndex)
             {
-                return;
+                ClearInspectedEnchantmentInternal(true);
+                return true;
             }
 
-            var handler = _spellController != null ? _spellController.GetEffectHandler(spell) : null;
-            if (handler == null)
-            {
-                return;
-            }
-
-            if (handler.TargetingMode == SpellTargetingMode.Enchantment)
-            {
-                UpdateEnchantmentTargetingInput(spell, handler);
-                return;
-            }
-
-            // Cancel spell targeting (AAA-style): RMB or ESC clears selection.
-            if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
-            {
-                SetSelectedSpell(null);
-                if (_cursorController != null)
-                {
-                    _cursorController.SetSpellCursor(false, _selectedSpell);
-                }
-                _board.SetSecondaryHighlightVisible(false);
-                UpdateBoardHighlight();
-                return;
-            }
-
-            // Spell targeting uses its own cursor and always clears move-selection visuals.
-            _hasSelectedMoveTile = false;
-            if (_cursorController != null)
-            {
-                _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
-                _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
-                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
-                _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
-                _cursorController.SetSpellCursor(true, _selectedSpell);
-            }
-
-            if (!CanActiveUnitCastSpell(spell))
-            {
-                _board.SetSecondaryHighlightVisible(false);
-                return;
-            }
-
-            if (!TryBuildActiveSpellContext(out var context))
-            {
-                _board.SetSecondaryHighlightVisible(false);
-                return;
-            }
-
-            if (!_board.TryScreenToTile(Input.mousePosition, out var x, out var y))
-            {
-                _board.SetSecondaryHighlightVisible(false);
-                return;
-            }
-
-            var hoveredTile = new Vector2Int(x, y);
-            var target = SpellTargetSelection.ForTile(hoveredTile);
-            bool eligible = handler.IsTargetValid(spell, context, target);
-
-            if (_highlightController != null)
-            {
-                _highlightController.SetSecondaryHighlight(hoveredTile, eligible);
-            }
-
-            if (Input.GetMouseButtonDown(0) && eligible)
-            {
-                TryExecuteSpellEffect(spell, target);
-            }
-        }
-
-        private void UpdateEnchantmentTargetingInput(SpellDefinition spell, ISpellEffectHandler handler)
-        {
-            if (_enchantmentController == null)
-            {
-                return;
-            }
-
-            // Cancel enchantment targeting: RMB or ESC clears selection.
-            if (Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.Escape))
-            {
-                SetSelectedSpell(null);
-                if (_cursorController != null)
-                {
-                    _cursorController.SetSpellCursor(false, _selectedSpell);
-                }
-                _enchantmentController.ClearHoverHighlight();
-                UpdateBoardHighlight();
-                return;
-            }
-
-            _hasSelectedMoveTile = false;
-            if (_cursorController != null)
-            {
-                _cursorController.SetSelectionCursor(false, _selectionCursorTexture, _selectionCursorHotspot);
-                _cursorController.SetMoveCursor(false, _moveCursorTexture, _moveCursorHotspot);
-                _cursorController.SetAttackCursor(false, _attackCursorTexture, _attackCursorHotspot);
-                _cursorController.SetShootCursor(false, _shootCursorTexture, _shootCursorHotspot);
-                _cursorController.SetSpellCursor(true, _selectedSpell);
-            }
-
-            if (_highlightController != null)
-            {
-                _highlightController.HideSecondaryHighlight();
-            }
-            if (_board != null)
-            {
-                _board.SetSecondaryHighlightVisible(false);
-            }
-
-            if (!CanActiveUnitCastSpell(spell))
-            {
-                _enchantmentController.ClearHoverHighlight();
-                return;
-            }
-
-            if (!TryBuildActiveSpellContext(out var context))
-            {
-                _enchantmentController.ClearHoverHighlight();
-                return;
-            }
-
-            int hoveredIndex;
-            bool hasTarget = handler.UsesActiveEnchantments
-                ? _enchantmentController.TryUpdateActiveEnchantmentHighlight(Input.mousePosition, out hoveredIndex)
-                : _enchantmentController.TryUpdateHoverHighlight(Input.mousePosition, out hoveredIndex);
-
-            if (hasTarget)
-            {
-                var target = SpellTargetSelection.ForQuad(hoveredIndex);
-                if (handler.IsTargetValid(spell, context, target) && Input.GetMouseButtonDown(0))
-                {
-                    TryExecuteSpellEffect(spell, target);
-                }
-            }
+            SetInspectedEnchantment(snapshot);
+            return true;
         }
 
         private void TryExecuteSpellEffect(SpellDefinition spell, SpellTargetSelection target)
@@ -2382,6 +2148,13 @@ namespace SevenBattles.Battle.Turn
             return _combatController.CanAttack(_units[_activeIndex].Stats, _activeUnitCurrentActionPoints, IsActiveUnitPlayerControlledInternal(), _movementAnimating, _attackAnimating);
         }
 
+        private bool CanActiveUnitShoot()
+        {
+            if (_combatController == null) return false;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return false;
+            return _combatController.CanShoot(_units[_activeIndex].Stats, _activeUnitCurrentActionPoints, IsActiveUnitPlayerControlledInternal(), _movementAnimating, _attackAnimating, _shootAnimating);
+        }
+
         private bool IsAttackableEnemyTile(Vector2Int tile)
         {
             return _combatController != null && _combatController.IsAttackableEnemyTile(tile);
@@ -2409,6 +2182,31 @@ namespace SevenBattles.Battle.Turn
                     }
                 },
                 () => { _attackAnimating = false; UpdateBoardHighlight(); }
+            );
+        }
+
+        private void TryExecuteShootForPlayerInput(Vector2Int targetTile)
+        {
+            if (_combatController == null) return;
+            if (!_hasActiveUnit || _activeIndex < 0 || _activeIndex >= _units.Count) return;
+
+            _combatController.TryExecuteShoot(
+                targetTile,
+                _units[_activeIndex],
+                _units,
+                u => u.Metadata,
+                u => u.Stats,
+                () => { _shootAnimating = true; },
+                () => { ConsumeActiveUnitActionPoint(); },
+                () =>
+                {
+                    CompactUnits();
+                    if (!HasBattleEnded && _hasActiveUnit && _activeIndex >= 0 && _activeIndex < _units.Count)
+                    {
+                        RebuildAttackableEnemyTiles();
+                    }
+                },
+                () => { _shootAnimating = false; UpdateBoardHighlight(); }
             );
         }
 

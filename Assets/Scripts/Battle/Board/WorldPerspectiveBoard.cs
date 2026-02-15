@@ -272,16 +272,16 @@ namespace SevenBattles.Battle.Board
             if (_cam == null) _cam = Camera.main;
             if (_cam == null || !_grid.IsValid) return;
             if (_highlightMr == null) EnsureHighlightObjects();
-            var screen = Input.mousePosition;
+            var screen = UnityEngine.Input.mousePosition;
             if (TryScreenToTile(screen, out var tx, out var ty))
             {
                 MoveHighlightToTile(tx, ty);
                 if (_highlightMr != null && !_highlightMr.gameObject.activeSelf)
                     _highlightMr.gameObject.SetActive(true);
             }
-            if (_logTileClicks && Input.GetMouseButtonDown(0))
+            if (_logTileClicks && UnityEngine.Input.GetMouseButtonDown(0))
             {
-                if (TryScreenToTile(Input.mousePosition, out var cx, out var cy))
+                if (TryScreenToTile(UnityEngine.Input.mousePosition, out var cx, out var cy))
                 {
                     SBLog.Info($"WorldPerspectiveBoard click tile=({cx},{cy})", this);
                 }

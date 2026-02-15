@@ -125,7 +125,7 @@ namespace SevenBattles.Battle.Board
         // Optional convenience: call every frame to update hover from mouse.
         public void UpdateHoverFromMouse()
         {
-            var screen = Input.mousePosition;
+            var screen = UnityEngine.Input.mousePosition;
             if (TryScreenToTile(screen, out int x, out int y)) MoveHighlightToTile(x, y);
         }
 

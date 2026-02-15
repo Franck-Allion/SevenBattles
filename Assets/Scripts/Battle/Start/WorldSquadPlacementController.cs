@@ -122,7 +122,7 @@ namespace SevenBattles.Battle.Start
             if (_model == null) EnsureModel();
             if (_model == null) return;
 
-            var screen = Input.mousePosition;
+            var screen = UnityEngine.Input.mousePosition;
             if (_board.TryScreenToTile(screen, out int x, out int y))
             {
                 var tile = new Vector2Int(x, y);
@@ -130,7 +130,7 @@ namespace SevenBattles.Battle.Start
                 bool valid = _selected >= 0 ? _model.CanPlace(tile) : _model.IsInPlayerPlacementArea(tile) && !_model.IsOccupied(tile);
                 _board.SetHighlightColor(valid ? _validColor : _invalidColor);
 
-                if (Input.GetMouseButtonDown(0))
+                if (UnityEngine.Input.GetMouseButtonDown(0))
                 {
                     HandleClick(tile);
                 }

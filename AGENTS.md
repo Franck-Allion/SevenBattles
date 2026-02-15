@@ -405,6 +405,11 @@ For more details on the current save/load architecture and JSON format, see:
 - Logic that changes the cursor must inject and use this service; do not use `Cursor.SetCursor` directly in battle controllers.
 - To add new cursor types, extend `BattleCursorController` rather than creating parallel input managers.
 
+### Player Input Ownership
+- All player-turn battle `Input.*` logic (click, hover, targeting, inspection) must live in a dedicated input controller (e.g., `BattlePlayerInputController`), not in the turn orchestrator.
+- `SimpleTurnOrderController` (and any future turn orchestrator) must delegate player input handling to this dedicated controller/service.
+- When adding new player input behaviors, extend the dedicated input controller or extracted input-focused services instead of growing orchestrator classes.
+
 ### Turn Index & Banners
 - `IBattleTurnController.TurnIndex` is the **only** source of truth for the battle turn number; UI must not maintain its own counters.  
 - Turn-based overlays (e.g., "Turn X" banners) must use `TurnIndex` + `LocalizedString` smart strings, and must acquire/release `SetInteractionLocked` in a balanced way (no permanent locks).  
