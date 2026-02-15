@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Core.Save
 {
     /// <summary>
@@ -48,7 +49,7 @@ namespace SevenBattles.Core.Save
                 }
                 else
                 {
-                    Debug.LogWarning($"CompositeGameStateSaveProvider on '{name}': Assigned object '{mb.name}' does not implement IGameStateSaveProvider.", this);
+                    SBLog.Warn($"CompositeGameStateSaveProvider on '{name}': Assigned object '{mb.name}' does not implement IGameStateSaveProvider.", this);
                 }
             }
 
@@ -81,7 +82,7 @@ namespace SevenBattles.Core.Save
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"CompositeGameStateSaveProvider: Provider '{provider.GetType().FullName}' threw during PopulateGameState. {ex}");
+                    SBLog.Error($"CompositeGameStateSaveProvider: Provider '{provider.GetType().FullName}' threw during PopulateGameState. {ex}");
                 }
             }
         }

@@ -3,6 +3,7 @@ using UnityEngine;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle
 {
     [DefaultExecutionOrder(-500)]
@@ -78,13 +79,13 @@ namespace SevenBattles.Battle
                         return resolved;
                     }
 
-                    Debug.LogWarning($"BattlefieldService: BattlefieldId '{id}' could not be resolved. Falling back to inspector default.", this);
+                    SBLog.Warn($"BattlefieldService: BattlefieldId '{id}' could not be resolved. Falling back to inspector default.", this);
                 }
             }
 
             if (_inspectorDefaultBattlefield == null)
             {
-                Debug.LogWarning("BattlefieldService: No battlefield resolved. Assign a default battlefield or set BattleSessionConfig.BattlefieldId.", this);
+                SBLog.Warn("BattlefieldService: No battlefield resolved. Assign a default battlefield or set BattleSessionConfig.BattlefieldId.", this);
             }
 
             return _inspectorDefaultBattlefield;

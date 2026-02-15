@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Core.Battle;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Spells
 {
     /// <summary>
@@ -187,7 +188,7 @@ namespace SevenBattles.Battle.Spells
             var trimmed = new SpellDefinition[_deckCapacity];
             System.Array.Copy(_assignedSpells, trimmed, _deckCapacity);
             _assignedSpells = trimmed;
-            Debug.LogWarning($"UnitSpellDeck: Assigned {originalCount} spells but deck capacity is {_deckCapacity}. Extra spells are ignored.", this);
+            SBLog.Warn($"UnitSpellDeck: Assigned {originalCount} spells but deck capacity is {_deckCapacity}. Extra spells are ignored.", this);
         }
 
         private bool RemoveFromDrawn(SpellDefinition spell)

@@ -4,6 +4,7 @@ using UnityEngine.Localization;
 using TMPro;
 using SevenBattles.Core;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.UI
 {
     // HUD panel showing the active unit portrait and End Turn button.
@@ -230,7 +231,7 @@ namespace SevenBattles.UI
 
                 if (_controller == null)
                 {
-                    Debug.LogWarning("TurnOrderHUD: No controller implementing ITurnOrderController found in scene.", this);
+                    SBLog.Warn("TurnOrderHUD: No controller implementing ITurnOrderController found in scene.", this);
                 }
             }
             else
@@ -238,7 +239,7 @@ namespace SevenBattles.UI
                 _controller = _controllerBehaviour as ITurnOrderController;
                 if (_controller == null)
                 {
-                    Debug.LogWarning("TurnOrderHUD: Assigned controller does not implement ITurnOrderController.", this);
+                    SBLog.Warn("TurnOrderHUD: Assigned controller does not implement ITurnOrderController.", this);
                 }
             }
         }
@@ -649,7 +650,7 @@ namespace SevenBattles.UI
         {
             if (_turnStartCanvasGroup == null)
             {
-                Debug.LogWarning("TurnOrderHUD: Turn start banner CanvasGroup is not assigned; banner will be disabled.", this);
+                SBLog.Warn("TurnOrderHUD: Turn start banner CanvasGroup is not assigned; banner will be disabled.", this);
                 return;
             }
 
@@ -658,7 +659,7 @@ namespace SevenBattles.UI
                 _turnStartText = _turnStartCanvasGroup.GetComponentInChildren<TMP_Text>(true);
                 if (_turnStartText == null)
                 {
-                    Debug.LogWarning("TurnOrderHUD: No TMP_Text found under _turnStartCanvasGroup for turn banner.", this);
+                    SBLog.Warn("TurnOrderHUD: No TMP_Text found under _turnStartCanvasGroup for turn banner.", this);
                 }
             }
 
@@ -670,11 +671,11 @@ namespace SevenBattles.UI
             if (_turnStartLabel != null)
             {
                 _turnStartLabel.StringChanged += HandleTurnStartLabelChanged;
-                Debug.Log($"TurnOrderHUD: Subscribed to turn start label (table={_turnStartLabel.TableReference}, entry={_turnStartLabel.TableEntryReference}).", this);
+                SBLog.Info($"TurnOrderHUD: Subscribed to turn start label (table={_turnStartLabel.TableReference}, entry={_turnStartLabel.TableEntryReference}).", this);
             }
             else
             {
-                Debug.LogWarning("TurnOrderHUD: _turnStartLabel is not assigned; turn banner will not use localization.", this);
+                SBLog.Warn("TurnOrderHUD: _turnStartLabel is not assigned; turn banner will not use localization.", this);
             }
 
             _lastKnownTurnIndex = 0;
@@ -712,7 +713,7 @@ namespace SevenBattles.UI
             }
             else if (_activePortraitImage != null)
             {
-                Debug.LogWarning("TurnOrderHUD: No Button found for active portrait; stats panel will not open on click.", this);
+                SBLog.Warn("TurnOrderHUD: No Button found for active portrait; stats panel will not open on click.", this);
             }
         }
 
@@ -1316,7 +1317,7 @@ namespace SevenBattles.UI
         {
             if (_turnStartCanvasGroup == null)
             {
-                Debug.LogWarning("TurnOrderHUD: ShowTurnStartMessage called but _turnStartCanvasGroup is null.", this);
+                SBLog.Warn("TurnOrderHUD: ShowTurnStartMessage called but _turnStartCanvasGroup is null.", this);
                 return;
             }
 
@@ -1324,7 +1325,7 @@ namespace SevenBattles.UI
             {
                 _turnStartLabel.Arguments = new object[] { turnIndex };
                 var localized = _turnStartLabel.GetLocalizedString();
-                Debug.Log($"TurnOrderHUD: Turn banner GetLocalizedString (TurnIndex={turnIndex}) -> \"{localized}\".", this);
+                SBLog.Info($"TurnOrderHUD: Turn banner GetLocalizedString (TurnIndex={turnIndex}) -> \"{localized}\".", this);
                 if (_turnStartText != null)
                 {
                     _turnStartText.text = localized;
@@ -1334,7 +1335,7 @@ namespace SevenBattles.UI
             {
                 // Fallback: show a non-localized label so we can still see something.
                 _turnStartText.text = $"Turn {turnIndex}";
-                Debug.LogWarning("TurnOrderHUD: _turnStartLabel is null; using non-localized fallback text for turn banner.", this);
+                SBLog.Warn("TurnOrderHUD: _turnStartLabel is null; using non-localized fallback text for turn banner.", this);
             }
 
             _turnStartBannerVisible = true;
@@ -1375,11 +1376,11 @@ namespace SevenBattles.UI
             if (_turnStartText != null)
             {
                 _turnStartText.text = value;
-                Debug.Log($"TurnOrderHUD: Turn banner localized text applied: \"{value}\".", this);
+                SBLog.Info($"TurnOrderHUD: Turn banner localized text applied: \"{value}\".", this);
             }
             else
             {
-                Debug.LogWarning($"TurnOrderHUD: Received localized turn banner text \"{value}\" but _turnStartText is null.", this);
+                SBLog.Warn($"TurnOrderHUD: Received localized turn banner text \"{value}\" but _turnStartText is null.", this);
             }
         }
 

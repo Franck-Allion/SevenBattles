@@ -6,6 +6,7 @@ using UnityEngine.Localization;
 using TMPro;
 using SevenBattles.Core.Save;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.UI
 {
     /// <summary>
@@ -119,7 +120,7 @@ namespace SevenBattles.UI
             _saveGameService = _saveGameServiceBehaviour as ISaveGameService;
             if (_saveGameService == null)
             {
-                Debug.LogWarning("SaveLoadHUD: Assigned save service does not implement ISaveGameService.", this);
+                SBLog.Warn("SaveLoadHUD: Assigned save service does not implement ISaveGameService.", this);
             }
         }
 
@@ -138,7 +139,7 @@ namespace SevenBattles.UI
             _gameStateLoadHandler = _gameStateLoadHandlerBehaviour as IGameStateLoadHandler;
             if (_gameStateLoadHandler == null)
             {
-                Debug.LogWarning("SaveLoadHUD: Assigned load handler does not implement IGameStateLoadHandler.", this);
+                SBLog.Warn("SaveLoadHUD: Assigned load handler does not implement IGameStateLoadHandler.", this);
             }
         }
 
@@ -195,7 +196,7 @@ namespace SevenBattles.UI
                 ResolveSaveService();
                 if (_saveGameService == null)
                 {
-                    Debug.LogWarning("SaveLoadHUD: ISaveGameService is null. Assign a MonoBehaviour implementing ISaveGameService in the inspector.", this);
+                    SBLog.Warn("SaveLoadHUD: ISaveGameService is null. Assign a MonoBehaviour implementing ISaveGameService in the inspector.", this);
                     return;
                 }
             }
@@ -436,7 +437,7 @@ namespace SevenBattles.UI
 
             if (task.Exception != null)
             {
-                Debug.LogError($"SaveLoadHUD: Failed to load save slot metadata. {task.Exception}");
+                SBLog.Error($"SaveLoadHUD: Failed to load save slot metadata. {task.Exception}");
                 _slots = Array.Empty<SaveSlotMetadata>();
             }
             else
@@ -554,7 +555,7 @@ namespace SevenBattles.UI
 
             if (_saveGameService == null || _gameStateLoadHandler == null)
             {
-                Debug.LogWarning("SaveLoadHUD: Cannot load slot because save service or load handler is not configured.", this);
+                SBLog.Warn("SaveLoadHUD: Cannot load slot because save service or load handler is not configured.", this);
                 return;
             }
 
@@ -622,7 +623,7 @@ namespace SevenBattles.UI
         {
             if (_saveGameService == null || _gameStateLoadHandler == null)
             {
-                Debug.Log("SaveLoadHUD: LoadFromSlotRoutine aborted because save service or load handler is null.", this);
+                SBLog.Info("SaveLoadHUD: LoadFromSlotRoutine aborted because save service or load handler is null.", this);
                 yield break;
             }
 
@@ -636,7 +637,7 @@ namespace SevenBattles.UI
 
             if (task.Exception != null)
             {
-                Debug.LogError($"SaveLoadHUD: Failed to load slot {slotIndex}. {task.Exception}");
+                SBLog.Error($"SaveLoadHUD: Failed to load slot {slotIndex}. {task.Exception}");
                 ShowLoadErrorDialog();
                 yield break;
             }
@@ -644,14 +645,14 @@ namespace SevenBattles.UI
             var data = task.Result;
             if (data == null)
             {
-                Debug.LogWarning($"SaveLoadHUD: LoadSlotDataAsync returned null for slot {slotIndex}.", this);
+                SBLog.Warn($"SaveLoadHUD: LoadSlotDataAsync returned null for slot {slotIndex}.", this);
                 ShowLoadErrorDialog();
                 yield break;
             }
 
             int placementCount = data.UnitPlacements != null ? data.UnitPlacements.Length : -1;
             string phase = data.BattleTurn != null ? data.BattleTurn.Phase : "null";
-            Debug.Log($"SaveLoadHUD: Loaded slot {slotIndex} -> placements={placementCount}, phase='{phase}'.", this);
+            SBLog.Info($"SaveLoadHUD: Loaded slot {slotIndex} -> placements={placementCount}, phase='{phase}'.", this);
 
             try
             {
@@ -659,7 +660,7 @@ namespace SevenBattles.UI
             }
             catch (Exception ex)
             {
-                Debug.LogError($"SaveLoadHUD: Load handler threw while applying loaded game for slot {slotIndex}. {ex}", this);
+                SBLog.Error($"SaveLoadHUD: Load handler threw while applying loaded game for slot {slotIndex}. {ex}", this);
                 ShowLoadErrorDialog();
                 yield break;
             }
@@ -685,7 +686,7 @@ namespace SevenBattles.UI
 
             if (task.Exception != null)
             {
-                Debug.LogError($"SaveLoadHUD: Failed to save slot {slotIndex}. {task.Exception}");
+                SBLog.Error($"SaveLoadHUD: Failed to save slot {slotIndex}. {task.Exception}");
                 yield break;
             }
 

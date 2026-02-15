@@ -4,6 +4,7 @@ using SevenBattles.Core.Math;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Board
 {
     // World-space version of the perspective board.
@@ -177,7 +178,7 @@ namespace SevenBattles.Battle.Board
             // Validate sorting order - should never be 0 or negative (would render behind board)
             if (sortingOrder <= 0)
             {
-                Debug.LogWarning($"[WorldPerspectiveBoard] PlaceHero called with invalid sortingOrder={sortingOrder}. " +
+                SBLog.Warn($"[WorldPerspectiveBoard] PlaceHero called with invalid sortingOrder={sortingOrder}. " +
                                  $"This will cause rendering issues. Setting to default 100.", this);
                 sortingOrder = 100;
             }
@@ -282,7 +283,7 @@ namespace SevenBattles.Battle.Board
             {
                 if (TryScreenToTile(Input.mousePosition, out var cx, out var cy))
                 {
-                    Debug.Log($"WorldPerspectiveBoard click tile=({cx},{cy})", this);
+                    SBLog.Info($"WorldPerspectiveBoard click tile=({cx},{cy})", this);
                 }
             }
         }

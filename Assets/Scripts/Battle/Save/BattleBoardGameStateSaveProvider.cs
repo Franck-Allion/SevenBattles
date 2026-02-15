@@ -8,6 +8,7 @@ using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Save
 {
     /// <summary>
@@ -136,7 +137,7 @@ namespace SevenBattles.Battle.Save
 
                 if (_logCapturedUnits)
                 {
-                    Debug.Log($"BattleBoardGameStateSaveProvider: Captured unit placement -> id='{unitId}', team='{team}', tile=({x},{y}), dead={dead}.", this);
+                    SBLog.Info($"BattleBoardGameStateSaveProvider: Captured unit placement -> id='{unitId}', team='{team}', tile=({x},{y}), dead={dead}.", this);
                 }
             }
 

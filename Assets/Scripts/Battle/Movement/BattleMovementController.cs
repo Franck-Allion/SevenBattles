@@ -6,6 +6,7 @@ using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core.Units;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Movement
 {
     /// <summary>
@@ -54,7 +55,7 @@ namespace SevenBattles.Battle.Movement
                 _board = FindObjectOfType<WorldPerspectiveBoard>();
                 if (_board == null)
                 {
-                    Debug.LogError("[BattleMovementController] WorldPerspectiveBoard dependency is missing and could not be found in the scene.");
+                    SBLog.Error("[BattleMovementController] WorldPerspectiveBoard dependency is missing and could not be found in the scene.");
                 }
             }
         }
@@ -74,7 +75,7 @@ namespace SevenBattles.Battle.Movement
 
             if (_board == null)
             {
-                Debug.LogError("[BattleMovementController] Cannot rebuild legal move tiles: Board is null.");
+                SBLog.Error("[BattleMovementController] Cannot rebuild legal move tiles: Board is null.");
                 return;
             }
 

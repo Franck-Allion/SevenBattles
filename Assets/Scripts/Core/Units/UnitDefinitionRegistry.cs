@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Core.Units
 {
     /// <summary>
@@ -73,7 +74,7 @@ namespace SevenBattles.Core.Units
 
                 if (_lookup.ContainsKey(def.Id))
                 {
-                    Debug.LogWarning($"UnitDefinitionRegistry: Duplicate unit ID '{def.Id}' found. Only the first occurrence will be used.", this);
+                    SBLog.Warn($"UnitDefinitionRegistry: Duplicate unit ID '{def.Id}' found. Only the first occurrence will be used.", this);
                     continue;
                 }
 

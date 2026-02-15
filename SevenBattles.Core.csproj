@@ -72,6 +72,7 @@
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleTurnController.cs" />
     <Compile Include="Assets\Scripts\Core\Save\SaveGameService.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerSquadGameStateSaveProvider.cs" />
+    <Compile Include="Assets\Scripts\Core\Diagnostics\SBLog.cs" />
     <Compile Include="Assets\Scripts\Core\Players\PlayerSquad.cs" />
     <Compile Include="Assets\Scripts\Core\Save\CompositeGameStateLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerSquadBattleSessionLoadHandler.cs" />

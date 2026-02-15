@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Core.Battle
 {
     [CreateAssetMenu(menuName = "SevenBattles/Battle/Battlefield Definition Registry", fileName = "BattlefieldDefinitionRegistry")]
@@ -59,7 +60,7 @@ namespace SevenBattles.Core.Battle
 
                 if (_lookup.ContainsKey(def.Id))
                 {
-                    Debug.LogWarning($"BattlefieldDefinitionRegistry: Duplicate battlefield ID '{def.Id}' found. Only the first occurrence will be used.", this);
+                    SBLog.Warn($"BattlefieldDefinitionRegistry: Duplicate battlefield ID '{def.Id}' found. Only the first occurrence will be used.", this);
                     continue;
                 }
 

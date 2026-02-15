@@ -6,6 +6,7 @@ using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Start
 {
     // Ensures enemies are spawned before the player placement phase begins.
@@ -75,7 +76,7 @@ namespace SevenBattles.Battle.Start
             var sessionService = UnityEngine.Object.FindFirstObjectByType<BattleSessionService>();
             if (sessionService == null)
             {
-                Debug.LogWarning("WorldBattleBootstrap: No BattleSessionService found in scene. Battle session will not be available.");
+                SBLog.Warn("WorldBattleBootstrap: No BattleSessionService found in scene. Battle session will not be available.");
                 return;
             }
 
@@ -88,7 +89,7 @@ namespace SevenBattles.Battle.Start
             if (BattleSessionConfigTransfer.TryConsume(out var pendingConfig))
             {
                 sessionService.InitializeSession(pendingConfig);
-                Debug.Log("WorldBattleBootstrap: Initialized battle session from pending config.");
+                SBLog.Info("WorldBattleBootstrap: Initialized battle session from pending config.");
                 return;
             }
 
@@ -97,7 +98,7 @@ namespace SevenBattles.Battle.Start
             if (config != null)
             {
                 sessionService.InitializeSession(config);
-                Debug.Log("WorldBattleBootstrap: Initialized battle session from legacy ScriptableObject references.");
+                SBLog.Info("WorldBattleBootstrap: Initialized battle session from legacy ScriptableObject references.");
             }
         }
 
@@ -149,7 +150,7 @@ namespace SevenBattles.Battle.Start
 
             if (playerSquad == null && enemySquad == null)
             {
-                Debug.LogWarning("WorldBattleBootstrap: Could not build legacy battle session config - no squads found.");
+                SBLog.Warn("WorldBattleBootstrap: Could not build legacy battle session config - no squads found.");
                 return null;
             }
 

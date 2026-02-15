@@ -9,6 +9,7 @@ using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Start
 {
     // Handles interactive placement of a fixed-size wizard squad on a world-space board.
@@ -157,18 +158,18 @@ namespace SevenBattles.Battle.Start
 
         public void SelectWizard(int index)
         {
-            if (_locked) { if (_logSelection) Debug.Log("SelectWizard ignored: placement locked.", this); return; }
-            if (index < 0 || index >= SquadSize) { if (_logSelection) Debug.Log($"SelectWizard ignored: index {index} out of range.", this); return; }
+            if (_locked) { if (_logSelection) SBLog.Info("SelectWizard ignored: placement locked.", this); return; }
+            if (index < 0 || index >= SquadSize) { if (_logSelection) SBLog.Info($"SelectWizard ignored: index {index} out of range.", this); return; }
             // Ignore already placed selections; selecting again could be used to move, but spec removes on click so keep simple
             if (_model != null && _model.TryGetTileOfWizard(index, out _))
             {
                 _selected = -1; // cannot select already placed
-                if (_logSelection) Debug.Log($"SelectWizard rejected: wizard {index} already placed.", this);
+                if (_logSelection) SBLog.Info($"SelectWizard rejected: wizard {index} already placed.", this);
                 return;
             }
             _selected = index;
             OnWizardSelected?.Invoke(index);
-            if (_logSelection) Debug.Log($"SelectWizard accepted: wizard {index}.", this);
+            if (_logSelection) SBLog.Info($"SelectWizard accepted: wizard {index}.", this);
             WizardSelected?.Invoke(index);
         }
 
@@ -405,11 +406,11 @@ namespace SevenBattles.Battle.Start
             var squad = GetPlayerSquadLoadouts();
             if (squad != null && squad.Length > 8)
             {
-                Debug.LogWarning("WorldSquadPlacementController: Only first 8 UnitLoadouts will be used.", this);
+                SBLog.Warn("WorldSquadPlacementController: Only first 8 UnitLoadouts will be used.", this);
             }
             if (squad == null || squad.Length == 0)
             {
-                Debug.LogWarning("WorldSquadPlacementController: Assign a PlayerSquad with 1..8 UnitLoadouts or ensure BattleSessionService is configured.", this);
+                SBLog.Warn("WorldSquadPlacementController: Assign a PlayerSquad with 1..8 UnitLoadouts or ensure BattleSessionService is configured.", this);
             }
         }
     }

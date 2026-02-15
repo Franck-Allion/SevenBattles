@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using SevenBattles.Core.Players;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Core.Save
 {
     public interface ISaveGameService
@@ -187,7 +188,7 @@ namespace SevenBattles.Core.Save
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"SaveGameService: Failed to create save directory '{directory}'. {ex}");
+                    SBLog.Warn($"SaveGameService: Failed to create save directory '{directory}'. {ex}");
                 }
 
                 for (int i = 0; i < MaxSlots; i++)
@@ -227,7 +228,7 @@ namespace SevenBattles.Core.Save
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogWarning($"SaveGameService: Failed to read save slot {slotIndex} at '{path}'. Treating as empty. {ex}");
+                        SBLog.Warn($"SaveGameService: Failed to read save slot {slotIndex} at '{path}'. Treating as empty. {ex}");
                         result[i] = new SaveSlotMetadata(slotIndex, false, null, 0);
                     }
                 }
@@ -253,7 +254,7 @@ namespace SevenBattles.Core.Save
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"SaveGameService: Failed to create save directory '{directory}' for loading. {ex}");
+                    SBLog.Warn($"SaveGameService: Failed to create save directory '{directory}' for loading. {ex}");
                 }
 
                 string path = GetSlotFilePath(directory, slotIndex);
@@ -312,7 +313,7 @@ namespace SevenBattles.Core.Save
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"SaveGameService: Failed to load save slot {slotIndex} at '{path}'. {ex}");
+                    SBLog.Error($"SaveGameService: Failed to load save slot {slotIndex} at '{path}'. {ex}");
                     return null;
                 }
             });
@@ -333,7 +334,7 @@ namespace SevenBattles.Core.Save
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"SaveGameService: Failed to create save directory '{directory}' for saving. {ex}");
+                SBLog.Warn($"SaveGameService: Failed to create save directory '{directory}' for saving. {ex}");
             }
 
             string path = GetSlotFilePath(directory, slotIndex);
@@ -359,7 +360,7 @@ namespace SevenBattles.Core.Save
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"SaveGameService: Failed to read existing save for slot {slotIndex} at '{path}' to compute run number. {ex}");
+                    SBLog.Warn($"SaveGameService: Failed to read existing save for slot {slotIndex} at '{path}' to compute run number. {ex}");
                 }
             }
 
@@ -378,7 +379,7 @@ namespace SevenBattles.Core.Save
                         try
                         {
                             File.Replace(tempPath, path, backupPath, ignoreMetadataErrors: true);
-                            Debug.Log($"SaveGameService: Save slot {slotIndex} backup file created at '{backupPath}'.");
+                            SBLog.Info($"SaveGameService: Save slot {slotIndex} backup file created at '{backupPath}'.");
                             try
                             {
                                 if (File.Exists(backupPath))
@@ -388,12 +389,12 @@ namespace SevenBattles.Core.Save
                             }
                             catch (Exception backupEx)
                             {
-                                Debug.LogWarning($"SaveGameService: Failed to delete backup file '{backupPath}'. {backupEx}");
+                                SBLog.Warn($"SaveGameService: Failed to delete backup file '{backupPath}'. {backupEx}");
                             }
                         }
                         catch (Exception replaceEx)
                         {
-                            Debug.LogWarning($"SaveGameService: File.Replace failed for '{path}'. Falling back to overwrite. {replaceEx}");
+                            SBLog.Warn($"SaveGameService: File.Replace failed for '{path}'. Falling back to overwrite. {replaceEx}");
                             File.Copy(tempPath, path, true);
                             File.Delete(tempPath);
                         }
@@ -405,7 +406,7 @@ namespace SevenBattles.Core.Save
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"SaveGameService: Failed to write save slot {slotIndex} to '{path}'. {ex}");
+                    SBLog.Error($"SaveGameService: Failed to write save slot {slotIndex} to '{path}'. {ex}");
                     try
                     {
                         if (File.Exists(tempPath))
@@ -455,7 +456,7 @@ namespace SevenBattles.Core.Save
             }
             catch (Exception ex)
             {
-                Debug.LogError($"SaveGameService: Game state provider threw during PopulateGameState. {ex}");
+                SBLog.Error($"SaveGameService: Game state provider threw during PopulateGameState. {ex}");
             }
 
             if (data.PlayerSquad == null)

@@ -6,6 +6,7 @@ using SevenBattles.Core.Battle;
 using SevenBattles.Core.Contracts;
 using SevenBattles.Core.Players;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Preparation
 {
     public sealed class TournamentBattleStartController : MonoBehaviour
@@ -143,7 +144,7 @@ namespace SevenBattles.Preparation
 
             if (_confirmation == null)
             {
-                Debug.LogError("TournamentBattleStartController: No confirmation message box assigned or found in the scene.", this);
+                SBLog.Error("TournamentBattleStartController: No confirmation message box assigned or found in the scene.", this);
                 return;
             }
 
@@ -178,7 +179,7 @@ namespace SevenBattles.Preparation
 
             if (!TryBuildBattleSessionConfig(battle, out var config))
             {
-                Debug.LogError("TournamentBattleStartController: Battle start aborted due to missing data.", this);
+                SBLog.Error("TournamentBattleStartController: Battle start aborted due to missing data.", this);
                 _inputLocked = false;
                 _transitioning = false;
                 if (_mapPresenter != null)
@@ -198,7 +199,7 @@ namespace SevenBattles.Preparation
 
             if (string.IsNullOrWhiteSpace(_battleSceneName))
             {
-                Debug.LogError("TournamentBattleStartController: Battle scene name is empty. Aborting load.", this);
+                SBLog.Error("TournamentBattleStartController: Battle scene name is empty. Aborting load.", this);
                 _inputLocked = false;
                 _transitioning = false;
                 if (_mapPresenter != null)
@@ -213,7 +214,7 @@ namespace SevenBattles.Preparation
             var loadOp = SceneManager.LoadSceneAsync(_battleSceneName, LoadSceneMode.Single);
             if (loadOp == null)
             {
-                Debug.LogError($"TournamentBattleStartController: Failed to load scene '{_battleSceneName}'.", this);
+                SBLog.Error($"TournamentBattleStartController: Failed to load scene '{_battleSceneName}'.", this);
                 _inputLocked = false;
                 _transitioning = false;
                 BattleSessionConfigTransfer.Clear();
@@ -230,42 +231,42 @@ namespace SevenBattles.Preparation
 
             if (battle == null)
             {
-                Debug.LogError("TournamentBattleStartController: Battle definition is missing.", this);
+                SBLog.Error("TournamentBattleStartController: Battle definition is missing.", this);
                 return false;
             }
 
             var battlefield = battle.Battlefield;
             if (battlefield == null)
             {
-                Debug.LogError("TournamentBattleStartController: Battle definition is missing a Battlefield.", this);
+                SBLog.Error("TournamentBattleStartController: Battle definition is missing a Battlefield.", this);
                 return false;
             }
 
             var enemySquad = battle.EnemySquad;
             if (enemySquad == null)
             {
-                Debug.LogError("TournamentBattleStartController: Battle definition is missing an EnemySquad.", this);
+                SBLog.Error("TournamentBattleStartController: Battle definition is missing an EnemySquad.", this);
                 return false;
             }
 
             var enemyLoadouts = enemySquad.GetLoadouts();
             if (enemyLoadouts == null || enemyLoadouts.Length == 0)
             {
-                Debug.LogError("TournamentBattleStartController: EnemySquad has no loadouts.", this);
+                SBLog.Error("TournamentBattleStartController: EnemySquad has no loadouts.", this);
                 return false;
             }
 
             var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
             if (playerSquad == null)
             {
-                Debug.LogError("TournamentBattleStartController: PlayerContext has no PlayerSquad assigned.", this);
+                SBLog.Error("TournamentBattleStartController: PlayerContext has no PlayerSquad assigned.", this);
                 return false;
             }
 
             var playerLoadouts = playerSquad.GetLoadouts();
             if (playerLoadouts == null || playerLoadouts.Length == 0)
             {
-                Debug.LogError("TournamentBattleStartController: PlayerSquad has no loadouts.", this);
+                SBLog.Error("TournamentBattleStartController: PlayerSquad has no loadouts.", this);
                 return false;
             }
 

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Core.Battle
 {
     /// <summary>
@@ -59,7 +60,7 @@ namespace SevenBattles.Core.Battle
 
                 if (_lookup.ContainsKey(def.Id))
                 {
-                    Debug.LogWarning($"SpellDefinitionRegistry: Duplicate spell ID '{def.Id}' found. Only the first occurrence will be used.", this);
+                    SBLog.Warn($"SpellDefinitionRegistry: Duplicate spell ID '{def.Id}' found. Only the first occurrence will be used.", this);
                     continue;
                 }
 

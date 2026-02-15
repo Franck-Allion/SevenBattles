@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using UnityEngine;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Core.Save
 {
     /// <summary>
@@ -29,7 +30,7 @@ namespace SevenBattles.Core.Save
         {
             if (_gameStateProviderBehaviour != null && !(_gameStateProviderBehaviour is IGameStateSaveProvider))
             {
-                Debug.LogWarning(
+                SBLog.Warn(
                     $"SaveGameServiceComponent on '{name}': Assigned GameStateProvider does not implement IGameStateSaveProvider.",
                     this);
             }
@@ -39,7 +40,7 @@ namespace SevenBattles.Core.Save
         {
             if (_gameStateProviderBehaviour == null)
             {
-                Debug.LogWarning("SaveGameServiceComponent: GameState provider is not assigned.", this);
+                SBLog.Warn("SaveGameServiceComponent: GameState provider is not assigned.", this);
                 _gameStateProvider = null;
                 _service = null;
                 return;
@@ -48,7 +49,7 @@ namespace SevenBattles.Core.Save
             _gameStateProvider = _gameStateProviderBehaviour as IGameStateSaveProvider;
             if (_gameStateProvider == null)
             {
-                Debug.LogWarning("SaveGameServiceComponent: Assigned provider does not implement IGameStateSaveProvider.", this);
+                SBLog.Warn("SaveGameServiceComponent: Assigned provider does not implement IGameStateSaveProvider.", this);
                 _service = null;
                 return;
             }
@@ -81,7 +82,7 @@ namespace SevenBattles.Core.Save
                 ResolveProviderAndService();
                 if (_service == null)
                 {
-                    Debug.LogWarning("SaveGameServiceComponent: Cannot save because underlying service is not initialized.", this);
+                    SBLog.Warn("SaveGameServiceComponent: Cannot save because underlying service is not initialized.", this);
                     return Task.FromResult(new SaveSlotMetadata(slotIndex, false, null, 0));
                 }
             }
@@ -96,7 +97,7 @@ namespace SevenBattles.Core.Save
                 ResolveProviderAndService();
                 if (_service == null)
                 {
-                    Debug.LogWarning("SaveGameServiceComponent: Cannot load because underlying service is not initialized.", this);
+                    SBLog.Warn("SaveGameServiceComponent: Cannot load because underlying service is not initialized.", this);
                     return Task.FromResult<SaveGameData>(null);
                 }
             }

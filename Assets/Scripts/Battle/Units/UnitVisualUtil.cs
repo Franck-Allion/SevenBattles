@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Units
 {
     // Utility for preparing wizard visuals (direction, sorting, scale) consistently.
@@ -50,7 +51,7 @@ namespace SevenBattles.Battle.Units
             // Validate sorting order - should never be 0 or negative (would render behind board)
             if (sortingOrder <= 0)
             {
-                Debug.LogWarning($"[UnitVisualUtil] InitializeHero called with invalid sortingOrder={sortingOrder}. " +
+                SBLog.Warn($"[UnitVisualUtil] InitializeHero called with invalid sortingOrder={sortingOrder}. " +
                                  $"This will cause rendering issues. Setting to default 100.");
                 sortingOrder = 100;
             }
@@ -134,7 +135,7 @@ namespace SevenBattles.Battle.Units
             }
             catch (System.Exception ex)
             {
-                Debug.LogWarning($"[UnitVisualUtil] Failed to invoke method '{animationName}': {ex.Message}");
+                SBLog.Warn($"[UnitVisualUtil] Failed to invoke method '{animationName}': {ex.Message}");
             }
 
             return false;
@@ -258,13 +259,13 @@ namespace SevenBattles.Battle.Units
                 {
                     // Only log if we really expected a state and it wasn't a method either.
                     // But since TryPlayAnimation calls this as fallback, we might want to log here.
-                    Debug.LogWarning($"[UnitVisualUtil] Animation/State '{stateName}' not found (checked method and CharacterState enum).");
+                    SBLog.Warn($"[UnitVisualUtil] Animation/State '{stateName}' not found (checked method and CharacterState enum).");
                     return false;
                 }
             }
             catch (System.Exception ex)
             {
-                Debug.LogWarning($"[UnitVisualUtil] Failed to set state '{stateName}': {ex.Message}");
+                SBLog.Warn($"[UnitVisualUtil] Failed to set state '{stateName}': {ex.Message}");
             }
 
             return false;

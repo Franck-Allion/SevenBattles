@@ -5,6 +5,7 @@ using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Save
 {
     /// <summary>
@@ -46,7 +47,7 @@ namespace SevenBattles.Battle.Save
         {
             if (_sessionService?.CurrentSession == null)
             {
-                Debug.LogWarning("BattleSessionSaveProvider: No current session to save.");
+                SBLog.Warn("BattleSessionSaveProvider: No current session to save.");
                 return;
             }
 
@@ -66,7 +67,7 @@ namespace SevenBattles.Battle.Save
                 BattlefieldId = ResolveBattlefieldId(session)
             };
 
-            Debug.Log($"BattleSessionSaveProvider: Saved session with {data.BattleSession.PlayerSquadIds.Length} player units, {data.BattleSession.EnemySquadIds.Length} enemy units.");
+            SBLog.Info($"BattleSessionSaveProvider: Saved session with {data.BattleSession.PlayerSquadIds.Length} player units, {data.BattleSession.EnemySquadIds.Length} enemy units.");
         }
 
         private static UnitSpellLoadoutSaveData[] BuildUnitLoadoutSaveData(UnitSpellLoadout[] squad)

@@ -11,6 +11,7 @@ using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 using SevenBattles.Battle.Combat;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Spells
 {
     /// <summary>
@@ -46,7 +47,7 @@ namespace SevenBattles.Battle.Spells
             if (_board == null)
             {
                 _board = FindObjectOfType<WorldPerspectiveBoard>();
-                if (_board == null) Debug.LogError("[BattleSpellController] WorldPerspectiveBoard not found.");
+                if (_board == null) SBLog.Error("[BattleSpellController] WorldPerspectiveBoard not found.");
             }
             if (_visualFeedback == null)
             {
@@ -346,7 +347,7 @@ namespace SevenBattles.Battle.Spells
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"BattleSpellController: Spell amount modifier threw an exception and was ignored: {ex.Message}", behaviours[i]);
+                    SBLog.Warn($"BattleSpellController: Spell amount modifier threw an exception and was ignored: {ex.Message}", behaviours[i]);
                 }
             }
         }
@@ -531,7 +532,7 @@ namespace SevenBattles.Battle.Spells
                     var projectileInstance = InstantiatePrefabAsGameObject(spell.ProjectilePrefab, spawnPos, rotation);
                     if (projectileInstance == null)
                     {
-                        Debug.LogError($"[BattleSpellController] ProjectilePrefab is not a GameObject prefab: '{spell.ProjectilePrefab?.name}'.", this);
+                        SBLog.Error($"[BattleSpellController] ProjectilePrefab is not a GameObject prefab: '{spell.ProjectilePrefab?.name}'.", this);
                         callbacks.OnComplete?.Invoke();
                         return;
                     }
@@ -641,7 +642,7 @@ namespace SevenBattles.Battle.Spells
             }
             catch (Exception e)
             {
-                Debug.LogError($"[BattleSpellController] Error executing spell cast: {e}");
+                SBLog.Error($"[BattleSpellController] Error executing spell cast: {e}");
                 callbacks.OnComplete?.Invoke();
             }
         }
@@ -675,7 +676,7 @@ namespace SevenBattles.Battle.Spells
             var instance = InstantiatePrefabAsGameObject(spell.TargetVfxPrefab, worldPosition, Quaternion.identity);
             if (instance == null)
             {
-                Debug.LogError($"[BattleSpellController] TargetVfxPrefab is not a GameObject prefab: '{spell.TargetVfxPrefab?.name}'.", this);
+                SBLog.Error($"[BattleSpellController] TargetVfxPrefab is not a GameObject prefab: '{spell.TargetVfxPrefab?.name}'.", this);
                 return;
             }
             ConfigureSpellVfxRendering(instance, spell, casterMeta, targetMeta, targetTile);

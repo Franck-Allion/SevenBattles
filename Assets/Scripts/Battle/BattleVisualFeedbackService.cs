@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.Rendering;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle
 {
     /// <summary>
@@ -45,7 +46,7 @@ namespace SevenBattles.Battle
         {
             if (damage < 0)
             {
-                Debug.LogWarning($"[BattleVisualFeedbackService] Invalid damage value: {damage}. Damage should be non-negative.", this);
+                SBLog.Warn($"[BattleVisualFeedbackService] Invalid damage value: {damage}. Damage should be non-negative.", this);
                 return;
             }
 
@@ -59,7 +60,7 @@ namespace SevenBattles.Battle
         {
             if (healAmount < 0)
             {
-                Debug.LogWarning($"[BattleVisualFeedbackService] Invalid heal value: {healAmount}. Heal should be non-negative.", this);
+                SBLog.Warn($"[BattleVisualFeedbackService] Invalid heal value: {healAmount}. Heal should be non-negative.", this);
                 return;
             }
 
@@ -81,7 +82,7 @@ namespace SevenBattles.Battle
         public void ShowBuffText(Vector3 worldPosition, string text)
         {
             // TODO: Implement buff/debuff visual feedback
-            Debug.Log($"[BattleVisualFeedbackService] ShowBuffText not yet implemented: '{text}' at {worldPosition}");
+            SBLog.Info($"[BattleVisualFeedbackService] ShowBuffText not yet implemented: '{text}' at {worldPosition}");
         }
 
         private void ShowNumber(
@@ -97,7 +98,7 @@ namespace SevenBattles.Battle
         {
             if (prefab == null)
             {
-                Debug.LogWarning($"[BattleVisualFeedbackService] Cannot show {label} number: {prefabFieldNameForLogs} is not assigned.", this);
+                SBLog.Warn($"[BattleVisualFeedbackService] Cannot show {label} number: {prefabFieldNameForLogs} is not assigned.", this);
                 return;
             }
 
@@ -121,12 +122,12 @@ namespace SevenBattles.Battle
                 bool valueSet = TrySetNumberValue(numberInstance, value);
                 if (!valueSet)
                 {
-                    Debug.LogWarning($"[BattleVisualFeedbackService] Could not set {label} value on prefab. The prefab may need manual configuration or a different integration approach.", this);
+                    SBLog.Warn($"[BattleVisualFeedbackService] Could not set {label} value on prefab. The prefab may need manual configuration or a different integration approach.", this);
                 }
             }
             catch (System.Exception ex)
             {
-                Debug.LogError($"[BattleVisualFeedbackService] Failed to instantiate {label} number prefab: {ex.Message}", this);
+                SBLog.Error($"[BattleVisualFeedbackService] Failed to instantiate {label} number prefab: {ex.Message}", this);
             }
         }
 

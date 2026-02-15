@@ -6,6 +6,7 @@ using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Units;
 using SevenBattles.Core.Units;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Combat
 {
     /// <summary>
@@ -424,7 +425,7 @@ namespace SevenBattles.Battle.Combat
             // Debug log
             string attackerName = attackerMeta != null ? (attackerMeta.Definition != null ? attackerMeta.Definition.Id : attackerMeta.gameObject.name) : "Unknown";
             string targetName = targetMeta != null ? (targetMeta.Definition != null ? targetMeta.Definition.Id : targetMeta.gameObject.name) : "Unknown";
-            Debug.Log($"[Combat] {attackerName} hit {targetName} for {damage} damage.");
+            SBLog.Info($"[Combat] {attackerName} hit {targetName} for {damage} damage.");
 
             // 6. Wait for completion
             yield return WaitHalfSecond;
@@ -550,7 +551,7 @@ namespace SevenBattles.Battle.Combat
 
             string attackerName = attackerMeta != null ? (attackerMeta.Definition != null ? attackerMeta.Definition.Id : attackerMeta.gameObject.name) : "Unknown";
             string targetName = targetMeta != null ? (targetMeta.Definition != null ? targetMeta.Definition.Id : targetMeta.gameObject.name) : "Unknown";
-            Debug.Log($"[Combat] {attackerName} shot {targetName} for {damage} damage.");
+            SBLog.Info($"[Combat] {attackerName} shot {targetName} for {damage} damage.");
 
             float recovery = Mathf.Max(0f, _shootRecoverySeconds);
             if (recovery > 0f)

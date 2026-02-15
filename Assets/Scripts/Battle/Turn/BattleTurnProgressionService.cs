@@ -5,6 +5,7 @@ using SevenBattles.Battle.Units;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Turn
 {
     /// <summary>
@@ -148,18 +149,18 @@ namespace SevenBattles.Battle.Turn
             if (playerAlive <= 0 && enemyAlive > 0)
             {
                 outcome = BattleOutcome.PlayerDefeat;
-                Debug.Log("[Battle] Player defeated. All player units are dead.", this);
+                SBLog.Info("[Battle] Player defeated. All player units are dead.", this);
             }
             else if (enemyAlive <= 0 && playerAlive > 0)
             {
                 outcome = BattleOutcome.PlayerVictory;
-                Debug.Log("[Battle] Player victory. All enemy units are dead.", this);
+                SBLog.Info("[Battle] Player victory. All enemy units are dead.", this);
             }
             else if (playerAlive <= 0 && enemyAlive <= 0)
             {
                 // Simultaneous wipe treated as defeat
                 outcome = BattleOutcome.PlayerDefeat;
-                Debug.Log("[Battle] Player defeated (simultaneous wipe). Both squads have no units remaining.", this);
+                SBLog.Info("[Battle] Player defeated (simultaneous wipe). Both squads have no units remaining.", this);
             }
             else
             {

@@ -4,6 +4,7 @@ using SevenBattles.Core.Units;
 using SevenBattles.Core.Battle;
 using SevenBattles.Battle.Tiles;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Units
 {
     // Runtime stats holder for a wizard instance.
@@ -183,7 +184,7 @@ namespace SevenBattles.Battle.Units
         {
             if (damage < 0)
             {
-                Debug.LogWarning($"[UnitStats] TakeDamage called with negative damage: {damage}. Ignoring.");
+                SBLog.Warn($"[UnitStats] TakeDamage called with negative damage: {damage}. Ignoring.");
                 return;
             }
 
@@ -199,7 +200,7 @@ namespace SevenBattles.Battle.Units
         {
             if (amount < 0)
             {
-                Debug.LogWarning($"[UnitStats] Heal called with negative amount: {amount}. Ignoring.");
+                SBLog.Warn($"[UnitStats] Heal called with negative amount: {amount}. Ignoring.");
                 return 0;
             }
 

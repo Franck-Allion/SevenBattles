@@ -197,6 +197,9 @@ Types: feat, fix, test, refactor, chore, docs.
   - ALL_CAPS ? constants  
 - All comments in English.  
 - Optimize memory & performance.  
+- All runtime logging must use `SevenBattles.Core.Diagnostics.SBLog` (`SBLog.Info`, `SBLog.Warn`, `SBLog.Error`).
+- Direct `UnityEngine.Debug.Log*` calls are forbidden in runtime code.
+  Allowed exceptions: `Assets/Scripts/Core/Diagnostics/SBLog.cs` and files under `Assets/Scripts/Tests/`.
 - Coroutine wait caching must use a shared Core utility: Assets/Scripts/Core/CoroutineWaitCache.cs.
   Do not duplicate WaitForSeconds cache dictionaries/services in Battle, UI, Menu, Preparation, or AI domains.
 - Use correct asmdefs.  

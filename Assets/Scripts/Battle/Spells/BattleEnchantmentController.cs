@@ -6,6 +6,7 @@ using SevenBattles.Battle.Units;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Spells
 {
     /// <summary>
@@ -561,7 +562,7 @@ namespace SevenBattles.Battle.Spells
             var instance = InstantiatePrefabAsGameObject(spell.EnchantmentVfxPrefab, position, Quaternion.identity);
             if (instance == null)
             {
-                Debug.LogWarning($"[BattleEnchantmentController] EnchantmentVfxPrefab is not a GameObject prefab: '{spell.EnchantmentVfxPrefab?.name}'.", this);
+                SBLog.Warn($"[BattleEnchantmentController] EnchantmentVfxPrefab is not a GameObject prefab: '{spell.EnchantmentVfxPrefab?.name}'.", this);
                 return null;
             }
 
@@ -904,7 +905,7 @@ namespace SevenBattles.Battle.Spells
             var instance = InstantiatePrefabAsGameObject(spell.TargetVfxPrefab, worldPosition, Quaternion.identity);
             if (instance == null)
             {
-                Debug.LogWarning($"[BattleEnchantmentController] TargetVfxPrefab is not a GameObject prefab: '{spell.TargetVfxPrefab?.name}'.", this);
+                SBLog.Warn($"[BattleEnchantmentController] TargetVfxPrefab is not a GameObject prefab: '{spell.TargetVfxPrefab?.name}'.", this);
                 return;
             }
 

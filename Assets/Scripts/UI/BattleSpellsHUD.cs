@@ -10,6 +10,7 @@ using UnityEngine.Localization.Settings;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.UI
 {
     // Displays the active unit's spells inside a HorizontalLayoutGroup container.
@@ -150,7 +151,7 @@ namespace SevenBattles.UI
         private void Awake()
         {
             if (_controllerBehaviour == null)
-                Debug.LogWarning("BattleSpellsHUD: Please assign a controller (MonoBehaviour implementing ITurnOrderController).", this);
+                SBLog.Warn("BattleSpellsHUD: Please assign a controller (MonoBehaviour implementing ITurnOrderController).", this);
             _controller = _controllerBehaviour as ITurnOrderController;
             _spellSelectionController = _controllerBehaviour as ISpellSelectionController;
             _enchantmentInspectionController = _controllerBehaviour as IEnchantmentInspectionController;
@@ -158,7 +159,7 @@ namespace SevenBattles.UI
             _sfxPlayer = _sfxPlayerBehaviour as IUiSfxPlayer;
 
             if (_spellsContainer == null)
-                Debug.LogWarning("BattleSpellsHUD: Please assign a spells container RectTransform (e.g., BattleHUD/SpellsContainer).", this);
+                SBLog.Warn("BattleSpellsHUD: Please assign a spells container RectTransform (e.g., BattleHUD/SpellsContainer).", this);
 
             if (_slotTemplate == null && _spellsContainer != null)
             {
@@ -390,7 +391,7 @@ namespace SevenBattles.UI
                 TryBindFixedSlots();
                 if (_slots.Count > 0 && required > _slots.Count)
                 {
-                    Debug.LogWarning($"BattleSpellsHUD: Active unit has {required} spells but only {_slots.Count} fixed slots are available. Extra spells are not shown.", this);
+                    SBLog.Warn($"BattleSpellsHUD: Active unit has {required} spells but only {_slots.Count} fixed slots are available. Extra spells are not shown.", this);
                 }
                 return;
             }

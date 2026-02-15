@@ -6,6 +6,7 @@ using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Contracts;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.UI
 {
     /// <summary>
@@ -255,7 +256,7 @@ namespace SevenBattles.UI
         {
             if (_victoryPopup == null)
             {
-                Debug.LogWarning("BattleResultHUD: Victory popup is not assigned.", this);
+                SBLog.Warn("BattleResultHUD: Victory popup is not assigned.", this);
                 ReleaseInteractionLock();
                 return;
             }
@@ -278,7 +279,7 @@ namespace SevenBattles.UI
             var popup = ResolveDefeatPopup(out var presenterOverride);
             if (popup == null)
             {
-                Debug.LogWarning("BattleResultHUD: Defeat popup is not assigned.", this);
+                SBLog.Warn("BattleResultHUD: Defeat popup is not assigned.", this);
                 ReleaseInteractionLock();
                 return;
             }

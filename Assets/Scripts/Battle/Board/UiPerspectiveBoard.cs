@@ -2,6 +2,7 @@ using SevenBattles.Core.Math;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Board
 {
     // Maps pointer to tiles on a perspective board drawn as a single Image inside a Canvas.
@@ -105,7 +106,7 @@ namespace SevenBattles.Battle.Board
             if (hero == null) return;
             if (!_grid.IsValid)
             {
-                Debug.LogWarning("UiPerspectiveBoard: Grid is invalid (inner quad not set). Hero placement skipped.");
+                SBLog.Warn("UiPerspectiveBoard: Grid is invalid (inner quad not set). Hero placement skipped.");
                 return;
             }
             // Ensure hero is under a UI parent that renders above the board
@@ -138,7 +139,7 @@ namespace SevenBattles.Battle.Board
             if (!_logTileClicks) return;
             if (TryScreenToTile(eventData.position, out var tx, out var ty))
             {
-                Debug.Log($"UiPerspectiveBoard click tile=({tx},{ty})", this);
+                SBLog.Info($"UiPerspectiveBoard click tile=({tx},{ty})", this);
             }
         }
 

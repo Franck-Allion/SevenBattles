@@ -4,6 +4,7 @@ using UnityEngine;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle
 {
     /// <summary>
@@ -38,7 +39,7 @@ namespace SevenBattles.Battle
             // Clone squads to ensure runtime progression changes (XP/levels/spells) do not mutate authored assets
             // like PlayerSquad ScriptableObjects when a legacy session is built from scene references.
             _currentSession = CloneConfig(config);
-            Debug.Log($"BattleSessionService: Session initialized. BattleType={config.BattleType}, " +
+            SBLog.Info($"BattleSessionService: Session initialized. BattleType={config.BattleType}, " +
                       $"PlayerSquad={config.PlayerSquad?.Length ?? 0}, EnemySquad={config.EnemySquad?.Length ?? 0}");
         }
 
@@ -49,7 +50,7 @@ namespace SevenBattles.Battle
         public void ClearSession()
         {
             _currentSession = null;
-            Debug.Log("BattleSessionService: Session cleared.");
+            SBLog.Info("BattleSessionService: Session cleared.");
         }
 
         private void OnDestroy()

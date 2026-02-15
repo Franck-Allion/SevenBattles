@@ -9,6 +9,7 @@ using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Start
 {
     // Spawns an enemy squad on the back (top) two rows, in random distinct tiles.
@@ -84,14 +85,14 @@ namespace SevenBattles.Battle.Start
         {
             if (_board == null)
             {
-                Debug.LogWarning("WorldEnemySquadStartController: Missing board reference.");
+                SBLog.Warn("WorldEnemySquadStartController: Missing board reference.");
                 return;
             }
 
             var defs = GetEnemySquadLoadouts();
             if (defs == null || defs.Length == 0)
             {
-                Debug.LogWarning("WorldEnemySquadStartController: No enemy wizard definitions configured.");
+                SBLog.Warn("WorldEnemySquadStartController: No enemy wizard definitions configured.");
                 return;
             }
 
@@ -99,7 +100,7 @@ namespace SevenBattles.Battle.Start
             int rows = _board.Rows;
             if (cols <= 0 || rows <= 0)
             {
-                Debug.LogWarning("WorldEnemySquadStartController: Board not initialized.");
+                SBLog.Warn("WorldEnemySquadStartController: Board not initialized.");
                 return;
             }
 
@@ -220,7 +221,7 @@ namespace SevenBattles.Battle.Start
             var squad = GetEnemySquadLoadouts();
             if (squad == null || squad.Length == 0)
             {
-                Debug.LogWarning("WorldEnemySquadStartController: Assign an enemy squad with 1..8 UnitLoadouts or ensure BattleSessionService is configured.", this);
+                SBLog.Warn("WorldEnemySquadStartController: Assign an enemy squad with 1..8 UnitLoadouts or ensure BattleSessionService is configured.", this);
             }
         }
     }

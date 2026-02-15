@@ -8,6 +8,7 @@ using SevenBattles.Core.Battle;
 using SevenBattles.Core.Contracts;
 using SevenBattles.Core.Players;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Progression
 {
     public class BattleXpAwarder : MonoBehaviour, IBattleXpResultProvider
@@ -120,7 +121,7 @@ namespace SevenBattles.Battle.Progression
 
             if (_tuning == null)
             {
-                Debug.LogWarning("BattleXpAwarder: Missing BattleXpTuning reference. XP will not be awarded.", this);
+                SBLog.Warn("BattleXpAwarder: Missing BattleXpTuning reference. XP will not be awarded.", this);
                 _awarded = true;
                 LastResult = new BattleXpAwardResult { Outcome = outcome, TotalXp = 0 };
                 XpAwarded?.Invoke(LastResult);
@@ -130,7 +131,7 @@ namespace SevenBattles.Battle.Progression
             var session = _sessionService != null ? _sessionService.CurrentSession : null;
             if (session == null)
             {
-                Debug.LogWarning("BattleXpAwarder: No BattleSessionConfig available. XP will not be awarded.", this);
+                SBLog.Warn("BattleXpAwarder: No BattleSessionConfig available. XP will not be awarded.", this);
                 _awarded = true;
                 LastResult = new BattleXpAwardResult { Outcome = outcome, TotalXp = 0 };
                 XpAwarded?.Invoke(LastResult);
@@ -179,7 +180,7 @@ namespace SevenBattles.Battle.Progression
 
             if (_logAward)
             {
-                Debug.Log($"BattleXpAwarder: outcome={outcome} totalXp={totalXp} alive={alivePlayerUnits}/{totalPlayerUnits} turns={actualTurns}", this);
+                SBLog.Info($"BattleXpAwarder: outcome={outcome} totalXp={totalXp} alive={alivePlayerUnits}/{totalPlayerUnits} turns={actualTurns}", this);
             }
 
             XpAwarded?.Invoke(LastResult);

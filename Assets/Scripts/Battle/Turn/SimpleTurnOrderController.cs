@@ -10,6 +10,7 @@ using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 using SevenBattles.Battle.Tiles;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Turn
 {
     // Basic initiative-based turn controller for wizards.
@@ -193,13 +194,13 @@ namespace SevenBattles.Battle.Turn
             if (_movementController == null)
             {
                 _movementController = GetComponent<SevenBattles.Battle.Movement.BattleMovementController>();
-                if (_movementController == null) Debug.LogError("[SimpleTurnOrderController] BattleMovementController dependency missing!");
+                if (_movementController == null) SBLog.Error("[SimpleTurnOrderController] BattleMovementController dependency missing!");
             }
 
             if (_spellController == null)
             {
                 _spellController = GetComponent<BattleSpellController>();
-                if (_spellController == null) Debug.LogError("[SimpleTurnOrderController] BattleSpellController dependency missing!");
+                if (_spellController == null) SBLog.Error("[SimpleTurnOrderController] BattleSpellController dependency missing!");
             }
 
             if (_enchantmentController == null)
@@ -218,7 +219,7 @@ namespace SevenBattles.Battle.Turn
             if (_combatController == null)
             {
                  _combatController = GetComponent<SevenBattles.Battle.Combat.BattleCombatController>();
-                 if (_combatController == null) Debug.LogError("[SimpleTurnOrderController] BattleCombatController dependency missing!");
+                 if (_combatController == null) SBLog.Error("[SimpleTurnOrderController] BattleCombatController dependency missing!");
             }
              
             if (_visualFeedback == null)
@@ -553,7 +554,7 @@ namespace SevenBattles.Battle.Turn
         {
             if (_turnProgressionService == null)
             {
-                Debug.LogError("[SimpleTurnOrderController] Turn progression service not initialized!");
+                SBLog.Error("[SimpleTurnOrderController] Turn progression service not initialized!");
                 return;
             }
 
@@ -584,7 +585,7 @@ namespace SevenBattles.Battle.Turn
             {
                 if (_logTurns)
                 {
-                    Debug.Log("SimpleTurnOrderController: Ignoring player end-turn request during AI turn.", this);
+                    SBLog.Info("SimpleTurnOrderController: Ignoring player end-turn request during AI turn.", this);
                 }
                 return;
             }
@@ -708,7 +709,7 @@ namespace SevenBattles.Battle.Turn
         {
             if (_lifecycleService == null)
             {
-                Debug.LogError("[SimpleTurnOrderController] Lifecycle service not initialized!");
+                SBLog.Error("[SimpleTurnOrderController] Lifecycle service not initialized!");
                 return;
             }
 
@@ -729,7 +730,7 @@ namespace SevenBattles.Battle.Turn
 
             if (_logTurns)
             {
-                Debug.Log($"SimpleTurnOrderController: Rebuilt units list, count={_units.Count}.", this);
+                SBLog.Info($"SimpleTurnOrderController: Rebuilt units list, count={_units.Count}.", this);
             }
         }
 
@@ -848,7 +849,7 @@ namespace SevenBattles.Battle.Turn
         {
             if (_lifecycleService == null)
             {
-                Debug.LogError("[SimpleTurnOrderController] Lifecycle service not initialized!");
+                SBLog.Error("[SimpleTurnOrderController] Lifecycle service not initialized!");
                 return;
             }
 
@@ -1143,7 +1144,7 @@ namespace SevenBattles.Battle.Turn
         {
             if (_turnProgressionService == null)
             {
-                Debug.LogError("[SimpleTurnOrderController] Turn progression service not initialized!");
+                SBLog.Error("[SimpleTurnOrderController] Turn progression service not initialized!");
                 return;
             }
 
@@ -1164,7 +1165,7 @@ namespace SevenBattles.Battle.Turn
         {
             if (_turnProgressionService == null)
             {
-                Debug.LogError("[SimpleTurnOrderController] Turn progression service not initialized!");
+                SBLog.Error("[SimpleTurnOrderController] Turn progression service not initialized!");
                 return;
             }
 
@@ -1351,11 +1352,11 @@ namespace SevenBattles.Battle.Turn
                     var u = _units[_activeIndex];
                     string side = u.Metadata != null && u.Metadata.IsPlayerControlled ? "Player" : "AI";
                     int initiative = u.Stats != null ? u.Stats.Initiative : 0;
-                    Debug.Log($"SimpleTurnOrderController: Active -> {side} unit (initiative={initiative}, index={_activeIndex})", this);
+                    SBLog.Info($"SimpleTurnOrderController: Active -> {side} unit (initiative={initiative}, index={_activeIndex})", this);
                 }
                 else
                 {
-                    Debug.Log("SimpleTurnOrderController: No active unit (battle likely ended).", this);
+                    SBLog.Info("SimpleTurnOrderController: No active unit (battle likely ended).", this);
                 }
             }
 
@@ -1441,7 +1442,7 @@ namespace SevenBattles.Battle.Turn
 
             if (!string.IsNullOrEmpty(decision.LogMessage))
             {
-                Debug.Log(decision.LogMessage, this);
+                SBLog.Info(decision.LogMessage, this);
             }
 
             if (decision.Type == BattleAiTurnService.DecisionType.Move)

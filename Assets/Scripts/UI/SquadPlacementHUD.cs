@@ -5,6 +5,7 @@ using UnityEngine.Localization;
 using TMPro;
 using SevenBattles.Core;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.UI
 {
     // Simple HUD wiring for portraits and Start Battle button.
@@ -79,7 +80,7 @@ namespace SevenBattles.UI
         {
             // Require explicit assignment to avoid cross-domain lookup and deprecated APIs.
             if (_controllerBehaviour == null)
-                Debug.LogWarning("SquadPlacementHUD: Please assign a controller (MonoBehaviour implementing ISquadPlacementController).", this);
+                SBLog.Warn("SquadPlacementHUD: Please assign a controller (MonoBehaviour implementing ISquadPlacementController).", this);
             _controller = _controllerBehaviour as ISquadPlacementController;
 
             WireButtons();
@@ -319,7 +320,7 @@ namespace SevenBattles.UI
                 if (_logBindings && withinSquad && !visible)
                 {
                     var reason = placed ? "already placed" : (!hasPortrait ? "no portrait sprite" : "out of squad range");
-                    Debug.LogWarning($"HUD Portrait slot {i} hidden ({reason}). ImageFound={(img!=null)} SpriteFromController={(spriteFromController!=null)}", this);
+                    SBLog.Warn($"HUD Portrait slot {i} hidden ({reason}). ImageFound={(img!=null)} SpriteFromController={(spriteFromController!=null)}", this);
                 }
 
                 // Ensure highlight is off when this entry isn't currently usable
@@ -453,7 +454,7 @@ namespace SevenBattles.UI
 
         private void SetSelected(int index)
         {
-            if (_logSelection) Debug.Log($"HUD selection -> {index} (was {_selectedIndex})", this);
+            if (_logSelection) SBLog.Info($"HUD selection -> {index} (was {_selectedIndex})", this);
             if (index == _selectedIndex) return;
             // Turn off previous
             if (_selectedIndex >= 0 && _selectedIndex < _portraitButtons.Length)
@@ -483,11 +484,11 @@ namespace SevenBattles.UI
             if (tf != null)
             {
                 tf.gameObject.SetActive(active);
-                if (_logSelection) Debug.Log($"HUD highlight {(active ? "ON" : "OFF")} for slot {idx} -> '{tf.name}'", this);
+                if (_logSelection) SBLog.Info($"HUD highlight {(active ? "ON" : "OFF")} for slot {idx} -> '{tf.name}'", this);
             }
             else if (_logSelection && active)
             {
-                Debug.LogWarning($"HUD highlight target not found for slot {idx}. Looked for '{_frameChildBaseName}{idx}', '{_frameChildBaseName}', 'EdgeGlow' under '{root.name}'.", this);
+                SBLog.Warn($"HUD highlight target not found for slot {idx}. Looked for '{_frameChildBaseName}{idx}', '{_frameChildBaseName}', 'EdgeGlow' under '{root.name}'.", this);
             }
         }
 
@@ -518,7 +519,7 @@ namespace SevenBattles.UI
                 SetHighlightActive(i, false);
             }
             _selectedIndex = -1;
-            if (_logSelection) Debug.Log("HUD highlights cleared", this);
+            if (_logSelection) SBLog.Info("HUD highlights cleared", this);
         }
 
         private void PlaySelectSound()

@@ -11,6 +11,7 @@ using SevenBattles.Core.Players;
 using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Save
 {
     /// <summary>
@@ -112,7 +113,7 @@ namespace SevenBattles.Battle.Save
 
             if (_board == null)
             {
-                Debug.LogWarning("BattleGameStateLoadHandler: Board reference is not assigned.", this);
+                SBLog.Warn("BattleGameStateLoadHandler: Board reference is not assigned.", this);
                 return;
             }
 
@@ -122,14 +123,14 @@ namespace SevenBattles.Battle.Save
             int placementCount = placements != null ? placements.Length : -1;
             string phase = data.BattleTurn != null ? data.BattleTurn.Phase : "null";
             int defCount = _definitions != null ? _definitions.Count : -1;
-            Debug.Log($"BattleGameStateLoadHandler: ApplyLoadedGame started. placements={placementCount}, phase='{phase}', definitions={defCount}", this);
+            SBLog.Info($"BattleGameStateLoadHandler: ApplyLoadedGame started. placements={placementCount}, phase='{phase}', definitions={defCount}", this);
             if (_definitions != null && _definitions.Count > 0)
             {
                 foreach (var kv in _definitions)
                 {
                     var def = kv.Value;
                     string prefabName = def != null && def.Prefab != null ? def.Prefab.name : "<null prefab>";
-                    Debug.Log($"BattleGameStateLoadHandler: definition id='{kv.Key}' prefab='{prefabName}'.", this);
+                    SBLog.Info($"BattleGameStateLoadHandler: definition id='{kv.Key}' prefab='{prefabName}'.", this);
                 }
             }
 
@@ -172,7 +173,7 @@ namespace SevenBattles.Battle.Save
                 for (int i = 0; i < placements.Length; i++)
                 {
                     var placement = placements[i];
-                    Debug.Log(
+                    SBLog.Info(
                         $"BattleGameStateLoadHandler: Processing placement index={i} id='{placement?.UnitId}' team='{placement?.Team}' tile=({placement?.X},{placement?.Y}) dead={placement?.Dead}.",
                         this);
 
@@ -180,7 +181,7 @@ namespace SevenBattles.Battle.Save
                     {
                         if (_logLoadedUnits)
                         {
-                            Debug.Log("BattleGameStateLoadHandler: Skipping null placement entry.", this);
+                            SBLog.Info("BattleGameStateLoadHandler: Skipping null placement entry.", this);
                         }
                         continue;
                     }
@@ -190,7 +191,7 @@ namespace SevenBattles.Battle.Save
                         // Dead units remain dead and are not spawned.
                         if (_logLoadedUnits)
                         {
-                            Debug.Log($"BattleGameStateLoadHandler: Skipping dead unit id='{placement.UnitId}' team='{placement.Team}'.", this);
+                            SBLog.Info($"BattleGameStateLoadHandler: Skipping dead unit id='{placement.UnitId}' team='{placement.Team}'.", this);
                         }
                         continue;
                     }
@@ -200,7 +201,7 @@ namespace SevenBattles.Battle.Save
                         // Invalid tile, skip.
                         if (_logLoadedUnits)
                         {
-                            Debug.Log($"BattleGameStateLoadHandler: Skipping unit id='{placement.UnitId}' team='{placement.Team}' with invalid tile=({placement.X},{placement.Y}).", this);
+                            SBLog.Info($"BattleGameStateLoadHandler: Skipping unit id='{placement.UnitId}' team='{placement.Team}' with invalid tile=({placement.X},{placement.Y}).", this);
                         }
                         continue;
                     }
@@ -217,17 +218,17 @@ namespace SevenBattles.Battle.Save
                             bool ok = placementController.TryPlaceAt(playerIndex, tile);
                             if (!ok)
                             {
-                                Debug.LogWarning($"BattleGameStateLoadHandler: Failed to TryPlaceAt index={playerIndex} tile=({tile.x},{tile.y}) for unitId='{placement.UnitId}'.", this);
+                                SBLog.Warn($"BattleGameStateLoadHandler: Failed to TryPlaceAt index={playerIndex} tile=({tile.x},{tile.y}) for unitId='{placement.UnitId}'.", this);
                             }
                             else if (_logLoadedUnits)
                             {
-                                Debug.Log($"BattleGameStateLoadHandler: Placed player unitId='{placement.UnitId}' at tile=({tile.x},{tile.y}) via WorldSquadPlacementController index={playerIndex}.", this);
+                                SBLog.Info($"BattleGameStateLoadHandler: Placed player unitId='{placement.UnitId}' at tile=({tile.x},{tile.y}) via WorldSquadPlacementController index={playerIndex}.", this);
                             }
                             continue;
                         }
                         else
                         {
-                            Debug.LogWarning($"BattleGameStateLoadHandler: Could not map player unitId='{placement.UnitId}' to a PlayerSquad index; falling back to direct spawn.", this);
+                            SBLog.Warn($"BattleGameStateLoadHandler: Could not map player unitId='{placement.UnitId}' to a PlayerSquad index; falling back to direct spawn.", this);
                         }
                     }
 
@@ -235,7 +236,7 @@ namespace SevenBattles.Battle.Save
                     var def = ResolveDefinition(placement.UnitId);
                     if (def == null || def.Prefab == null)
                     {
-                        Debug.LogWarning(
+                        SBLog.Warn(
                             $"BattleGameStateLoadHandler: Unable to resolve UnitDefinition for id '{placement.UnitId}'. Unit will not be spawned.",
                             this);
                         continue;
@@ -280,13 +281,13 @@ namespace SevenBattles.Battle.Save
 
                     if (_logLoadedUnits)
                     {
-                        Debug.Log($"BattleGameStateLoadHandler: Spawned unit id='{placement.UnitId}' team='{placement.Team}' at tile=({tile.x},{tile.y}), sortingOrder={sortingOrder}.", this);
+                        SBLog.Info($"BattleGameStateLoadHandler: Spawned unit id='{placement.UnitId}' team='{placement.Team}' at tile=({tile.x},{tile.y}), sortingOrder={sortingOrder}.", this);
                     }
                 }
             }
 
             var metasAfter = UnityEngine.Object.FindObjectsByType<UnitBattleMetadata>(FindObjectsSortMode.None);
-            Debug.Log($"BattleGameStateLoadHandler: After ApplyLoadedGame, UnitBattleMetadata count={metasAfter.Length}.", this);
+            SBLog.Info($"BattleGameStateLoadHandler: After ApplyLoadedGame, UnitBattleMetadata count={metasAfter.Length}.", this);
 
             RestoreEnchantments(data, metasAfter);
 

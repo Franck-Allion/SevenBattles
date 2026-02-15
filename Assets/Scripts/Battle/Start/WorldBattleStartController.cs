@@ -1,6 +1,7 @@
 using UnityEngine;
 using SevenBattles.Battle.Board;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Start
 {
     // World-space variant: spawns a world prefab (SpriteRenderers) and places it on the board.
@@ -30,7 +31,7 @@ namespace SevenBattles.Battle.Start
         {
             if (_board == null || _heroPrefab == null)
             {
-                Debug.LogWarning("WorldBattleStartController: Missing board or hero prefab.");
+                SBLog.Warn("WorldBattleStartController: Missing board or hero prefab.");
                 return;
             }
 

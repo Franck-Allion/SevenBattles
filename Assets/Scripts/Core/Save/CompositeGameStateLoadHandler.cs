@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Core.Save
 {
     /// <summary>
@@ -48,7 +49,7 @@ namespace SevenBattles.Core.Save
                 }
                 else
                 {
-                    Debug.LogWarning($"CompositeGameStateLoadHandler: '{b.name}' does not implement IGameStateLoadHandler.", this);
+                    SBLog.Warn($"CompositeGameStateLoadHandler: '{b.name}' does not implement IGameStateLoadHandler.", this);
                 }
             }
 
@@ -88,7 +89,7 @@ namespace SevenBattles.Core.Save
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"CompositeGameStateLoadHandler: Load handler '{handler.GetType().Name}' failed. {ex}", this);
+                    SBLog.Error($"CompositeGameStateLoadHandler: Load handler '{handler.GetType().Name}' failed. {ex}", this);
                 }
             }
         }

@@ -1,6 +1,7 @@
 using UnityEngine;
 using SevenBattles.Battle.Units;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Board
 {
     /// <summary>
@@ -36,7 +37,7 @@ namespace SevenBattles.Battle.Board
                 _board = FindObjectOfType<WorldPerspectiveBoard>();
                 if (_board == null)
                 {
-                    Debug.LogError("[BattleBoardHighlightController] WorldPerspectiveBoard dependency missing!");
+                    SBLog.Error("[BattleBoardHighlightController] WorldPerspectiveBoard dependency missing!");
                 }
             }
         }
@@ -71,7 +72,7 @@ namespace SevenBattles.Battle.Board
             // Validate BaseSortingOrder - should never be 0 or negative
             if (meta.BaseSortingOrder <= 0)
             {
-                Debug.LogWarning($"[BattleBoardHighlightController] Active unit has invalid BaseSortingOrder={meta.BaseSortingOrder}. Setting to default 100.", this);
+                SBLog.Warn($"[BattleBoardHighlightController] Active unit has invalid BaseSortingOrder={meta.BaseSortingOrder}. Setting to default 100.", this);
                 meta.BaseSortingOrder = 100;
             }
             

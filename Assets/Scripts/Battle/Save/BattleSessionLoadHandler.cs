@@ -6,6 +6,7 @@ using SevenBattles.Core.Battle;
 using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Save
 {
     /// <summary>
@@ -56,13 +57,13 @@ namespace SevenBattles.Battle.Save
         {
             if (data.BattleSession == null)
             {
-                Debug.LogWarning("BattleSessionLoadHandler: No BattleSession data in save file. Using legacy fallback.");
+                SBLog.Warn("BattleSessionLoadHandler: No BattleSession data in save file. Using legacy fallback.");
                 return;
             }
 
             if (_sessionService == null)
             {
-                Debug.LogError("BattleSessionLoadHandler: No BattleSessionService available to restore session.");
+                SBLog.Error("BattleSessionLoadHandler: No BattleSessionService available to restore session.");
                 return;
             }
 
@@ -72,11 +73,11 @@ namespace SevenBattles.Battle.Save
             {
                 if (_sessionService.CurrentSession != null)
                 {
-                    Debug.LogWarning("BattleSessionLoadHandler: Save contains no BattleSession squad data; keeping existing runtime session.");
+                    SBLog.Warn("BattleSessionLoadHandler: Save contains no BattleSession squad data; keeping existing runtime session.");
                     return;
                 }
 
-                Debug.LogWarning("BattleSessionLoadHandler: Save contains no BattleSession squad data and no runtime session exists; skipping session restore.");
+                SBLog.Warn("BattleSessionLoadHandler: Save contains no BattleSession squad data and no runtime session exists; skipping session restore.");
                 return;
             }
 
@@ -108,11 +109,11 @@ namespace SevenBattles.Battle.Save
             {
                 if (existing != null)
                 {
-                    Debug.LogWarning("BattleSessionLoadHandler: Unable to resolve any squads from save; keeping existing runtime session.");
+                    SBLog.Warn("BattleSessionLoadHandler: Unable to resolve any squads from save; keeping existing runtime session.");
                 }
                 else
                 {
-                    Debug.LogWarning("BattleSessionLoadHandler: Unable to resolve any squads from save and no runtime session exists; skipping session restore.");
+                    SBLog.Warn("BattleSessionLoadHandler: Unable to resolve any squads from save and no runtime session exists; skipping session restore.");
                 }
                 return;
             }
@@ -128,7 +129,7 @@ namespace SevenBattles.Battle.Save
             };
 
             _sessionService.InitializeSession(config);
-            Debug.Log($"BattleSessionLoadHandler: Restored session with {config.PlayerSquad.Length} player units, {config.EnemySquad.Length} enemy units.");
+            SBLog.Info($"BattleSessionLoadHandler: Restored session with {config.PlayerSquad.Length} player units, {config.EnemySquad.Length} enemy units.");
         }
 
         private static bool HasAnySquadData(SaveGameData data)
@@ -226,7 +227,7 @@ namespace SevenBattles.Battle.Save
             if (!_warnedMissingUnitRegistry)
             {
                 _warnedMissingUnitRegistry = true;
-                Debug.LogWarning("BattleSessionLoadHandler: No UnitDefinitionRegistry assigned. Falling back to scanning loaded UnitDefinition assets (slower).");
+                SBLog.Warn("BattleSessionLoadHandler: No UnitDefinitionRegistry assigned. Falling back to scanning loaded UnitDefinition assets (slower).");
             }
 
             if (_unitLookup.TryGetValue(id, out var cached))
@@ -316,7 +317,7 @@ namespace SevenBattles.Battle.Save
 
             if (_unitRegistry == null)
             {
-                Debug.LogWarning("BattleSessionLoadHandler: No UnitDefinitionRegistry assigned. Cannot resolve unit IDs.");
+                SBLog.Warn("BattleSessionLoadHandler: No UnitDefinitionRegistry assigned. Cannot resolve unit IDs.");
                 return System.Array.Empty<UnitDefinition>();
             }
 

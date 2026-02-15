@@ -5,6 +5,7 @@ using SevenBattles.Core.Players;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Units;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Start
 {
     // Spawns a squad of wizards (world-space SpriteRenderer prefabs) on the first row of the board.
@@ -47,7 +48,7 @@ namespace SevenBattles.Battle.Start
         {
             if (_board == null)
             {
-                Debug.LogWarning("WorldSquadStartController: Missing board reference.");
+                SBLog.Warn("WorldSquadStartController: Missing board reference.");
                 return;
             }
 
@@ -55,7 +56,7 @@ namespace SevenBattles.Battle.Start
             var loadouts = playerSquad != null ? playerSquad.GetLoadouts() : null;
             if ((loadouts == null || loadouts.Length == 0) && (_wizardPrefabs == null || _wizardPrefabs.Length == 0))
             {
-                Debug.LogWarning("WorldSquadStartController: No wizard prefabs configured.");
+                SBLog.Warn("WorldSquadStartController: No wizard prefabs configured.");
                 return;
             }
 

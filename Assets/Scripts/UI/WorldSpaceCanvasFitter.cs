@@ -1,5 +1,6 @@
 using UnityEngine;
 
+using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.UI
 {
     // Ensures a World-Space Canvas fills the camera view.
@@ -41,7 +42,7 @@ namespace SevenBattles.UI
             if (_camera == null) return;
             if (_canvas != null && _canvas.renderMode != RenderMode.WorldSpace)
             {
-                Debug.LogWarning("WorldSpaceCanvasFitter: Canvas must be set to World Space.", this);
+                SBLog.Warn("WorldSpaceCanvasFitter: Canvas must be set to World Space.", this);
                 return;
             }
 
