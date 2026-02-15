@@ -19,6 +19,8 @@
   - Uses `_currentRoundIndex` to color hover highlights (current = yellow, others = gray).
   - Uses `EllipseDefinition.ContainsPoint` for hover hit testing.
   - Optional cursor texture for the next battle hover (assign in inspector).
+- `Assets/Scripts/Preparation/TournamentOpponentHoverPanelPresenter.cs`
+  - Shows an anchored opponent panel while hovering any battle node.
 - `Assets/Scripts/Preparation/TournamentBattleStartController.cs`
   - Listens for clicks on the current battle ellipse, shows confirmation, and starts BattleScene with injected battle data.
 - `Assets/Scripts/Preparation/TournamentBattleEllipseGizmo.cs`

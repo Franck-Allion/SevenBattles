@@ -31,15 +31,19 @@
 - `TournamentPathPreview` (`TournamentPathPreviewRenderer`)
   - `_tournament` -> `Assets/Data/Tournaments/Tournament-Default.asset` (or another `TournamentDefinition`).
   - `_spriteRenderer` -> `SpriteRenderer` on the same GameObject.
-- `TournamentPathPreview` (`TournamentBattleMapPresenter`)
-  - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.
-  - `_camera` -> `Main Camera`.
-  - `_battleRoot` -> `TournamentPathPreview` (`Transform`).
-  - `_currentRoundIndex` -> `1` (current round highlight target).
-  - `_defaultCursorTexture` -> `Assets/Art/Cursors/pointer002.png` (or the desired default cursor asset).
-  - `_defaultCursorHotspot` -> set to match the cursor tip (e.g., `4,4`).
-  - `_nextBattleCursorTexture` -> cursor texture asset for the next battle hover (optional).
-  - `_nextBattleCursorHotspot` -> set to match the cursor texture hotspot.
+  - `TournamentPathPreview` (`TournamentBattleMapPresenter`)
+    - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.
+    - `_camera` -> `Main Camera`.
+    - `_battleRoot` -> `TournamentPathPreview` (`Transform`).
+    - `_currentRoundIndex` -> `1` (current round highlight target).
+    - `_defaultCursorTexture` -> `Assets/Art/Cursors/pointer002.png` (or the desired default cursor asset).
+    - `_defaultCursorHotspot` -> set to match the cursor tip (e.g., `4,4`).
+    - `_nextBattleCursorTexture` -> cursor texture asset for the next battle hover (optional).
+    - `_nextBattleCursorHotspot` -> set to match the cursor texture hotspot.
+  - `OpponentHoverPanel` (`TournamentOpponentHoverPanelPresenter`)
+    - `_mapPresenter` -> `TournamentPathPreview` (`TournamentBattleMapPresenter`).
+    - `_rootCanvasGroup` -> `OpponentHoverPanel` (`CanvasGroup`).
+    - `_rows` -> child row GameObjects (portrait `Image`, level `TMP_Text` or `Text`).
 - `TournamentPathPreview` (`TournamentBattleStartController`)
   - `_mapPresenter` -> `TournamentPathPreview` (`TournamentBattleMapPresenter`).
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.

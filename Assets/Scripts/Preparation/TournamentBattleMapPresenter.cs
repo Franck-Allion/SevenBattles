@@ -40,8 +40,11 @@ namespace SevenBattles.Preparation
         private bool _interactionsEnabled = true;
         private bool _cursorActive;
         private bool _defaultCursorApplied;
+        private int _lastHoveredIndex = -1;
+        private TournamentBattleDefinition _lastHoveredDefinition;
 
         public event Action<TournamentBattleDefinition, int> BattleClicked;
+        public event Action<TournamentBattleDefinition, int> BattleHoverChanged;
 
         public TournamentDefinition TournamentDefinition => _tournament;
         public int CurrentRoundIndex => GetClampedRoundIndex();
@@ -55,12 +58,14 @@ namespace SevenBattles.Preparation
         {
             BuildViews();
             ApplyDefaultCursor();
+            ClearHoverState();
         }
 
         private void OnDisable()
         {
             ClearViews();
             ApplyDefaultCursor();
+            ClearHoverState();
         }
 
         private void OnDestroy()
@@ -79,6 +84,7 @@ namespace SevenBattles.Preparation
             if (!_interactionsEnabled || _camera == null || _battleRoot == null || _views.Count == 0)
             {
                 ApplyDefaultCursor();
+                ClearHoverState();
                 return;
             }
 
@@ -107,6 +113,7 @@ namespace SevenBattles.Preparation
 
             bool isNextBattleHovered = hoveredView != null && hoveredView.Index == currentRoundIndex;
             UpdateHoverCursor(isNextBattleHovered);
+            UpdateHoverState(hoveredView);
 
             if (hoveredView != null && Input.GetMouseButtonDown(0))
             {
@@ -140,6 +147,7 @@ namespace SevenBattles.Preparation
                 }
 
                 ApplyDefaultCursor();
+                ClearHoverState();
             }
         }
 
@@ -183,6 +191,33 @@ namespace SevenBattles.Preparation
             _cursorActive = false;
             _defaultCursorApplied = true;
             Cursor.SetCursor(_defaultCursorTexture, _defaultCursorHotspot, CursorMode.Auto);
+        }
+
+        private void UpdateHoverState(BattleView hoveredView)
+        {
+            int hoveredIndex = hoveredView != null ? hoveredView.Index : -1;
+            var hoveredDefinition = hoveredView != null ? hoveredView.Definition : null;
+
+            if (hoveredIndex == _lastHoveredIndex && ReferenceEquals(hoveredDefinition, _lastHoveredDefinition))
+            {
+                return;
+            }
+
+            _lastHoveredIndex = hoveredIndex;
+            _lastHoveredDefinition = hoveredDefinition;
+            BattleHoverChanged?.Invoke(hoveredDefinition, hoveredIndex);
+        }
+
+        private void ClearHoverState()
+        {
+            if (_lastHoveredIndex == -1 && _lastHoveredDefinition == null)
+            {
+                return;
+            }
+
+            _lastHoveredIndex = -1;
+            _lastHoveredDefinition = null;
+            BattleHoverChanged?.Invoke(null, -1);
         }
 
         private void EnsureReferences()

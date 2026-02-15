@@ -3,7 +3,9 @@
   "rootNamespace": "SevenBattles.Preparation",
   "references": [
     "SevenBattles.Core",
-    "Unity.Localization"
+    "Unity.Localization",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
