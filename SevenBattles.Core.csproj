@@ -64,6 +64,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\UnitSpellLoadout.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpCalculator.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\EnchantmentStatBonus.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\ShaderWarmupPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\UnitXpProgressionUtil.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\PreloadResult.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleOutcome.cs" />
@@ -79,6 +80,7 @@
     <Compile Include="Assets\Scripts\Core\Save\PlayerSquadBattleSessionLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleSessionConfig.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleXpResultProvider.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\ScenePreloadManifest.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IHealthBarView.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentBattleDefinition.cs" />
@@ -90,6 +92,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\EllipseDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGridMappingMode.cs" />
     <Compile Include="Assets\Scripts\Core\UnitStatsViewData.cs" />
+    <Compile Include="Assets\Scripts\Core\Diagnostics\PreloadTimingReport.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpTuning.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGrid.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinition.cs" />
@@ -97,10 +100,12 @@
     <Compile Include="Assets\Scripts\Core\Battle\SpellAmountPreview.cs" />
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISpellSelectionController.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\LocalizationPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattlefieldService.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldTileColor.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinitionRegistry.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\ScenePreloader.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IConfirmationMessageBox.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\IPreloadTask.cs" />
@@ -1137,6 +1142,10 @@
     <ProjectReference Include="Unity.Localization.csproj">
       <Project>{D71028B7-CB19-EF3E-3E02-3ACC563BEEBE}</Project>
       <Name>Unity.Localization</Name>
+    </ProjectReference>
+    <ProjectReference Include="Unity.ResourceManager.csproj">
+      <Project>{D7C05569-365F-7585-709E-C6DB0851E6B0}</Project>
+      <Name>Unity.ResourceManager</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

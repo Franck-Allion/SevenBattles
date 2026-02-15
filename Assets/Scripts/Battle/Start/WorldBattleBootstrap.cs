@@ -5,6 +5,8 @@ using SevenBattles.Battle.Turn;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
+using SevenBattles.Core.Preload;
+using System.Threading.Tasks;
 
 using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Start
@@ -42,6 +44,8 @@ namespace SevenBattles.Battle.Start
         private float _fadeOutDuration = 0.5f;
         [SerializeField, Tooltip("Fade-in duration in seconds.")]
         private float _fadeInDuration = 0.5f;
+        [SerializeField, Tooltip("Optional preload manifest executed after fade-out and before battle HUD swap.")]
+        private ScenePreloadManifest _preloadManifest;
 
         private ISquadPlacementController _playerPlacement;
         private IBattleTurnController _turnController;
@@ -302,6 +306,27 @@ namespace SevenBattles.Battle.Start
                     yield return null;
                 }
                 _fadeCanvasGroup.alpha = 1f;
+            }
+
+            if (_preloadManifest != null)
+            {
+                var preloader = new ScenePreloader();
+                Task<PreloadResult[]> task = preloader.RunAllAsync(_preloadManifest, destroyCancellationToken);
+                while (!task.IsCompleted)
+                {
+                    yield return null;
+                }
+
+                int completedTaskCount = 0;
+                if (task.Status == TaskStatus.RanToCompletion && task.Result != null)
+                {
+                    completedTaskCount = task.Result.Length;
+                }
+
+                if (completedTaskCount > 0)
+                {
+                    SBLog.Info($"[Preload] Completed {completedTaskCount} task(s).", this);
+                }
             }
 
             if (_placementHudRoot != null)

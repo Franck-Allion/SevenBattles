@@ -465,5 +465,80 @@ When the AI introduces or changes behavior, it must keep documentation aligned f
 
 ---
 
+## 16. PRELOAD SYSTEM GUIDELINES
+
+The project uses a Core preload pipeline to reduce first-use hitches before a scene becomes interactive.
+
+### Ownership & Contracts
+
+- Core preload contracts live in `Assets/Scripts/Core/Preload/`.
+- `IPreloadTask` is the uniform async contract:
+  - `Name` identifies the task in logs/profiler.
+  - `IsCompleted` reflects terminal state.
+  - `ExecuteAsync(CancellationToken)` must never leak uncaught exceptions; return `PreloadResult.Fail(...)` instead.
+- `PreloadResult` is the standard outcome payload (`Success`, `DurationMs`, `ErrorMessage`).
+
+### Declarative Scene Manifest
+
+- `ScenePreloadManifest` (`ScriptableObject`) is the declarative source for scene preload intent.
+- Current manifest inputs:
+  - `ShaderVariantCollection[]` for shader warmup.
+  - `string[] LocalizationTableNames` for async String Table preload.
+  - `Object[] PrefabsToWarm` reserved for future pool warmup.
+- Prefer extending this manifest over creating ad-hoc preload entry points.
+
+### Task Implementations
+
+- `ShaderWarmupPreloadTask`:
+  - Calls `collection.WarmUp()` for each non-null collection.
+  - Yields between collections (`await Task.Yield()`) to reduce frame hitch spikes.
+- `LocalizationPreloadTask`:
+  - Awaits localization initialization asynchronously.
+  - Preloads tables with `GetTableAsync(...)`.
+  - Missing/failed table loads are warnings and do not abort the full preload pass.
+
+### Orchestration Rules
+
+- `ScenePreloader` is the single orchestrator for manifest-driven preload execution.
+- Build tasks from manifest and execute sequentially (no parallel execution) to avoid CPU spikes.
+- Reuse a single internal `List<IPreloadTask>` for task staging (avoid per-run list allocations).
+- Log per-task durations with `SBLog`.
+- Emit a final structured summary via `PreloadTimingReport`:
+  - Format: `[Preload] Complete: N tasks, total Xms (...)`.
+  - `PreloadTimingReport.ToSummary()` must use a recycled `StringBuilder` (no per-call builder allocation).
+
+### Profiler Instrumentation
+
+- Use `Unity.Profiling.ProfilerMarker` scopes in `ScenePreloader`:
+  - `SevenBattles.Preload.RunAll`
+  - `SevenBattles.Preload.ShaderWarmup`
+  - `SevenBattles.Preload.Localization`
+- Wrap each task execution in the task-specific marker scope.
+- Avoid profiler-summary string work when the profiler is not active.
+
+### Battle Integration Point
+
+- `WorldBattleBootstrap.PlacementToBattleRoutine()` is the canonical integration point for battle scene preload.
+- Run preload after fade-out reaches full black (`alpha = 1f`) and before HUD swap / `StartBattle()`.
+- Keep existing transition order intact:
+  1. Fade-out
+  2. Preload (if manifest assigned)
+  3. HUD swap + `StartBattle()`
+  4. Fade-in
+- If manifest is null/empty, skip silently.
+
+### Unity Wiring Requirements for Preload Changes
+
+When preload wiring changes, PRs must include:
+- Scene field wiring:
+  - `Assets/Scripts/Battle/Start/WorldBattleBootstrap.cs` -> `_preloadManifest`.
+- ScriptableObject asset details:
+  - Exact manifest asset path(s) under `Assets/...`.
+  - Values for shader collections and localization table names.
+- Addressables/localization impact:
+  - Any table or asset keys relied on by preload tasks.
+
+---
 # SevenBattles Engineering | Unity 6  
 **"Reuse first, wire clean, test always, commit clean."**
+

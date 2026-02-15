@@ -2,7 +2,8 @@
   "name": "SevenBattles.Core",
   "rootNamespace": "SevenBattles.Core",
   "references": [
-    "Unity.Localization"
+    "Unity.Localization",
+    "Unity.ResourceManager"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],
