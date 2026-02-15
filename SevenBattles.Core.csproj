@@ -65,6 +65,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpCalculator.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\EnchantmentStatBonus.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\UnitXpProgressionUtil.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\PreloadResult.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleOutcome.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinitionRegistry.cs" />
@@ -102,6 +103,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IConfirmationMessageBox.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\IPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitLevelBonusData.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
