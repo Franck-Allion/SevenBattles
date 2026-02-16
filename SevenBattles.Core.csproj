@@ -89,6 +89,7 @@
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleSessionService.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpAwardResult.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IUnitInspectionController.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\AudioPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Players\PlayerContext.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\EllipseDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGridMappingMode.cs" />
@@ -104,9 +105,11 @@
     <Compile Include="Assets\Scripts\Core\Preload\LocalizationPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattlefieldService.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldTileColor.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\TexturePreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\ScenePreloader.cs" />
+    <Compile Include="Assets\Scripts\Core\Diagnostics\AssetCacheDiagnostics.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IConfirmationMessageBox.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\IPreloadTask.cs" />
@@ -114,6 +117,7 @@
     <Compile Include="Assets\Scripts\Core\Units\UnitLevelBonusData.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
     <Compile Include="Assets\Scripts\Core\Save\CompositeGameStateSaveProvider.cs" />
+    <Compile Include="Assets\Scripts\Core\Preload\PrefabWarmupPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitStatsData.cs" />
     <Compile Include="Assets\Scripts\Core\Save\SaveGameServiceComponent.cs" />
     <Compile Include="Assets\Scripts\Core\Scene\SceneTransitionFader.cs" />
