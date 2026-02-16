@@ -13,10 +13,16 @@ namespace SevenBattles.Core.Preload
         [SerializeField] private ShaderVariantCollection[] _shaderCollections;
         [SerializeField] private string[] _localizationTableNames;
         [SerializeField] private Object[] _prefabsToWarm;
+        [SerializeField] private AudioClip[] _audioClipsToPreload;
+        [SerializeField] private Sprite[] _spritesToPreload;
+        [SerializeField] private Texture2D[] _texturesToPreload;
 
         public string SceneName => _sceneName;
         public ShaderVariantCollection[] ShaderCollections => _shaderCollections;
         public string[] LocalizationTableNames => _localizationTableNames;
         public Object[] PrefabsToWarm => _prefabsToWarm;
+        public AudioClip[] AudioClips => _audioClipsToPreload;
+        public Sprite[] Sprites => _spritesToPreload;
+        public Texture2D[] Textures => _texturesToPreload;
     }
 }
