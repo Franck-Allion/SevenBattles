@@ -450,6 +450,7 @@ namespace SevenBattles.Battle.Combat
 
             if (_attackHitClip != null)
             {
+                AssetCacheDiagnostics.LogAccess(_attackHitClip, "BattleCombatController.ExecuteAttackRoutine.AttackHitSfx", this);
                 AudioSource.PlayClipAtPoint(_attackHitClip, Vector3.zero, 1f);
             }
 
@@ -498,6 +499,7 @@ namespace SevenBattles.Battle.Combat
                             volume = 1f;
                         }
 
+                        AssetCacheDiagnostics.LogAccess(def.DeathSfx, "BattleCombatController.ExecuteAttackRoutine.DeathSfx", this);
                         AudioSource.PlayClipAtPoint(def.DeathSfx, targetMeta.transform.position, volume);
                     }
 
@@ -577,6 +579,7 @@ namespace SevenBattles.Battle.Combat
 
             if (_shootHitClip != null)
             {
+                AssetCacheDiagnostics.LogAccess(_shootHitClip, "BattleCombatController.ExecuteShootRoutine.ShootHitSfx", this);
                 AudioSource.PlayClipAtPoint(_shootHitClip, Vector3.zero, 1f);
             }
 
@@ -623,6 +626,7 @@ namespace SevenBattles.Battle.Combat
                             volume = 1f;
                         }
 
+                        AssetCacheDiagnostics.LogAccess(def.DeathSfx, "BattleCombatController.ExecuteShootRoutine.DeathSfx", this);
                         AudioSource.PlayClipAtPoint(def.DeathSfx, targetMeta.transform.position, volume);
                     }
 

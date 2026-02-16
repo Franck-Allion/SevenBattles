@@ -47,6 +47,7 @@ namespace SevenBattles.Battle.Start
         private bool _ignoreRaycast = true;
 
         private IBattleSessionService _sessionService;
+        private bool _autoStartSuppressed;
 
         private void Awake()
         {
@@ -74,10 +75,24 @@ namespace SevenBattles.Battle.Start
 
         private void Start()
         {
-            if (_autoStartOnPlay)
+            if (!_autoStartSuppressed)
+            {
+                var bootstrap = UnityEngine.Object.FindFirstObjectByType<WorldBattleBootstrap>();
+                if (bootstrap != null && _autoStartOnPlay && bootstrap.TryRequestEnemySpawn(this))
+                {
+                    return;
+                }
+            }
+
+            if (_autoStartOnPlay && !_autoStartSuppressed)
             {
                 StartEnemySquad();
             }
+        }
+
+        public void SetAutoStartSuppressed(bool suppressed)
+        {
+            _autoStartSuppressed = suppressed;
         }
 
         // Public entry to spawn all configured enemy wizards at random valid tiles.
@@ -116,6 +131,7 @@ namespace SevenBattles.Battle.Start
                 if (def == null || def.Prefab == null) continue;
                 var tile = validTiles[i];
 
+                AssetCacheDiagnostics.LogAccess(def.Prefab, "WorldEnemySquadStartController.StartEnemySquad.EnemyPrefab", this);
                 var go = Instantiate(def.Prefab);
                 UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                 int sortingOrder = _board.ComputeSortingOrder(tile.x, tile.y, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10);

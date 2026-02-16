@@ -179,6 +179,7 @@ namespace SevenBattles.Battle.Start
             if (!_model.TryPlace(index, tile)) return;
             var prefab = ResolvePrefab(index);
             if (prefab == null) return;
+            AssetCacheDiagnostics.LogAccess(prefab, "WorldSquadPlacementController.PlaceWizard.UnitPrefab", this);
             var go = Instantiate(prefab);
             SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
             int sortingOrder = _board != null ? _board.ComputeSortingOrder(tile.x, tile.y, _baseSortingOrder, rowStride: 10, intraRowOffset: index % 10) : (_baseSortingOrder + index);
@@ -230,6 +231,7 @@ namespace SevenBattles.Battle.Start
         private void Play(AudioClip clip)
         {
             if (clip == null) return;
+            AssetCacheDiagnostics.LogAccess(clip, "WorldSquadPlacementController.Play", this);
             if (_audio != null)
             {
                 _audio.PlayOneShot(clip);

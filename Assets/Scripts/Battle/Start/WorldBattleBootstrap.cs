@@ -6,6 +6,7 @@ using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Preload;
+using System;
 using System.Threading.Tasks;
 
 using SevenBattles.Core.Diagnostics;
@@ -49,16 +50,36 @@ namespace SevenBattles.Battle.Start
 
         private ISquadPlacementController _playerPlacement;
         private IBattleTurnController _turnController;
+        private bool _enemiesSpawned;
+        private bool _startupPreloadCompletedSuccessfully;
+        private Coroutine _enemySpawnStartupRoutine;
         private Coroutine _transitionRoutine;
 
         private void Awake()
         {
+            // Ensure diagnostics starts from a clean state even when no preload manifest is assigned.
+            AssetCacheDiagnostics.Reset();
+            RegisterManifestAssetsForDiagnostics(_preloadManifest);
+
             // Ensure battle session is initialized before spawning enemies
             EnsureBattleSessionInitialized();
 
+            if (_enemy == null)
+            {
+                _enemy = UnityEngine.Object.FindFirstObjectByType<WorldEnemySquadStartController>();
+            }
+
             if (_spawnEnemiesOnAwake && _enemy != null)
             {
-                _enemy.StartEnemySquad();
+                _enemy.SetAutoStartSuppressed(true);
+                if (_preloadManifest != null)
+                {
+                    _enemySpawnStartupRoutine = StartCoroutine(PreloadThenSpawnEnemiesRoutine());
+                }
+                else
+                {
+                    SpawnEnemiesIfNeeded();
+                }
             }
 
             if (_startTurnsOnPlacementLocked)
@@ -182,6 +203,50 @@ namespace SevenBattles.Battle.Start
                 StopCoroutine(_transitionRoutine);
                 _transitionRoutine = null;
             }
+
+            if (_enemySpawnStartupRoutine != null)
+            {
+                StopCoroutine(_enemySpawnStartupRoutine);
+                _enemySpawnStartupRoutine = null;
+            }
+        }
+
+        public bool IsManagingEnemySpawn => _spawnEnemiesOnAwake;
+
+        public bool TryRequestEnemySpawn(WorldEnemySquadStartController enemy)
+        {
+            if (enemy == null)
+            {
+                return false;
+            }
+
+            if (_enemy == null)
+            {
+                _enemy = enemy;
+            }
+
+            _enemy.SetAutoStartSuppressed(true);
+
+            if (_enemiesSpawned)
+            {
+                return true;
+            }
+
+            if (_enemySpawnStartupRoutine != null)
+            {
+                return true;
+            }
+
+            if (_preloadManifest != null)
+            {
+                _enemySpawnStartupRoutine = StartCoroutine(PreloadThenSpawnEnemiesRoutine());
+            }
+            else
+            {
+                SpawnEnemiesIfNeeded();
+            }
+
+            return true;
         }
 
         private void HandlePlacementLocked()
@@ -308,8 +373,9 @@ namespace SevenBattles.Battle.Start
                 _fadeCanvasGroup.alpha = 1f;
             }
 
-            if (_preloadManifest != null)
+            if (_preloadManifest != null && !_startupPreloadCompletedSuccessfully)
             {
+                SBLog.Info($"[Preload] Starting manifest '{_preloadManifest.name}' for scene transition.", this);
                 var preloader = new ScenePreloader();
                 Task<PreloadResult[]> task = preloader.RunAllAsync(_preloadManifest, destroyCancellationToken);
                 while (!task.IsCompleted)
@@ -317,15 +383,46 @@ namespace SevenBattles.Battle.Start
                     yield return null;
                 }
 
-                int completedTaskCount = 0;
-                if (task.Status == TaskStatus.RanToCompletion && task.Result != null)
+                if (task.Status == TaskStatus.RanToCompletion)
                 {
-                    completedTaskCount = task.Result.Length;
-                }
+                    PreloadResult[] results = task.Result ?? Array.Empty<PreloadResult>();
+                    int completedTaskCount = results.Length;
+                    int failedTaskCount = CountFailedTasks(results);
 
-                if (completedTaskCount > 0)
+                    if (completedTaskCount <= 0)
+                    {
+                        SBLog.Warn("[Preload] Manifest executed but produced zero tasks. Check manifest entries.", this);
+                    }
+                    else if (failedTaskCount > 0)
+                    {
+                        SBLog.Warn($"[Preload] Completed {completedTaskCount} task(s) with {failedTaskCount} failure(s).", this);
+                    }
+                    else
+                    {
+                        SBLog.Info($"[Preload] Completed {completedTaskCount} task(s) successfully.", this);
+                    }
+                }
+                else if (task.IsCanceled || task.Status == TaskStatus.Canceled)
                 {
-                    SBLog.Info($"[Preload] Completed {completedTaskCount} task(s).", this);
+                    SBLog.Warn("[Preload] Manifest execution was canceled.", this);
+                }
+                else if (task.IsFaulted || task.Status == TaskStatus.Faulted)
+                {
+                    string errorMessage = task.Exception != null && task.Exception.GetBaseException() != null
+                        ? task.Exception.GetBaseException().Message
+                        : "Unknown preload error.";
+                    SBLog.Error($"[Preload] Manifest execution faulted: {errorMessage}", this);
+                }
+            }
+            else
+            {
+                if (_preloadManifest == null)
+                {
+                    SBLog.Warn("[Preload] No ScenePreloadManifest assigned on WorldBattleBootstrap. Preload skipped.", this);
+                }
+                else
+                {
+                    SBLog.Info("[Preload] Skipping transition preload because startup preload already completed successfully.", this);
                 }
             }
 
@@ -369,6 +466,102 @@ namespace SevenBattles.Battle.Start
             }
 
             _transitionRoutine = null;
+        }
+
+        private static int CountFailedTasks(PreloadResult[] results)
+        {
+            if (results == null || results.Length == 0)
+            {
+                return 0;
+            }
+
+            int failed = 0;
+            for (int i = 0; i < results.Length; i++)
+            {
+                if (!results[i].Success)
+                {
+                    failed++;
+                }
+            }
+
+            return failed;
+        }
+
+        private IEnumerator PreloadThenSpawnEnemiesRoutine()
+        {
+            if (_preloadManifest == null)
+            {
+                SpawnEnemiesIfNeeded();
+                _enemySpawnStartupRoutine = null;
+                yield break;
+            }
+
+            SBLog.Info($"[Preload] Starting manifest '{_preloadManifest.name}' before enemy spawn.", this);
+            var preloader = new ScenePreloader();
+            Task<PreloadResult[]> task = preloader.RunAllAsync(_preloadManifest, destroyCancellationToken);
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            if (task.Status == TaskStatus.RanToCompletion)
+            {
+                PreloadResult[] results = task.Result ?? Array.Empty<PreloadResult>();
+                int completedTaskCount = results.Length;
+                int failedTaskCount = CountFailedTasks(results);
+
+                if (completedTaskCount <= 0)
+                {
+                    SBLog.Warn("[Preload] Manifest executed but produced zero tasks before enemy spawn. Check manifest entries.", this);
+                }
+                else if (failedTaskCount > 0)
+                {
+                    SBLog.Warn($"[Preload] Pre-enemy spawn preload completed {completedTaskCount} task(s) with {failedTaskCount} failure(s).", this);
+                }
+                else
+                {
+                    SBLog.Info($"[Preload] Pre-enemy spawn preload completed {completedTaskCount} task(s) successfully.", this);
+                    _startupPreloadCompletedSuccessfully = true;
+                }
+            }
+            else if (task.IsCanceled || task.Status == TaskStatus.Canceled)
+            {
+                SBLog.Warn("[Preload] Pre-enemy spawn manifest execution was canceled.", this);
+            }
+            else if (task.IsFaulted || task.Status == TaskStatus.Faulted)
+            {
+                string errorMessage = task.Exception != null && task.Exception.GetBaseException() != null
+                    ? task.Exception.GetBaseException().Message
+                    : "Unknown preload error.";
+                SBLog.Error($"[Preload] Pre-enemy spawn manifest execution faulted: {errorMessage}", this);
+            }
+
+            SpawnEnemiesIfNeeded();
+            _enemySpawnStartupRoutine = null;
+        }
+
+        private void SpawnEnemiesIfNeeded()
+        {
+            if (_enemiesSpawned || _enemy == null)
+            {
+                return;
+            }
+
+            _enemy.StartEnemySquad();
+            _enemiesSpawned = true;
+        }
+
+        private static void RegisterManifestAssetsForDiagnostics(ScenePreloadManifest manifest)
+        {
+            if (manifest == null)
+            {
+                return;
+            }
+
+            AssetCacheDiagnostics.RegisterManifestAssets(manifest.PrefabsToWarm);
+            AssetCacheDiagnostics.RegisterManifestAssets(manifest.AudioClips);
+            AssetCacheDiagnostics.RegisterManifestAssets(manifest.Sprites);
+            AssetCacheDiagnostics.RegisterManifestAssets(manifest.Textures);
         }
     }
 }

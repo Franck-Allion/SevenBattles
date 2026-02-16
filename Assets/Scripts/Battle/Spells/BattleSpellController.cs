@@ -529,6 +529,7 @@ namespace SevenBattles.Battle.Spells
                     {
                         rotation = ComputeProjectileRotation(direction);
                     }
+                    AssetCacheDiagnostics.LogAccess(spell.ProjectilePrefab, "BattleSpellController.TryExecuteSpellCast.ProjectilePrefab", this);
                     var projectileInstance = InstantiatePrefabAsGameObject(spell.ProjectilePrefab, spawnPos, rotation);
                     if (projectileInstance == null)
                     {

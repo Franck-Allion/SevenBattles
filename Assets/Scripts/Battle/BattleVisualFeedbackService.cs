@@ -107,6 +107,7 @@ namespace SevenBattles.Battle
 
             try
             {
+                AssetCacheDiagnostics.LogAccess(prefab, $"BattleVisualFeedbackService.ShowNumber.{label}", this);
                 GameObject numberInstance = Instantiate(prefab, spawnPosition, Quaternion.identity);
 
                 if (!Mathf.Approximately(scaleMultiplier, 1f))

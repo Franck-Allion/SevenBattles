@@ -68,6 +68,7 @@ namespace SevenBattles.Battle.Start
                     var def = loadout != null ? loadout.Definition : null;
                     if (def == null || def.Prefab == null) continue;
                     int tileX = GetTileXForIndex(i);
+                    AssetCacheDiagnostics.LogAccess(def.Prefab, "WorldSquadStartController.StartSquad.PlayerLoadoutPrefab", this);
                     var go = Object.Instantiate(def.Prefab);
                     SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                     int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);
@@ -90,6 +91,7 @@ namespace SevenBattles.Battle.Start
                     var prefab = _wizardPrefabs[i];
                     if (prefab == null) continue;
                     int tileX = GetTileXForIndex(i);
+                    AssetCacheDiagnostics.LogAccess(prefab, "WorldSquadStartController.StartSquad.LegacyWizardPrefab", this);
                     var go = Object.Instantiate(prefab);
                     SevenBattles.Battle.Units.UnitVisualUtil.ApplyScale(go, _scaleMultiplier);
                     int sortingOrder = _board != null ? _board.ComputeSortingOrder(tileX, _rowY, _baseSortingOrder, rowStride: 10, intraRowOffset: i % 10) : (_baseSortingOrder + i);

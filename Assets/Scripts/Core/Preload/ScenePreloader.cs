@@ -28,46 +28,64 @@ namespace SevenBattles.Core.Preload
 
                 if (manifest == null)
                 {
+                    SBLog.Warn("[Preload] ScenePreloader received a null manifest. Skipping preload.");
                     return Array.Empty<PreloadResult>();
                 }
+
+                AssetCacheDiagnostics.RegisterManifestAssets(manifest.PrefabsToWarm);
+                AssetCacheDiagnostics.RegisterManifestAssets(manifest.AudioClips);
+                AssetCacheDiagnostics.RegisterManifestAssets(manifest.Sprites);
+                AssetCacheDiagnostics.RegisterManifestAssets(manifest.Textures);
+
+                int shaderCount = CountNonNull(manifest.ShaderCollections);
+                int localizationTableCount = CountNonEmpty(manifest.LocalizationTableNames);
+                int audioCount = CountNonNull(manifest.AudioClips);
+                int spriteCount = CountNonNull(manifest.Sprites);
+                int textureCount = CountNonNull(manifest.Textures);
+                int prefabCount = CountNonNull(manifest.PrefabsToWarm);
+                SBLog.Info(
+                    $"[Preload] Manifest '{manifest.name}' (scene='{manifest.SceneName}') entries: " +
+                    $"shaders={shaderCount}, localizationTables={localizationTableCount}, audio={audioCount}, " +
+                    $"sprites={spriteCount}, textures={textureCount}, prefabs={prefabCount}.");
 
                 _tasks.Clear();
 
                 ShaderVariantCollection[] shaderCollections = manifest.ShaderCollections;
-                if (shaderCollections != null && shaderCollections.Length > 0)
+                if (shaderCount > 0)
                 {
                     _tasks.Add(new ShaderWarmupPreloadTask(shaderCollections));
                 }
 
                 string[] localizationTableNames = manifest.LocalizationTableNames;
-                if (localizationTableNames != null && localizationTableNames.Length > 0)
+                if (localizationTableCount > 0)
                 {
                     _tasks.Add(new LocalizationPreloadTask(localizationTableNames));
                 }
 
                 var audioClips = manifest.AudioClips;
-                if (audioClips != null && audioClips.Length > 0)
+                if (audioCount > 0)
                 {
                     _tasks.Add(new AudioPreloadTask(audioClips));
                 }
 
                 var sprites = manifest.Sprites;
                 var textures = manifest.Textures;
-                bool hasSprites = sprites != null && sprites.Length > 0;
-                bool hasTextures = textures != null && textures.Length > 0;
+                bool hasSprites = spriteCount > 0;
+                bool hasTextures = textureCount > 0;
                 if (hasSprites || hasTextures)
                 {
                     _tasks.Add(new TexturePreloadTask(sprites, textures));
                 }
 
                 var prefabsToWarm = manifest.PrefabsToWarm;
-                if (prefabsToWarm != null && prefabsToWarm.Length > 0)
+                if (prefabCount > 0)
                 {
                     _tasks.Add(new PrefabWarmupPreloadTask(prefabsToWarm));
                 }
 
                 if (_tasks.Count == 0)
                 {
+                    SBLog.Warn($"[Preload] Manifest '{manifest.name}' contains no valid preload entries. Skipping tasks.");
                     return Array.Empty<PreloadResult>();
                 }
 
@@ -136,7 +154,14 @@ namespace SevenBattles.Core.Preload
 
                     results[i] = result;
                     totalMs += result.DurationMs;
-                    SBLog.Info($"[Preload] {task.Name}: {result.DurationMs:F1}ms");
+                    if (result.Success)
+                    {
+                        SBLog.Info($"[Preload] {task.Name}: {result.DurationMs:F1}ms");
+                    }
+                    else
+                    {
+                        SBLog.Warn($"[Preload] {task.Name} failed after {result.DurationMs:F1}ms: {result.ErrorMessage}");
+                    }
                 }
 
                 if (shouldLogProfilerSummary)
@@ -147,6 +172,44 @@ namespace SevenBattles.Core.Preload
 
                 return results;
             }
+        }
+
+        private static int CountNonNull<T>(T[] values) where T : UnityEngine.Object
+        {
+            if (values == null || values.Length == 0)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i] != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountNonEmpty(string[] values)
+        {
+            if (values == null || values.Length == 0)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(values[i]))
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }

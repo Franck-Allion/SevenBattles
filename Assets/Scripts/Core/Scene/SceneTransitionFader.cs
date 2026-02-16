@@ -92,12 +92,15 @@ namespace SevenBattles.Core
             float fadeInDuration,
             System.Action onFailed)
         {
+            AssetCacheDiagnostics.Reset();
+            RegisterManifestAssetsForDiagnostics(preloadManifest);
             SetOverlayVisible(true, 0f);
 
             yield return FadeTo(1f, fadeOutDuration);
 
             if (preloadManifest != null)
             {
+                SBLog.Info($"[Preload] Starting manifest '{preloadManifest.name}' before loading scene '{sceneName}'.", this);
                 var preloader = new ScenePreloader();
                 Task<PreloadResult[]> preloadTask = preloader.RunAllAsync(preloadManifest, destroyCancellationToken);
                 while (!preloadTask.IsCompleted)
@@ -105,16 +108,40 @@ namespace SevenBattles.Core
                     yield return null;
                 }
 
-                int completedTaskCount = 0;
-                if (preloadTask.Status == TaskStatus.RanToCompletion && preloadTask.Result != null)
+                if (preloadTask.Status == TaskStatus.RanToCompletion)
                 {
-                    completedTaskCount = preloadTask.Result.Length;
-                }
+                    PreloadResult[] results = preloadTask.Result ?? System.Array.Empty<PreloadResult>();
+                    int completedTaskCount = results.Length;
+                    int failedTaskCount = CountFailedTasks(results);
 
-                if (completedTaskCount > 0)
-                {
-                    SBLog.Info($"[Preload] Completed {completedTaskCount} task(s).", this);
+                    if (completedTaskCount <= 0)
+                    {
+                        SBLog.Warn("[Preload] Manifest executed but produced zero tasks. Check manifest entries.", this);
+                    }
+                    else if (failedTaskCount > 0)
+                    {
+                        SBLog.Warn($"[Preload] Completed {completedTaskCount} task(s) with {failedTaskCount} failure(s).", this);
+                    }
+                    else
+                    {
+                        SBLog.Info($"[Preload] Completed {completedTaskCount} task(s) successfully.", this);
+                    }
                 }
+                else if (preloadTask.IsCanceled || preloadTask.Status == TaskStatus.Canceled)
+                {
+                    SBLog.Warn("[Preload] Manifest execution was canceled.", this);
+                }
+                else if (preloadTask.IsFaulted || preloadTask.Status == TaskStatus.Faulted)
+                {
+                    string errorMessage = preloadTask.Exception != null && preloadTask.Exception.GetBaseException() != null
+                        ? preloadTask.Exception.GetBaseException().Message
+                        : "Unknown preload error.";
+                    SBLog.Error($"[Preload] Manifest execution faulted: {errorMessage}", this);
+                }
+            }
+            else
+            {
+                SBLog.Warn($"[Preload] No ScenePreloadManifest provided before loading scene '{sceneName}'.", this);
             }
 
             var loadOp = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
@@ -219,6 +246,38 @@ namespace SevenBattles.Core
             {
                 _instance = null;
             }
+        }
+
+        private static int CountFailedTasks(PreloadResult[] results)
+        {
+            if (results == null || results.Length == 0)
+            {
+                return 0;
+            }
+
+            int failed = 0;
+            for (int i = 0; i < results.Length; i++)
+            {
+                if (!results[i].Success)
+                {
+                    failed++;
+                }
+            }
+
+            return failed;
+        }
+
+        private static void RegisterManifestAssetsForDiagnostics(ScenePreloadManifest manifest)
+        {
+            if (manifest == null)
+            {
+                return;
+            }
+
+            AssetCacheDiagnostics.RegisterManifestAssets(manifest.PrefabsToWarm);
+            AssetCacheDiagnostics.RegisterManifestAssets(manifest.AudioClips);
+            AssetCacheDiagnostics.RegisterManifestAssets(manifest.Sprites);
+            AssetCacheDiagnostics.RegisterManifestAssets(manifest.Textures);
         }
     }
 }
