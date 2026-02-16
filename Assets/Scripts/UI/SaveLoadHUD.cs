@@ -464,6 +464,7 @@ namespace SevenBattles.UI
 
             if (titleLabel != null)
             {
+                LocalizationCacheDiagnostics.LogDisplay(titleLabel, "SaveLoadHUD.Title", this);
                 var value = titleLabel.GetLocalizedString();
                 if (_titleTMP != null)
                 {
@@ -477,6 +478,7 @@ namespace SevenBattles.UI
 
             if (_backLabel != null)
             {
+                LocalizationCacheDiagnostics.LogDisplay(_backLabel, "SaveLoadHUD.BackLabel", this);
                 var back = _backLabel.GetLocalizedString();
                 if (_backTMP != null)
                 {
@@ -526,6 +528,7 @@ namespace SevenBattles.UI
 
             if (metadata == null || !metadata.HasSave)
             {
+                LocalizationCacheDiagnostics.LogDisplay(_emptySlotLabel, "SaveLoadHUD.EmptySlotLabel", this);
                 text = _emptySlotLabel.GetLocalizedString();
             }
             else
@@ -535,6 +538,7 @@ namespace SevenBattles.UI
                     metadata.TimestampString ?? string.Empty,
                     metadata.RunNumber
                 };
+                LocalizationCacheDiagnostics.LogDisplay(_usedSlotLabel, "SaveLoadHUD.UsedSlotLabel", this);
                 text = _usedSlotLabel.GetLocalizedString();
             }
 

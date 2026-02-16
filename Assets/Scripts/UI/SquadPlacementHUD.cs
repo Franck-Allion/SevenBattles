@@ -185,6 +185,7 @@ namespace SevenBattles.UI
 
         private void HandleStartLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_startButtonLabel, "SquadPlacementHUD.StartButton", this);
             if (_startButtonTMP != null) _startButtonTMP.text = value;
             else if (_startButtonText != null) _startButtonText.text = value;
         }
@@ -217,6 +218,7 @@ namespace SevenBattles.UI
 
         private void HandleInstructionChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_placementInstructions, "SquadPlacementHUD.Instructions", this);
             if (_instructionsTMP != null) _instructionsTMP.text = value;
             else if (_instructionsText != null) _instructionsText.text = value;
         }

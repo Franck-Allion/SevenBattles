@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
+using SevenBattles.Core.Diagnostics;
 using UnityEngine.Localization.Settings;
 
 namespace SevenBattles.Core.Preload
@@ -71,13 +71,17 @@ namespace SevenBattles.Core.Preload
                         var table = await LocalizationSettings.StringDatabase.GetTableAsync(tableName).Task;
                         if (table == null)
                         {
-                            UnityEngine.Debug.LogWarning($"LocalizationPreloadTask: String Table '{tableName}' was not found.");
+                            SBLog.Warn($"LocalizationPreloadTask: String Table '{tableName}' was not found.");
                             continue;
                         }
+
+                        // Track both forms to avoid naming mismatch (requested alias vs resolved collection name).
+                        LocalizationCacheDiagnostics.MarkTablePreloaded(tableName);
+                        LocalizationCacheDiagnostics.MarkTablePreloaded(table.TableCollectionName);
                     }
                     catch (Exception ex)
                     {
-                        UnityEngine.Debug.LogWarning($"LocalizationPreloadTask: Failed to preload table '{tableName}'. {ex.Message}");
+                        SBLog.Warn($"LocalizationPreloadTask: Failed to preload table '{tableName}'. {ex.Message}");
                     }
                 }
 

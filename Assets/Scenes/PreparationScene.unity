@@ -1835,6 +1835,10 @@ MonoBehaviour:
   _playerContext: {fileID: 11400000, guid: c073641df4db2fd4ca1ea6cfa9b9325d, type: 2}
   _confirmationBehaviour: {fileID: 1114520097}
   _battleSceneName: BattleScene
+  _battleScenePreload: {fileID: 11400000, guid: e63301480d72baa4197b8309c65be662, type: 2}
+  _sceneFadeOutDuration: 0.5
+  _sceneFadeInDuration: 0.5
+  _sceneFadeColor: {r: 0, g: 0, b: 0, a: 1}
   _confirmTitle:
     m_TableReference:
       m_TableCollectionName: GUID:4ef3c00478f1f3e41863062f04ff4ada

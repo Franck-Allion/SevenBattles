@@ -1081,24 +1081,28 @@ namespace SevenBattles.UI
 
         private void HandleSelectedSpellDescriptionChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_selectedSpellDescriptionString, "BattleSpellsHUD.SelectedSpellDescription", this);
             if (_selectedSpellDescriptionText == null) return;
             _selectedSpellDescriptionText.text = value ?? string.Empty;
         }
 
         private void HandleInspectedEnchantmentDescriptionChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_inspectedEnchantmentDescriptionString, "BattleSpellsHUD.EnchantmentDescription", this);
             _cachedEnchantmentDescription = value ?? string.Empty;
             UpdateEnchantmentInfoText();
         }
 
         private void HandleEnchantmentOwnerLineChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_inspectedEnchantmentOwnerLineString, "BattleSpellsHUD.EnchantmentOwnerLine", this);
             _cachedEnchantmentOwnerLine = value ?? string.Empty;
             UpdateEnchantmentInfoText();
         }
 
         private void HandleEnchantmentOwnerValueChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_inspectedEnchantmentOwnerValueString, "BattleSpellsHUD.EnchantmentOwnerValue", this);
             _cachedEnchantmentOwnerValue = value ?? string.Empty;
             UpdateEnchantmentOwnerLineArguments();
             if (_inspectedEnchantmentOwnerLineString != null)

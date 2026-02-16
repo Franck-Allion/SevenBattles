@@ -49,5 +49,10 @@
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
   - `_confirmationBehaviour` -> `ConfirmationHUD/ConfirmationPanel` (`ConfirmationMessageBoxHUD`).
   - `_battleSceneName` -> `BattleScene`.
+  - `_battleScenePreload` -> `Assets/Data/Preload/BattleScenePreload.asset`.
+  - `_sceneFadeOutDuration` -> `0.5` (seconds).
+  - `_sceneFadeInDuration` -> `0.5` (seconds).
+  - `_sceneFadeColor` -> `#000000` (black).
+  - Transition order (`SceneTransitionFader`) -> fade-out, preload manifest, load scene, fade-in.
 - `TournamentPathPreview` (`TournamentBattleEllipseGizmo`)
   - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.

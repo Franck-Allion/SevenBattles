@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.Localization;
 using TMPro;
 using SevenBattles.Core.Contracts;
+using SevenBattles.Core.Diagnostics;
 
 namespace SevenBattles.UI
 {
@@ -348,6 +349,7 @@ namespace SevenBattles.UI
 
         private void HandleTitleChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_titleString, "ConfirmationMessageBoxHUD.Title", this);
             if (_titleTMP != null)
             {
                 _titleTMP.text = value;
@@ -360,6 +362,7 @@ namespace SevenBattles.UI
 
         private void HandleMessageChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_messageString, "ConfirmationMessageBoxHUD.Message", this);
             if (_messageTMP != null)
             {
                 _messageTMP.text = value;
@@ -372,6 +375,7 @@ namespace SevenBattles.UI
 
         private void HandleConfirmLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_confirmLabel, "ConfirmationMessageBoxHUD.ConfirmLabel", this);
             if (_confirmTMP != null)
             {
                 _confirmTMP.text = value;
@@ -384,6 +388,7 @@ namespace SevenBattles.UI
 
         private void HandleCancelLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_cancelLabel, "ConfirmationMessageBoxHUD.CancelLabel", this);
             if (_cancelTMP != null)
             {
                 _cancelTMP.text = value;

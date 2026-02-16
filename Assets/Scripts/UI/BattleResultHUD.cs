@@ -538,6 +538,7 @@ namespace SevenBattles.UI
 
             try
             {
+                LocalizationCacheDiagnostics.LogDisplay(ls, "BattleResultHUD.UiCommonLookup");
                 return ls.GetLocalizedString();
             }
             catch

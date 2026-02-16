@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.Localization;
 using TMPro;
 using SevenBattles.Core;
+using SevenBattles.Core.Diagnostics;
 
 namespace SevenBattles.UI
 {
@@ -845,6 +846,7 @@ namespace SevenBattles.UI
 
         private void HandleSaveLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_saveLabel, "BattlePauseHUD.SaveLabel", this);
             if (_saveTMP != null)
             {
                 _saveTMP.text = value;
@@ -857,6 +859,7 @@ namespace SevenBattles.UI
 
         private void HandleLoadLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_loadLabel, "BattlePauseHUD.LoadLabel", this);
             if (_loadTMP != null)
             {
                 _loadTMP.text = value;
@@ -869,6 +872,7 @@ namespace SevenBattles.UI
 
         private void HandleSettingsLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_settingsLabel, "BattlePauseHUD.SettingsLabel", this);
             if (_settingsTMP != null)
             {
                 _settingsTMP.text = value;
@@ -881,6 +885,7 @@ namespace SevenBattles.UI
 
         private void HandleQuitLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_quitLabel, "BattlePauseHUD.QuitLabel", this);
             if (_quitTMP != null)
             {
                 _quitTMP.text = value;
@@ -893,6 +898,7 @@ namespace SevenBattles.UI
 
         private void HandleCancelLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_cancelLabel, "BattlePauseHUD.CancelLabel", this);
             if (_cancelTMP != null)
             {
                 _cancelTMP.text = value;
@@ -936,6 +942,7 @@ namespace SevenBattles.UI
 
         private void HandleTitleLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_titleLabel, "BattlePauseHUD.TitleLabel", this);
             if (_titleTMP != null)
             {
                 _titleTMP.text = value;

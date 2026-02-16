@@ -309,6 +309,7 @@ namespace SevenBattles.UI
 
         private void HandleEndTurnLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_endTurnLabel, "TurnOrderHUD.EndTurnLabel", this);
             if (_endTurnTMP != null) _endTurnTMP.text = value;
             else if (_endTurnText != null) _endTurnText.text = value;
         }
@@ -513,6 +514,7 @@ namespace SevenBattles.UI
                 return;
             }
 
+            LocalizationCacheDiagnostics.LogDisplay(labelString, "TurnOrderHUD.StatLabel", this);
             labelString.RefreshString();
         }
 
@@ -1373,6 +1375,7 @@ namespace SevenBattles.UI
 
         private void HandleTurnStartLabelChanged(string value)
         {
+            LocalizationCacheDiagnostics.LogDisplay(_turnStartLabel, "TurnOrderHUD.TurnStartBanner", this);
             if (_turnStartText != null)
             {
                 _turnStartText.text = value;

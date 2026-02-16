@@ -66,6 +66,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\EnchantmentStatBonus.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\ShaderWarmupPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\UnitXpProgressionUtil.cs" />
+    <Compile Include="Assets\Scripts\Core\Diagnostics\LocalizationCacheDiagnostics.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\PreloadResult.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleOutcome.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinition.cs" />
@@ -115,6 +116,7 @@
     <Compile Include="Assets\Scripts\Core\Save\CompositeGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitStatsData.cs" />
     <Compile Include="Assets\Scripts\Core\Save\SaveGameServiceComponent.cs" />
+    <Compile Include="Assets\Scripts\Core\Scene\SceneTransitionFader.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\EnchantmentQuadDefinition.cs" />
   </ItemGroup>
   <ItemGroup>

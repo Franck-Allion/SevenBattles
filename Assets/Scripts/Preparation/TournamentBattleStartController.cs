@@ -1,12 +1,13 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Localization;
-using UnityEngine.SceneManagement;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Contracts;
 using SevenBattles.Core.Players;
+using SevenBattles.Core.Preload;
 
 using SevenBattles.Core.Diagnostics;
+using SevenBattles.Core;
 namespace SevenBattles.Preparation
 {
     public sealed class TournamentBattleStartController : MonoBehaviour
@@ -20,6 +21,16 @@ namespace SevenBattles.Preparation
 
         [Header("Scene")]
         [SerializeField] private string _battleSceneName = "BattleScene";
+
+        [Header("Transition")]
+        [SerializeField, Tooltip("Optional preload manifest executed during the scene transition to BattleScene.")]
+        private ScenePreloadManifest _battleScenePreload;
+        [SerializeField, Tooltip("Fade-out duration in seconds for the scene transition.")]
+        private float _sceneFadeOutDuration = 0.5f;
+        [SerializeField, Tooltip("Fade-in duration in seconds for the scene transition.")]
+        private float _sceneFadeInDuration = 0.5f;
+        [SerializeField, Tooltip("Fade color used during the scene transition.")]
+        private Color _sceneFadeColor = Color.black;
 
         [Header("Localization")]
         [SerializeField] private LocalizedString _confirmTitle;
@@ -211,17 +222,30 @@ namespace SevenBattles.Preparation
 
             BattleSessionConfigTransfer.SetPending(config);
 
-            var loadOp = SceneManager.LoadSceneAsync(_battleSceneName, LoadSceneMode.Single);
-            if (loadOp == null)
+            bool transitionStarted = SceneTransitionFader.TryStartTransition(
+                _battleSceneName,
+                _battleScenePreload,
+                _sceneFadeOutDuration,
+                _sceneFadeInDuration,
+                _sceneFadeColor,
+                HandleSceneTransitionFailed);
+
+            if (!transitionStarted)
             {
-                SBLog.Error($"TournamentBattleStartController: Failed to load scene '{_battleSceneName}'.", this);
-                _inputLocked = false;
-                _transitioning = false;
-                BattleSessionConfigTransfer.Clear();
-                if (_mapPresenter != null)
-                {
-                    _mapPresenter.SetInteractionsEnabled(true);
-                }
+                SBLog.Error($"TournamentBattleStartController: Failed to start scene transition to '{_battleSceneName}'.", this);
+                HandleSceneTransitionFailed();
+                return;
+            }
+        }
+
+        private void HandleSceneTransitionFailed()
+        {
+            _inputLocked = false;
+            _transitioning = false;
+            BattleSessionConfigTransfer.Clear();
+            if (_mapPresenter != null)
+            {
+                _mapPresenter.SetInteractionsEnabled(true);
             }
         }
 
