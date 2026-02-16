@@ -14,13 +14,18 @@ namespace SevenBattles.Core.Preload
         private static readonly ProfilerMarker _preloadMarker = new ProfilerMarker("SevenBattles.Preload.RunAll");
         private static readonly ProfilerMarker _shaderMarker = new ProfilerMarker("SevenBattles.Preload.ShaderWarmup");
         private static readonly ProfilerMarker _localizationMarker = new ProfilerMarker("SevenBattles.Preload.Localization");
+        private static readonly ProfilerMarker _audioMarker = new ProfilerMarker("SevenBattles.Preload.Audio");
+        private static readonly ProfilerMarker _textureMarker = new ProfilerMarker("SevenBattles.Preload.Texture");
+        private static readonly ProfilerMarker _prefabMarker = new ProfilerMarker("SevenBattles.Preload.Prefab");
 
-        private readonly List<IPreloadTask> _tasks = new List<IPreloadTask>(4);
+        private readonly List<IPreloadTask> _tasks = new List<IPreloadTask>(6);
 
         public async Task<PreloadResult[]> RunAllAsync(ScenePreloadManifest manifest, CancellationToken ct)
         {
             using (_preloadMarker.Auto())
             {
+                AssetCacheDiagnostics.Reset();
+
                 if (manifest == null)
                 {
                     return Array.Empty<PreloadResult>();
@@ -38,6 +43,27 @@ namespace SevenBattles.Core.Preload
                 if (localizationTableNames != null && localizationTableNames.Length > 0)
                 {
                     _tasks.Add(new LocalizationPreloadTask(localizationTableNames));
+                }
+
+                var audioClips = manifest.AudioClips;
+                if (audioClips != null && audioClips.Length > 0)
+                {
+                    _tasks.Add(new AudioPreloadTask(audioClips));
+                }
+
+                var sprites = manifest.Sprites;
+                var textures = manifest.Textures;
+                bool hasSprites = sprites != null && sprites.Length > 0;
+                bool hasTextures = textures != null && textures.Length > 0;
+                if (hasSprites || hasTextures)
+                {
+                    _tasks.Add(new TexturePreloadTask(sprites, textures));
+                }
+
+                var prefabsToWarm = manifest.PrefabsToWarm;
+                if (prefabsToWarm != null && prefabsToWarm.Length > 0)
+                {
+                    _tasks.Add(new PrefabWarmupPreloadTask(prefabsToWarm));
                 }
 
                 if (_tasks.Count == 0)
@@ -70,6 +96,27 @@ namespace SevenBattles.Core.Preload
                         else if (task is LocalizationPreloadTask)
                         {
                             using (_localizationMarker.Auto())
+                            {
+                                result = await task.ExecuteAsync(ct);
+                            }
+                        }
+                        else if (task is AudioPreloadTask)
+                        {
+                            using (_audioMarker.Auto())
+                            {
+                                result = await task.ExecuteAsync(ct);
+                            }
+                        }
+                        else if (task is TexturePreloadTask)
+                        {
+                            using (_textureMarker.Auto())
+                            {
+                                result = await task.ExecuteAsync(ct);
+                            }
+                        }
+                        else if (task is PrefabWarmupPreloadTask)
+                        {
+                            using (_prefabMarker.Auto())
                             {
                                 result = await task.ExecuteAsync(ct);
                             }
