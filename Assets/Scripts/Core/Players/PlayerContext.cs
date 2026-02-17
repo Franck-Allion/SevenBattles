@@ -1,4 +1,5 @@
 using System;
+using SevenBattles.Core.Items;
 using UnityEngine;
 
 namespace SevenBattles.Core.Players
@@ -13,6 +14,10 @@ namespace SevenBattles.Core.Players
     {
         [Tooltip("The current squad of the player.")]
         public PlayerSquad PlayerSquad;
+
+        [Header("Inventory")]
+        [Tooltip("Runtime player inventory for equipment, spells, and consumable items.")]
+        public PlayerInventory Inventory;
 
         [Header("Resources")]
         [SerializeField, Min(0), Tooltip("Current amount of gold owned by the player.")]
