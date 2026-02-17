@@ -84,12 +84,14 @@
     <Compile Include="Assets\Scripts\Core\Preload\ScenePreloadManifest.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerResourcesLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinition.cs" />
+    <Compile Include="Assets\Scripts\Core\Items\ItemEffectType.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IHealthBarView.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentBattleDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IEnchantmentInspectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleSessionService.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpAwardResult.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IUnitInspectionController.cs" />
+    <Compile Include="Assets\Scripts\Core\Items\EquipmentDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\AudioPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Players\PlayerContext.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\EllipseDefinition.cs" />
@@ -102,6 +104,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattleSessionConfigTransfer.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellAmountPreview.cs" />
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />
+    <Compile Include="Assets\Scripts\Core\Items\EquipmentSlotType.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISpellSelectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\LocalizationPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattlefieldService.cs" />
@@ -109,6 +112,7 @@
     <Compile Include="Assets\Scripts\Core\Preload\TexturePreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinitionRegistry.cs" />
+    <Compile Include="Assets\Scripts\Core\Items\ItemDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\ScenePreloader.cs" />
     <Compile Include="Assets\Scripts\Core\Diagnostics\AssetCacheDiagnostics.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentDefinition.cs" />
