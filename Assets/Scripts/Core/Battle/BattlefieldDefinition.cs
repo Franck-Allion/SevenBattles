@@ -37,6 +37,9 @@ namespace SevenBattles.Core.Battle
         [Header("Enchantment Quads (local, in this transform's plane)")]
         [SerializeField] private EnchantmentQuadDefinition[] _enchantmentQuads = new EnchantmentQuadDefinition[0];
 
+        [Header("Rewards")]
+        [SerializeField] private BattleRewardTable _rewardTable = new BattleRewardTable();
+
         public Sprite BackgroundSprite => _backgroundSprite;
         public int Columns => _columns <= 0 ? DefaultColumns : _columns;
         public int Rows => _rows <= 0 ? DefaultRows : _rows;
@@ -49,6 +52,7 @@ namespace SevenBattles.Core.Battle
         public Vector2 BottomLeft => _bottomLeft;
         public float TileHighlightInset01 => Mathf.Clamp(_tileHighlightInset01, 0f, 0.45f);
         public EnchantmentQuadDefinition[] EnchantmentQuads => _enchantmentQuads ?? Array.Empty<EnchantmentQuadDefinition>();
+        public BattleRewardTable RewardTable => _rewardTable ?? (_rewardTable = new BattleRewardTable());
 
         public bool TryGetTileColor(Vector2Int tile, out BattlefieldTileColor color)
         {

@@ -82,6 +82,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattleSessionConfig.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleXpResultProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\ScenePreloadManifest.cs" />
+    <Compile Include="Assets\Scripts\Core\Items\PlayerInventory.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerResourcesLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Items\ItemEffectType.cs" />
@@ -106,6 +107,7 @@
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />
     <Compile Include="Assets\Scripts\Core\Items\EquipmentSlotType.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISpellSelectionController.cs" />
+    <Compile Include="Assets\Scripts\Core\Items\InventoryEntry.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\LocalizationPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattlefieldService.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldTileColor.cs" />
