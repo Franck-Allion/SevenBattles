@@ -22,6 +22,8 @@
     - `TournamentBattleEllipseGizmo` draws ellipse layout gizmos for authoring.
   - `ConfirmationHUD`
     - `ConfirmationMessageBoxHUD` (copied from BattleScene).
+  - `PopupMenu`
+    - `PreparationPopupMenuLocalizationController` localizes action labels for menu buttons.
 
 **Extension Points:**
 - New preparation controllers attach as new roots or under a future `_System` root if added.
@@ -59,3 +61,8 @@
   - Transition order (`SceneTransitionFader`) -> fade-out, preload manifest, load scene, fade-in.
 - `TournamentPathPreview` (`TournamentBattleEllipseGizmo`)
   - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.
+- `PopupMenu` (`PreparationPopupMenuLocalizationController`)
+  - `_shopLabelTMP` -> `PopupMenu/ShopButtonMenu/Text` (`TMP_Text`).
+  - `_squadLabelTMP` -> `PopupMenu/SquadButtonMenu/Text` (`TMP_Text`).
+  - `_shopLabel` -> table `UI.Common`, key `Preparation.Popup.Shop`.
+  - `_squadLabel` -> table `UI.Common`, key `Preparation.Popup.Squad`.

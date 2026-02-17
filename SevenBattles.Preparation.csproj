@@ -65,6 +65,7 @@
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleStartController.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleEllipseGizmo.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleMapPresenter.cs" />
+    <Compile Include="Assets\Scripts\Preparation\PreparationPopupMenuLocalizationController.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentOpponentHoverPanelPresenter.cs" />
   </ItemGroup>
   <ItemGroup>
