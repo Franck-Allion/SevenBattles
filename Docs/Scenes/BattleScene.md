@@ -30,8 +30,9 @@
       - `BattleBoardGameStateSaveProvider` (`BattleBoardGameStateSaveProvider`) - Saves board state.
       - `BattleEnchantmentGameStateSaveProvider` (`BattleEnchantmentGameStateSaveProvider`) - Saves active enchantments.
       - `BattleSessionSaveProvider` (`BattleSessionSaveProvider`) - Saves battle session configuration.
-      - `PlayerGameStateProvider` (`PlayerSquadGameStateSaveProvider`) - Saves player squad state (DEPRECATED).
+      - `PlayerGameStateProvider` (`PlayerSquadGameStateSaveProvider`) - Saves player-owned state from `PlayerContext` (squad + resources).
       - `CompositeGameStateProvider` (`CompositeGameStateSaveProvider`) - Aggregates save providers.
+      - `PlayerResourcesLoadHandler` (`PlayerResourcesLoadHandler`) - Restores `PlayerContext` resources on load.
   - `World`
     - World/board representation (`WorldPerspectiveBoard`, tiles, highlights, etc.)
     - Background sprite driver (`BattlefieldBackgroundRenderer`) sets the board image at battle start

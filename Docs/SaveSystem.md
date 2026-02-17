@@ -12,18 +12,21 @@ It reflects the current **Save + Load** implementation.
 
 - **Core domain**
   - `SaveGameService`: orchestrates building a `SaveGameData` snapshot and writing it as JSON.
-  - `ISaveGameService`: UI‑facing interface for saving/reading slot metadata.
+  - `ISaveGameService`: UI-facing interface for saving/reading slot metadata.
   - `IGameStateSaveProvider`: abstraction that populates `SaveGameData` from the current game state.
+  - `IGameStateLoadHandler`: abstraction that applies loaded `SaveGameData` to runtime owners.
   - `SaveGameServiceComponent`: MonoBehaviour wrapper that wires a provider into `SaveGameService` using `Application.persistentDataPath`.
   - `CompositeGameStateSaveProvider`: aggregates multiple `IGameStateSaveProvider` instances so different domains can contribute to a single `SaveGameData`.
+  - `CompositeGameStateLoadHandler`: aggregates multiple `IGameStateLoadHandler` instances for load.
 
 - **Battle domain**
-  - `BattleBoardGameStateSaveProvider`: captures unit placements (player + enemy) and per‑unit stats.
+  - `BattleBoardGameStateSaveProvider`: captures unit placements (player + enemy) and per-unit stats.
   - `BattleTurnGameStateSaveProvider`: captures phase (placement/battle), turn index, active unit identity, AP, and whether the active unit has already moved this turn.
   - `BattleEnchantmentGameStateSaveProvider`: captures active battlefield enchantments (spell id, quad index, caster identity).
 
 - **Players domain**
-  - `PlayerSquadGameStateSaveProvider`: captures the player squad composition (which wizards are in the squad).
+  - `PlayerSquadGameStateSaveProvider`: captures player-owned state from `PlayerContext` (squad + resources).
+  - `PlayerResourcesLoadHandler`: restores player resources into `PlayerContext` when loading.
 
 - **UI domain**
   - `SaveLoadHUD`: Save/Load overlay that drives slot selection and calls into `ISaveGameService` for persistence.
@@ -66,6 +69,7 @@ For each `SaveSlotAsync(int slotIndex)` call:
        - `PlayerSquad`: always non‑null with an empty `WizardIds` array.
        - `UnitPlacements`: always non‑null, possibly empty.
        - `BattleTurn`: always non‑null, defaults to `Phase = "unknown"`, zeroed indices and AP.
+       - `PlayerResources`: always non‑null, defaults to `Gold = 0` and `Gems = 0`.
 
 4. **JSON serialization**
    - Uses `JsonUtility.ToJson(SaveGameData, prettyPrint: true)` to obtain the JSON string.
@@ -123,7 +127,7 @@ Typical configuration:
 
 File: `Assets/Scripts/Core/Save/PlayerSquadGameStateSaveProvider.cs`
 
-- Reads from `PlayerSquad` (via `PlayerContext` or direct reference).
+- Reads from `PlayerContext`.
 - Fills `SaveGameData.PlayerSquad` with:
 
   ```csharp
@@ -133,6 +137,16 @@ File: `Assets/Scripts/Core/Save/PlayerSquadGameStateSaveProvider.cs`
   ```
 
 - If the squad is null or empty, writes an empty `WizardIds` array (no crash).
+- Also fills `SaveGameData.PlayerResources` with:
+
+  ```csharp
+  public sealed class PlayerResourcesSaveData {
+      public int Gold;
+      public int Gems;
+  }
+  ```
+
+- Gold and gems are sanitized to non-negative values by `SaveGameService` defaults.
 
 ### 3.4 Battle Board Provider (Placements + Stats)
 
@@ -302,6 +316,14 @@ public sealed class BattleEnchantmentSaveData {
 }
 ```
 
+### 3.8 Player Resources Load Handler
+
+File: `Assets/Scripts/Core/Save/PlayerResourcesLoadHandler.cs`
+
+- Applies `SaveGameData.PlayerResources` back to `PlayerContext`.
+- Uses `PlayerContext.SetResources(gold, gems)` so negative values clamp safely to `0`.
+- Wire this handler into `CompositeGameStateLoadHandler` for scenes that can execute load flows.
+
 ---
 
 ## 4. JSON File Format
@@ -373,6 +395,10 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
     "BattleType": "campaign",
     "Difficulty": 1,
     "CampaignMissionId": "mission_01"
+  },
+  "PlayerResources": {
+    "Gold": 1000,
+    "Gems": 10
   }
 }
 ```
@@ -453,10 +479,4 @@ When you add a new persistent game‑state feature, answer these questions (see 
      - Ensures bad JSON does not crash and falls back to a safe state.
 
 Keeping these invariants in mind will ensure the save format remains robust, debuggable, and easy to extend as SevenBattles grows.
-
-
-
-
-
-
 

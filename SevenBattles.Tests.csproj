@@ -91,6 +91,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\WorldPerspectiveBoardHighlightTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattleSpellsHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleGameStateLoadHandlerTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\PlayerResourcesLoadHandlerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleXpCalculatorTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleVisualFeedbackServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsDeckCapacityTests.cs" />
@@ -100,6 +101,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\BattlefieldServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Spells\UnitSpellDeckTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\PreparationResourcesPanelPresenterTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattlePauseHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerSpellCastTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
@@ -1117,6 +1119,10 @@
     <ProjectReference Include="SevenBattles.Battle.csproj">
       <Project>{36964088-0D0C-62F4-CC2A-05A0E1F5616C}</Project>
       <Name>SevenBattles.Battle</Name>
+    </ProjectReference>
+    <ProjectReference Include="SevenBattles.Preparation.csproj">
+      <Project>{646C86CB-8C74-8C4D-9C99-EB1100799E72}</Project>
+      <Name>SevenBattles.Preparation</Name>
     </ProjectReference>
     <ProjectReference Include="SevenBattles.UI.csproj">
       <Project>{1A86DB10-03A8-55C0-F467-744673C46B2C}</Project>

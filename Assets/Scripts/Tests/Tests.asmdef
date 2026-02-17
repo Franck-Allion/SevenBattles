@@ -4,6 +4,7 @@
   "references": [
     "SevenBattles.Core",
     "SevenBattles.Battle",
+    "SevenBattles.Preparation",
     "SevenBattles.UI",
     "Unity.TextMeshPro",
     "UnityEngine.UI"

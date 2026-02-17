@@ -5981,6 +5981,7 @@ GameObject:
   - component: {fileID: 1099892872498620344}
   - component: {fileID: 2134330723522157088}
   - component: {fileID: 8527300829459393839}
+  - component: {fileID: 8527300829459393841}
   m_Layer: 5
   m_Name: ResourcesPanel
   m_TagString: Untagged
@@ -7267,6 +7268,21 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &8527300829459393841
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1375815815037988093}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 043fc0d168f647a69542ac7630930d2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _playerContext: {fileID: 11400000, guid: c073641df4db2fd4ca1ea6cfa9b9325d, type: 2}
+  _goldValueTMP: {fileID: 4905508967741221535}
+  _gemsValueTMP: {fileID: 1706960720679748122}
 --- !u!224 &8741457869144064895
 RectTransform:
   m_ObjectHideFlags: 0

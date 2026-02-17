@@ -82,6 +82,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattleSessionConfig.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleXpResultProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\ScenePreloadManifest.cs" />
+    <Compile Include="Assets\Scripts\Core\Save\PlayerResourcesLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IHealthBarView.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentBattleDefinition.cs" />

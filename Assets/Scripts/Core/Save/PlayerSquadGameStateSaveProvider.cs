@@ -20,6 +20,20 @@ namespace SevenBattles.Core.Save
                 throw new ArgumentNullException(nameof(data));
             }
 
+            int gold = 0;
+            int gems = 0;
+            if (_playerContext != null)
+            {
+                gold = _playerContext.Gold;
+                gems = _playerContext.Gems;
+            }
+
+            data.PlayerResources = new PlayerResourcesSaveData
+            {
+                Gold = gold,
+                Gems = gems
+            };
+
             var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
 
             var loadouts = playerSquad != null ? playerSquad.GetLoadouts() : null;

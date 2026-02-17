@@ -64,6 +64,7 @@
     <Compile Include="Assets\Scripts\Preparation\TournamentPathPreviewRenderer.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleStartController.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleEllipseGizmo.cs" />
+    <Compile Include="Assets\Scripts\Preparation\PreparationResourcesPanelPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleMapPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationPopupMenuLocalizationController.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentOpponentHoverPanelPresenter.cs" />

@@ -24,6 +24,8 @@
     - `ConfirmationMessageBoxHUD` (copied from BattleScene).
   - `PopupMenu`
     - `PreparationPopupMenuLocalizationController` localizes action labels for menu buttons.
+  - `ResourcesPanel`
+    - `PreparationResourcesPanelPresenter` updates `CoinValue` and `GemValue` TMP labels from `PlayerContext`.
 
 **Extension Points:**
 - New preparation controllers attach as new roots or under a future `_System` root if added.
@@ -66,3 +68,7 @@
   - `_squadLabelTMP` -> `PopupMenu/SquadButtonMenu/Text` (`TMP_Text`).
   - `_shopLabel` -> table `UI.Common`, key `Preparation.Popup.Shop`.
   - `_squadLabel` -> table `UI.Common`, key `Preparation.Popup.Squad`.
+- `ResourcesPanel` (`PreparationResourcesPanelPresenter`)
+  - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
+  - `_goldValueTMP` -> `Canvas/ResourcesPanel/Coin/CoinValue` (`TMP_Text`).
+  - `_gemsValueTMP` -> `Canvas/ResourcesPanel/Gem/GemValue` (`TMP_Text`).

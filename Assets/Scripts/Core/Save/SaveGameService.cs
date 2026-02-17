@@ -143,6 +143,13 @@ namespace SevenBattles.Core.Save
     }
 
     [Serializable]
+    public sealed class PlayerResourcesSaveData
+    {
+        public int Gold;
+        public int Gems;
+    }
+
+    [Serializable]
     public sealed class SaveGameData
     {
         public string Timestamp;
@@ -152,6 +159,7 @@ namespace SevenBattles.Core.Save
         public BattleTurnSaveData BattleTurn;
         public BattleSessionSaveData BattleSession; // NEW: Original battle configuration
         public BattleEnchantmentSaveData[] BattleEnchantments;
+        public PlayerResourcesSaveData PlayerResources;
     }
 
     public sealed class SaveGameService : ISaveGameService
@@ -308,6 +316,8 @@ namespace SevenBattles.Core.Save
                     {
                         data.BattleEnchantments = Array.Empty<BattleEnchantmentSaveData>();
                     }
+
+                    data.PlayerResources = SanitizePlayerResources(data.PlayerResources);
 
                     return data;
                 }
@@ -491,7 +501,34 @@ namespace SevenBattles.Core.Save
                 data.BattleEnchantments = Array.Empty<BattleEnchantmentSaveData>();
             }
 
+            data.PlayerResources = SanitizePlayerResources(data.PlayerResources);
+
             return data;
+        }
+
+        private static PlayerResourcesSaveData SanitizePlayerResources(PlayerResourcesSaveData value)
+        {
+            int gold = 0;
+            int gems = 0;
+
+            if (value != null)
+            {
+                if (value.Gold > 0)
+                {
+                    gold = value.Gold;
+                }
+
+                if (value.Gems > 0)
+                {
+                    gems = value.Gems;
+                }
+            }
+
+            return new PlayerResourcesSaveData
+            {
+                Gold = gold,
+                Gems = gems
+            };
         }
     }
 }

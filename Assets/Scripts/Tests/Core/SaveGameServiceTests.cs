@@ -14,12 +14,20 @@ namespace SevenBattles.Tests.Core
         {
             public string[] WizardIds;
             public string BattlefieldId;
+            public int Gold;
+            public int Gems;
 
             public void PopulateGameState(SaveGameData data)
             {
                 data.PlayerSquad = new PlayerSquadSaveData
                 {
                     WizardIds = WizardIds ?? Array.Empty<string>()
+                };
+
+                data.PlayerResources = new PlayerResourcesSaveData
+                {
+                    Gold = Gold,
+                    Gems = Gems
                 };
 
                 if (!string.IsNullOrEmpty(BattlefieldId))
@@ -194,6 +202,7 @@ namespace SevenBattles.Tests.Core
             Assert.IsNotNull(data.UnitPlacements, "UnitPlacements should be initialized even if provider left it null.");
             Assert.IsNotNull(data.BattleTurn, "BattleTurn should be initialized even if provider left it null.");
             Assert.IsNotNull(data.BattleEnchantments, "BattleEnchantments should be initialized even if provider left it null.");
+            Assert.IsNotNull(data.PlayerResources, "PlayerResources should be initialized even if provider left it null.");
         }
 
         [Test]
@@ -219,6 +228,32 @@ namespace SevenBattles.Tests.Core
             var data = JsonUtility.FromJson<SaveGameData>(json);
             Assert.IsNotNull(data.BattleSession, "BattleSession should be populated when provider supplies it.");
             Assert.AreEqual("battlefield.test", data.BattleSession.BattlefieldId);
+        }
+
+        [Test]
+        public async Task Save_IncludesPlayerResources_WhenProvided()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "WizA" },
+                Gold = 1234,
+                Gems = 56
+            };
+
+            var service = new SaveGameService(provider, dir);
+            await service.SaveSlotAsync(1);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            string json = File.ReadAllText(path);
+            var data = JsonUtility.FromJson<SaveGameData>(json);
+
+            Assert.IsNotNull(data.PlayerResources);
+            Assert.AreEqual(1234, data.PlayerResources.Gold);
+            Assert.AreEqual(56, data.PlayerResources.Gems);
         }
 
         [Test]
@@ -347,6 +382,30 @@ namespace SevenBattles.Tests.Core
             Assert.IsNotNull(data, "LoadSlotDataAsync should return a SaveGameData instance for valid JSON.");
             Assert.IsNotNull(data.BattleEnchantments, "BattleEnchantments should default to an empty array when missing.");
             Assert.AreEqual(0, data.BattleEnchantments.Length);
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_MissingPlayerResources_DefaultsToZero()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            File.WriteAllText(path, "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1 }");
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "Any" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNotNull(data, "LoadSlotDataAsync should return a SaveGameData instance for valid JSON.");
+            Assert.IsNotNull(data.PlayerResources, "PlayerResources should default to a non-null DTO when missing.");
+            Assert.AreEqual(0, data.PlayerResources.Gold);
+            Assert.AreEqual(0, data.PlayerResources.Gems);
         }
     }
 }
