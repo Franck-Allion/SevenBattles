@@ -43,7 +43,10 @@
   - `OpponentHoverPanel` (`TournamentOpponentHoverPanelPresenter`)
     - `_mapPresenter` -> `TournamentPathPreview` (`TournamentBattleMapPresenter`).
     - `_rootCanvasGroup` -> `OpponentHoverPanel` (`CanvasGroup`).
+    - `_squadNameText` -> `OpponentHoverPanel/SquadNameText` (`TMP_Text`).
     - `_rows` -> child row GameObjects (portrait `Image`, level `TMP_Text` or `Text`).
+  - Enemy squad data (`Assets/Data/*Squad.asset` / `PlayerSquad`)
+    - `LocalizedSquadName` -> assign table + entry key to display translated names in `OpponentHoverPanel`.
 - `TournamentPathPreview` (`TournamentBattleStartController`)
   - `_mapPresenter` -> `TournamentPathPreview` (`TournamentBattleMapPresenter`).
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.

@@ -2,7 +2,9 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.Localization;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Players;
 
 namespace SevenBattles.Preparation
 {
@@ -15,10 +17,15 @@ namespace SevenBattles.Preparation
 
         [Header("Rows (0..7)")]
         [SerializeField] private OpponentRow[] _rows = new OpponentRow[8];
+        [SerializeField, Tooltip("Optional text field used to display the hovered enemy squad name.")]
+        private TMP_Text _squadNameText;
 
         [Header("Behavior")]
         [SerializeField, Tooltip("Hide the panel when the hovered battle has no enemy squad configured.")]
         private bool _hideWhenNoEnemy = true;
+
+        private LocalizedString _activeSquadNameLocalized;
+        private string _activeSquadNameFallback = string.Empty;
 
         private void Awake()
         {
@@ -42,6 +49,7 @@ namespace SevenBattles.Preparation
                 _mapPresenter.BattleHoverChanged -= HandleBattleHoverChanged;
             }
 
+            ClearSquadNameBinding();
             HideImmediate();
         }
 
@@ -69,6 +77,8 @@ namespace SevenBattles.Preparation
         {
             if (battle == null)
             {
+                ClearSquadNameBinding();
+                SetSquadNameText(string.Empty);
                 HideImmediate();
                 return;
             }
@@ -76,6 +86,8 @@ namespace SevenBattles.Preparation
             var enemySquad = battle.EnemySquad;
             if (enemySquad == null)
             {
+                ClearSquadNameBinding();
+                SetSquadNameText(string.Empty);
                 if (_hideWhenNoEnemy)
                 {
                     HideImmediate();
@@ -88,11 +100,15 @@ namespace SevenBattles.Preparation
                 return;
             }
 
+            BindSquadName(enemySquad);
+
             var loadouts = enemySquad.GetLoadouts();
             if (loadouts == null || loadouts.Length == 0)
             {
                 if (_hideWhenNoEnemy)
                 {
+                    ClearSquadNameBinding();
+                    SetSquadNameText(string.Empty);
                     HideImmediate();
                 }
                 else
@@ -166,6 +182,85 @@ namespace SevenBattles.Preparation
             {
                 row.LevelText.text = value;
             }
+        }
+
+        private void SetSquadNameText(string value)
+        {
+            if (_squadNameText == null)
+            {
+                return;
+            }
+
+            _squadNameText.text = value ?? string.Empty;
+        }
+
+        private void BindSquadName(PlayerSquad squad)
+        {
+            ClearSquadNameBinding();
+
+            if (squad == null)
+            {
+                SetSquadNameText(string.Empty);
+                return;
+            }
+
+            _activeSquadNameFallback = squad.name;
+            var localizedSquadName = squad.LocalizedSquadName;
+
+            if (!HasLocalizedValue(localizedSquadName))
+            {
+                SetSquadNameText(_activeSquadNameFallback);
+                return;
+            }
+
+            _activeSquadNameLocalized = localizedSquadName;
+            _activeSquadNameLocalized.StringChanged += HandleSquadNameChanged;
+            RefreshSquadNameText();
+        }
+
+        private void ClearSquadNameBinding()
+        {
+            if (_activeSquadNameLocalized != null)
+            {
+                _activeSquadNameLocalized.StringChanged -= HandleSquadNameChanged;
+            }
+
+            _activeSquadNameLocalized = null;
+            _activeSquadNameFallback = string.Empty;
+        }
+
+        private void RefreshSquadNameText()
+        {
+            if (_activeSquadNameLocalized == null)
+            {
+                SetSquadNameText(_activeSquadNameFallback);
+                return;
+            }
+
+            try
+            {
+                HandleSquadNameChanged(_activeSquadNameLocalized.GetLocalizedString());
+            }
+            catch
+            {
+                SetSquadNameText(_activeSquadNameFallback);
+            }
+        }
+
+        private void HandleSquadNameChanged(string localizedValue)
+        {
+            if (string.IsNullOrWhiteSpace(localizedValue))
+            {
+                SetSquadNameText(_activeSquadNameFallback);
+                return;
+            }
+
+            SetSquadNameText(localizedValue);
+        }
+
+        private static bool HasLocalizedValue(LocalizedString localized)
+        {
+            return localized != null && !localized.IsEmpty;
         }
 
         private void ShowImmediate()

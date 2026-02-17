@@ -9,6 +9,9 @@
   - `TournamentDefinition.Battles` holds 7 `TournamentBattleDefinition` entries in order.
 - `Assets/Scripts/Core/Battle/TournamentBattleDefinition.cs`
   - Fields: `Battlefield`, `EnemySquad`, `EnemyPrefab`, `Ellipse`, `PrefabOffset`, `PrefabScale`.
+- `Assets/Scripts/Core/Players/PlayerSquad.cs`
+  - `LocalizedSquadName` stores the localized squad title used by preparation hover UI.
+  - `UnitLoadouts` still provides the per-unit roster/spell loadouts.
 - `Assets/Scripts/Core/Battle/EllipseDefinition.cs`
   - `Center`/`Radii`/`RotationDegrees` stored in local coordinates of the map root.
 
@@ -21,6 +24,8 @@
   - Optional cursor texture for the next battle hover (assign in inspector).
 - `Assets/Scripts/Preparation/TournamentOpponentHoverPanelPresenter.cs`
   - Shows an anchored opponent panel while hovering any battle node.
+  - Populates unit rows and optional squad-name `TMP_Text` from `TournamentBattleDefinition.EnemySquad`.
+  - Uses `PlayerSquad.LocalizedSquadName` when configured, with asset-name fallback.
 - `Assets/Scripts/Preparation/TournamentBattleStartController.cs`
   - Listens for clicks on the current battle ellipse, shows confirmation, and starts BattleScene with injected battle data.
 - `Assets/Scripts/Preparation/TournamentBattleEllipseGizmo.cs`
