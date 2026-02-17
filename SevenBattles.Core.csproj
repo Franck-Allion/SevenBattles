@@ -63,6 +63,7 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\Core\Battle\UnitSpellLoadout.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpCalculator.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\BattleRewardResult.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\EnchantmentStatBonus.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\ShaderWarmupPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\UnitXpProgressionUtil.cs" />
@@ -83,10 +84,12 @@
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleXpResultProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\ScenePreloadManifest.cs" />
     <Compile Include="Assets\Scripts\Core\Items\PlayerInventory.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\IBattleRewardService.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerResourcesLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Items\ItemEffectType.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IHealthBarView.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\BattleRewardType.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentBattleDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IEnchantmentInspectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleSessionService.cs" />
@@ -97,6 +100,7 @@
     <Compile Include="Assets\Scripts\Core\Players\PlayerContext.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\EllipseDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Math\PerspectiveGridMappingMode.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\BattleRewardEntry.cs" />
     <Compile Include="Assets\Scripts\Core\UnitStatsViewData.cs" />
     <Compile Include="Assets\Scripts\Core\Diagnostics\PreloadTimingReport.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpTuning.cs" />
@@ -122,6 +126,8 @@
     <Compile Include="Assets\Scripts\Core\Preload\IPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitLevelBonusData.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\BattleRewardTable.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\BattleRewardService.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
     <Compile Include="Assets\Scripts\Core\Save\CompositeGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\PrefabWarmupPreloadTask.cs" />
