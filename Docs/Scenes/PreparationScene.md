@@ -88,6 +88,13 @@
   - `_gemsValueTMP` -> `Canvas/ResourcesPanel/Gem/GemValue` (`TMP_Text`).
   - `_goldNumberPrefab` -> `Assets/Prefabs/DamageNumber/GoldNumber.prefab`.
   - `_gemNumberPrefab` -> `Assets/Prefabs/DamageNumber/GemNumber.prefab`.
+  - `_goldCollectionSfxClip` -> fallback coin cascade clip used when variants are not assigned.
+  - `_goldCollectionSfxVariants` -> optional random clip pool (example: `Loot_Simple_Coins_1`, `Loot_Simple_Coins_2`, `Loot_Simple_Coins_3`).
+  - `_goldCollectionAudioSource` -> optional dedicated `AudioSource` for gold coin ticks (auto-resolved/created when not assigned).
+  - `_goldCollectionSfxVolume` -> coin tick volume multiplier.
+  - `_goldCollectionMaxTicksPerSecond` -> hard cap for coin tick cadence to prevent audio spam.
+  - `_goldCollectionAmountForMaxCadence` / `_goldCollectionSmallRewardTickInterval` / `_goldCollectionLargeRewardStartTickInterval` / `_goldCollectionSlowdownMultiplier` -> controls burst-then-slow cascade feel based on gold gained.
+  - `_goldCollectionPitchJitter` -> optional slight random pitch variation for naturalness.
   - `_goldNumberSpawnAnchor` / `_gemNumberSpawnAnchor` -> optional per-currency spawn anchor overrides (`RectTransform`).
   - `_currencyNumberOffset` -> base spawn offset from the anchor top-right corner.
   - `_goldNumberOffset` / `_gemNumberOffset` -> optional per-currency additional offset.

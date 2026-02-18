@@ -56,6 +56,27 @@ namespace SevenBattles.Preparation
         private float _counterPunchDuration = 0.08f;
         [SerializeField, Tooltip("Extra lifetime added to floating number prefabs.")]
         private float _floatingNumberLifetimePadding = 0.1f;
+        [Header("Gold Collection SFX")]
+        [SerializeField, Tooltip("Fallback coin SFX clip used when no variants are assigned.")]
+        private AudioClip _goldCollectionSfxClip;
+        [SerializeField, Tooltip("Optional coin SFX variants randomly selected per tick (e.g., Loot_Simple_Coins_1/2/3).")]
+        private AudioClip[] _goldCollectionSfxVariants = Array.Empty<AudioClip>();
+        [SerializeField, Tooltip("AudioSource used for gold collection ticks. Auto-resolved/created when missing.")]
+        private AudioSource _goldCollectionAudioSource;
+        [SerializeField, Range(0f, 1.5f), Tooltip("Volume multiplier for gold collection ticks.")]
+        private float _goldCollectionSfxVolume = 1f;
+        [SerializeField, Min(1f), Tooltip("Maximum number of gold coin ticks played per second.")]
+        private float _goldCollectionMaxTicksPerSecond = 12f;
+        [SerializeField, Tooltip("Gold amount where the cascade reaches the fastest burst cadence.")]
+        private int _goldCollectionAmountForMaxCadence = 180;
+        [SerializeField, Tooltip("Tick interval (seconds) used for small gold rewards.")]
+        private float _goldCollectionSmallRewardTickInterval = 0.18f;
+        [SerializeField, Tooltip("Starting tick interval (seconds) used for large rewards.")]
+        private float _goldCollectionLargeRewardStartTickInterval = 0.055f;
+        [SerializeField, Tooltip("How much slower the gold cascade becomes by the end of the animation.")]
+        private float _goldCollectionSlowdownMultiplier = 2.1f;
+        [SerializeField, Range(0f, 0.25f), Tooltip("Optional random pitch jitter applied per coin tick.")]
+        private float _goldCollectionPitchJitter = 0.03f;
         [Header("Debug Spawn (Play Mode)")]
         [SerializeField, Tooltip("Enable keyboard shortcuts to test gold/gem floating number spawn in play mode.")]
         private bool _enableDebugSpawnHotkeys;
@@ -71,11 +92,13 @@ namespace SevenBattles.Preparation
         private Coroutine _rewardAnimationRoutine;
         private CounterAnimationState _goldAnimation;
         private CounterAnimationState _gemsAnimation;
+        private GoldCascadeSfxState _goldCascadeSfx;
         private readonly Vector3[] _tmpCorners = new Vector3[4];
 
         private void Awake()
         {
             AutoResolveTextReferences();
+            EnsureGoldCollectionAudioSource();
             if (_currencyNumberCamera == null)
             {
                 _currencyNumberCamera = Camera.main;
@@ -85,6 +108,7 @@ namespace SevenBattles.Preparation
         private void OnEnable()
         {
             AutoResolveTextReferences();
+            EnsureGoldCollectionAudioSource();
             TryLogSaveDirectoryHint();
             Subscribe();
             if (!TryStartPendingVictoryRewardAnimation())
@@ -226,6 +250,7 @@ namespace SevenBattles.Preparation
                 if (canAnimateGold)
                 {
                     _goldAnimation = CreateCounterAnimationState(_goldValueTMP, pending.FromGold, pending.ToGold, pending.GoldGained);
+                    StartGoldCascadeSfx(pending.GoldGained, _goldAnimation.StepIntervalSeconds * pending.GoldGained);
                     TrySpawnFloatingNumber(
                         ResolveSpawnAnchor(ResourceType.Gold),
                         ResolveSpawnOffset(ResourceType.Gold),
@@ -289,6 +314,8 @@ namespace SevenBattles.Preparation
                 float dt = Time.unscaledDeltaTime;
                 bool goldActive = UpdateCounterAnimation(_goldAnimation, dt);
                 bool gemsActive = UpdateCounterAnimation(_gemsAnimation, dt);
+                int goldStepsThisFrame = _goldAnimation != null ? _goldAnimation.LastStepCount : 0;
+                UpdateGoldCascadeSfx(goldStepsThisFrame, dt);
                 if (!goldActive && !gemsActive)
                 {
                     break;
@@ -297,6 +324,7 @@ namespace SevenBattles.Preparation
                 yield return null;
             }
 
+            StopGoldCascadeSfx();
             FinalizeCounterAnimation(_goldAnimation);
             FinalizeCounterAnimation(_gemsAnimation);
             _goldAnimation = null;
@@ -311,6 +339,7 @@ namespace SevenBattles.Preparation
                 return false;
             }
 
+            state.LastStepCount = 0;
             const int MAX_STEPS_PER_FRAME = 1000;
             float stepInterval = Mathf.Max(0.0001f, state.StepIntervalSeconds);
             state.StepTimerSeconds += Mathf.Max(0f, deltaTime);
@@ -327,6 +356,7 @@ namespace SevenBattles.Preparation
             {
                 SetTextValue(state.Label, state.CurrentValue);
                 state.PunchTimerSeconds = Mathf.Max(0f, _counterPunchDuration);
+                state.LastStepCount = steps;
             }
 
             if (state.CurrentValue >= state.TargetValue)
@@ -377,6 +407,8 @@ namespace SevenBattles.Preparation
 
         private void StopRewardAnimation(bool applyFinalValue)
         {
+            StopGoldCascadeSfx();
+
             if (_rewardAnimationRoutine != null)
             {
                 try
@@ -399,6 +431,210 @@ namespace SevenBattles.Preparation
 
             _goldAnimation = null;
             _gemsAnimation = null;
+        }
+
+        private void StartGoldCascadeSfx(int goldGained, float animationDurationSeconds)
+        {
+            StopGoldCascadeSfx();
+
+            AudioClip[] clipPool = BuildGoldCascadeClipPool();
+            if (goldGained <= 0 || clipPool.Length == 0)
+            {
+                return;
+            }
+
+            _goldCascadeSfx = CreateGoldCascadeSfxState(goldGained, animationDurationSeconds);
+            _goldCascadeSfx.ClipPool = clipPool;
+        }
+
+        private GoldCascadeSfxState CreateGoldCascadeSfxState(int goldGained, float animationDurationSeconds)
+        {
+            int safeGained = Mathf.Max(1, goldGained);
+            float safeDuration = Mathf.Max(0.1f, animationDurationSeconds);
+            float minTickIntervalByCap = 1f / Mathf.Max(1f, _goldCollectionMaxTicksPerSecond);
+            float amountT = Mathf.Clamp01((float)safeGained / Mathf.Max(1, _goldCollectionAmountForMaxCadence));
+
+            float smallRewardInterval = Mathf.Max(minTickIntervalByCap, _goldCollectionSmallRewardTickInterval);
+            float largeRewardStartInterval = Mathf.Max(minTickIntervalByCap, _goldCollectionLargeRewardStartTickInterval);
+            float startInterval = Mathf.Lerp(smallRewardInterval, largeRewardStartInterval, amountT);
+            float slowdownMultiplier = Mathf.Max(1f, _goldCollectionSlowdownMultiplier);
+            float endInterval = Mathf.Max(startInterval, startInterval * slowdownMultiplier);
+
+            int maxTickCountByCap = Mathf.Max(1, Mathf.FloorToInt(safeDuration / minTickIntervalByCap));
+            int targetTickCount = Mathf.Clamp(
+                Mathf.RoundToInt(Mathf.Lerp(3f, maxTickCountByCap, amountT)),
+                1,
+                maxTickCountByCap);
+
+            return new GoldCascadeSfxState
+            {
+                IsActive = true,
+                TotalGained = safeGained,
+                PendingIncrements = 0,
+                IncrementsPerTick = Mathf.Max(1, Mathf.CeilToInt((float)safeGained / targetTickCount)),
+                AnimationDurationSeconds = safeDuration,
+                ElapsedSeconds = 0f,
+                StartIntervalSeconds = startInterval,
+                EndIntervalSeconds = endInterval,
+                NextTickTimeSeconds = Time.unscaledTime
+            };
+        }
+
+        private void UpdateGoldCascadeSfx(int goldStepsThisFrame, float deltaTime)
+        {
+            if (_goldCascadeSfx == null || !_goldCascadeSfx.IsActive)
+            {
+                return;
+            }
+
+            _goldCascadeSfx.ElapsedSeconds += Mathf.Max(0f, deltaTime);
+            if (goldStepsThisFrame > 0)
+            {
+                _goldCascadeSfx.PendingIncrements += goldStepsThisFrame;
+            }
+
+            if (_goldCascadeSfx.PendingIncrements <= 0)
+            {
+                return;
+            }
+
+            float now = Time.unscaledTime;
+            if (now < _goldCascadeSfx.NextTickTimeSeconds)
+            {
+                return;
+            }
+
+            AudioSource source = EnsureGoldCollectionAudioSource();
+            if (source == null)
+            {
+                return;
+            }
+
+            AudioClip tickClip = PickGoldCascadeClip(_goldCascadeSfx);
+            if (tickClip == null)
+            {
+                return;
+            }
+
+            PlayGoldCollectionTick(source, tickClip);
+            _goldCascadeSfx.PendingIncrements = Mathf.Max(0, _goldCascadeSfx.PendingIncrements - _goldCascadeSfx.IncrementsPerTick);
+            _goldCascadeSfx.NextTickTimeSeconds = now + EvaluateGoldCascadeIntervalSeconds(_goldCascadeSfx);
+        }
+
+        private float EvaluateGoldCascadeIntervalSeconds(GoldCascadeSfxState state)
+        {
+            if (state == null)
+            {
+                return 1f / Mathf.Max(1f, _goldCollectionMaxTicksPerSecond);
+            }
+
+            float minIntervalByCap = 1f / Mathf.Max(1f, _goldCollectionMaxTicksPerSecond);
+            float progress = Mathf.Clamp01(state.ElapsedSeconds / Mathf.Max(0.0001f, state.AnimationDurationSeconds));
+            float interval = Mathf.Lerp(state.StartIntervalSeconds, state.EndIntervalSeconds, progress);
+            return Mathf.Max(minIntervalByCap, interval);
+        }
+
+        private void PlayGoldCollectionTick(AudioSource source, AudioClip clip)
+        {
+            if (source == null || clip == null)
+            {
+                return;
+            }
+
+            float originalPitch = source.pitch;
+            float jitter = Mathf.Clamp(_goldCollectionPitchJitter, 0f, 0.25f);
+            if (jitter > 0f)
+            {
+                source.pitch = Mathf.Clamp(originalPitch + UnityEngine.Random.Range(-jitter, jitter), 0.75f, 1.35f);
+            }
+
+            float volume = Mathf.Clamp(_goldCollectionSfxVolume, 0f, 1.5f);
+            source.PlayOneShot(clip, volume);
+            source.pitch = originalPitch;
+        }
+
+        private AudioClip[] BuildGoldCascadeClipPool()
+        {
+            if (_goldCollectionSfxVariants != null && _goldCollectionSfxVariants.Length > 0)
+            {
+                int nonNullCount = 0;
+                for (int i = 0; i < _goldCollectionSfxVariants.Length; i++)
+                {
+                    if (_goldCollectionSfxVariants[i] != null)
+                    {
+                        nonNullCount++;
+                    }
+                }
+
+                if (nonNullCount > 0)
+                {
+                    var pool = new AudioClip[nonNullCount];
+                    int cursor = 0;
+                    for (int i = 0; i < _goldCollectionSfxVariants.Length; i++)
+                    {
+                        AudioClip clip = _goldCollectionSfxVariants[i];
+                        if (clip == null)
+                        {
+                            continue;
+                        }
+
+                        pool[cursor] = clip;
+                        cursor++;
+                    }
+
+                    return pool;
+                }
+            }
+
+            if (_goldCollectionSfxClip != null)
+            {
+                return new[] { _goldCollectionSfxClip };
+            }
+
+            return Array.Empty<AudioClip>();
+        }
+
+        private static AudioClip PickGoldCascadeClip(GoldCascadeSfxState state)
+        {
+            if (state == null || state.ClipPool == null || state.ClipPool.Length == 0)
+            {
+                return null;
+            }
+
+            if (state.ClipPool.Length == 1)
+            {
+                return state.ClipPool[0];
+            }
+
+            int index = UnityEngine.Random.Range(0, state.ClipPool.Length);
+            return state.ClipPool[index];
+        }
+
+        private AudioSource EnsureGoldCollectionAudioSource()
+        {
+            if (_goldCollectionAudioSource == null)
+            {
+                _goldCollectionAudioSource = GetComponent<AudioSource>();
+            }
+
+            if (_goldCollectionAudioSource == null)
+            {
+                _goldCollectionAudioSource = gameObject.AddComponent<AudioSource>();
+                _goldCollectionAudioSource.playOnAwake = false;
+                _goldCollectionAudioSource.spatialBlend = 0f;
+            }
+
+            return _goldCollectionAudioSource;
+        }
+
+        private void StopGoldCascadeSfx()
+        {
+            if (_goldCascadeSfx != null)
+            {
+                _goldCascadeSfx.IsActive = false;
+            }
+
+            _goldCascadeSfx = null;
         }
 
         private static void FinalizeCounterAnimation(CounterAnimationState state)
@@ -694,7 +930,22 @@ namespace SevenBattles.Preparation
             public float StepTimerSeconds;
             public float PunchTimerSeconds;
             public Vector3 BaseScale;
+            public int LastStepCount;
             public bool IsActive;
+        }
+
+        private sealed class GoldCascadeSfxState
+        {
+            public bool IsActive;
+            public int TotalGained;
+            public int PendingIncrements;
+            public int IncrementsPerTick;
+            public float AnimationDurationSeconds;
+            public float ElapsedSeconds;
+            public float StartIntervalSeconds;
+            public float EndIntervalSeconds;
+            public float NextTickTimeSeconds;
+            public AudioClip[] ClipPool = Array.Empty<AudioClip>();
         }
 
         private enum ResourceType
