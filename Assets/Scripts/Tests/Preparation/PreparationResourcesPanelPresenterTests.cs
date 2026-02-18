@@ -1,6 +1,7 @@
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 using SevenBattles.Preparation;
 
@@ -8,6 +9,18 @@ namespace SevenBattles.Tests.Preparation
 {
     public class PreparationResourcesPanelPresenterTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            BattleVictoryRewardTransfer.Clear();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            BattleVictoryRewardTransfer.Clear();
+        }
+
         private static void SetPrivate(object target, string fieldName, object value)
         {
             var type = target.GetType();
@@ -77,6 +90,39 @@ namespace SevenBattles.Tests.Preparation
             Assert.AreEqual("5", gemsTmp.text);
 
             CallPrivate(presenter, "OnDisable");
+
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(context);
+        }
+
+        [Test]
+        public void OnEnable_WithPendingVictoryRewards_StartsFromPreBattleValues_ThenOnDisableFinalizes()
+        {
+            var root = new GameObject("ResourcesPanel");
+            var presenter = root.AddComponent<PreparationResourcesPanelPresenter>();
+
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            context.SetResources(100, 10);
+
+            var goldTmp = new GameObject("CoinValue").AddComponent<TextMeshProUGUI>();
+            goldTmp.transform.SetParent(root.transform);
+            var gemsTmp = new GameObject("GemValue").AddComponent<TextMeshProUGUI>();
+            gemsTmp.transform.SetParent(root.transform);
+
+            SetPrivate(presenter, "_playerContext", context);
+            SetPrivate(presenter, "_goldValueTMP", goldTmp);
+            SetPrivate(presenter, "_gemsValueTMP", gemsTmp);
+
+            BattleVictoryRewardTransfer.SetPending(55, 2, 45, 8);
+            CallPrivate(presenter, "OnEnable");
+
+            Assert.AreEqual("55", goldTmp.text);
+            Assert.AreEqual("2", gemsTmp.text);
+
+            CallPrivate(presenter, "OnDisable");
+
+            Assert.AreEqual("100", goldTmp.text);
+            Assert.AreEqual("10", gemsTmp.text);
 
             Object.DestroyImmediate(root);
             Object.DestroyImmediate(context);

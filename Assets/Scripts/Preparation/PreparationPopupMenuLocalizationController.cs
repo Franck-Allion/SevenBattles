@@ -1,6 +1,11 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Events;
 using UnityEngine.Localization;
+using UnityEngine.Serialization;
+using UnityEngine.UI;
 using SevenBattles.Core.Diagnostics;
 
 namespace SevenBattles.Preparation
@@ -21,29 +26,75 @@ namespace SevenBattles.Preparation
         [SerializeField, Tooltip("Child object name used to auto-find the Squad button when _squadLabelTMP is not assigned.")]
         private string _squadButtonObjectName = "SquadButtonMenu";
 
+        [Header("Button Targets")]
+        [SerializeField, Tooltip("Optional explicit reference to the Shop menu button. Auto-found when null.")]
+        private Button _shopButton;
+        [SerializeField, Tooltip("Optional explicit reference to the Squad menu button. Auto-found when null.")]
+        private Button _squadButton;
+
         [Header("Localization")]
         [SerializeField, Tooltip("Localized label for the Shop button.")]
         private LocalizedString _shopLabel;
         [SerializeField, Tooltip("Localized label for the Squad button.")]
         private LocalizedString _squadLabel;
 
+        [Header("Hover Feedback")]
+        [SerializeField, Tooltip("Cursor texture used while hovering menu buttons.")]
+        private Texture2D _hoverCursorTexture;
+        [SerializeField, Tooltip("Hotspot used with the hover cursor texture.")]
+        private Vector2 _hoverCursorHotspot = new Vector2(16f, 16f);
+        [SerializeField, Tooltip("Default cursor texture restored when no menu button is hovered.")]
+        private Texture2D _defaultCursorTexture;
+        [SerializeField, Tooltip("Hotspot used with the default cursor texture.")]
+        private Vector2 _defaultCursorHotspot = new Vector2(4f, 4f);
+        [SerializeField, Tooltip("Optional AudioSource used to play button click SFX.")]
+        [FormerlySerializedAs("_hoverAudioSource")]
+        private AudioSource _clickAudioSource;
+        [SerializeField, Tooltip("Optional SFX clip played when clicking a menu button.")]
+        [FormerlySerializedAs("_hoverSfxClip")]
+        private AudioClip _clickSfxClip;
+        [SerializeField, Range(0f, 1.5f), Tooltip("Volume multiplier for menu button click SFX.")]
+        [FormerlySerializedAs("_hoverSfxVolume")]
+        private float _clickSfxVolume = 1f;
+        [SerializeField, Tooltip("Minimum unscaled seconds between two click SFX plays.")]
+        [FormerlySerializedAs("_hoverSfxCooldown")]
+        private float _clickSfxCooldown = 0.05f;
+
+        private readonly List<MenuButtonHoverForwarder> _hoverForwarders = new List<MenuButtonHoverForwarder>(2);
+        private readonly List<ButtonClickSubscription> _clickSubscriptions = new List<ButtonClickSubscription>(2);
+        private int _hoveredButtonCount;
+        private float _lastClickSfxTime = -999f;
+
         private void Awake()
         {
             SetupLocalizationDefaults();
             ResolveLabelTargets();
+            ResolveButtonTargets();
         }
 
         private void OnEnable()
         {
             SetupLocalizationDefaults();
             ResolveLabelTargets();
+            ResolveButtonTargets();
             BindLabels();
+            WireHoverFeedback();
             RefreshLabels();
         }
 
         private void OnDisable()
         {
             UnbindLabels();
+            UnwireHoverFeedback();
+            RestoreDefaultCursor();
+        }
+
+        private void LateUpdate()
+        {
+            if (_hoveredButtonCount > 0)
+            {
+                ApplyHoverCursor();
+            }
         }
 
         private void SetupLocalizationDefaults()
@@ -72,6 +123,19 @@ namespace SevenBattles.Preparation
             }
         }
 
+        private void ResolveButtonTargets()
+        {
+            if (_shopButton == null)
+            {
+                _shopButton = FindButton(_shopButtonObjectName);
+            }
+
+            if (_squadButton == null)
+            {
+                _squadButton = FindButton(_squadButtonObjectName);
+            }
+        }
+
         private TMP_Text FindButtonLabel(string buttonObjectName)
         {
             if (string.IsNullOrWhiteSpace(buttonObjectName))
@@ -86,6 +150,28 @@ namespace SevenBattles.Preparation
             }
 
             return buttonTransform.GetComponentInChildren<TMP_Text>(true);
+        }
+
+        private Button FindButton(string buttonObjectName)
+        {
+            if (string.IsNullOrWhiteSpace(buttonObjectName))
+            {
+                return null;
+            }
+
+            var buttonTransform = transform.Find(buttonObjectName);
+            if (buttonTransform == null)
+            {
+                return null;
+            }
+
+            var button = buttonTransform.GetComponent<Button>();
+            if (button != null)
+            {
+                return button;
+            }
+
+            return buttonTransform.GetComponentInChildren<Button>(true);
         }
 
         private void BindLabels()
@@ -120,6 +206,138 @@ namespace SevenBattles.Preparation
             _squadLabel?.RefreshString();
         }
 
+        private void WireHoverFeedback()
+        {
+            UnwireHoverFeedback();
+            RegisterButtonHover(_shopButton);
+            RegisterButtonHover(_squadButton);
+        }
+
+        private void UnwireHoverFeedback()
+        {
+            for (int i = 0; i < _hoverForwarders.Count; i++)
+            {
+                var forwarder = _hoverForwarders[i];
+                if (forwarder != null)
+                {
+                    forwarder.SetOwner(null);
+                }
+            }
+
+            _hoverForwarders.Clear();
+
+            for (int i = 0; i < _clickSubscriptions.Count; i++)
+            {
+                var sub = _clickSubscriptions[i];
+                if (sub.Button != null && sub.ClickAction != null)
+                {
+                    sub.Button.onClick.RemoveListener(sub.ClickAction);
+                }
+            }
+
+            _clickSubscriptions.Clear();
+            _hoveredButtonCount = 0;
+        }
+
+        private void RegisterButtonHover(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            if (ContainsSubscription(button))
+            {
+                return;
+            }
+
+            var forwarder = button.GetComponent<MenuButtonHoverForwarder>();
+            if (forwarder == null)
+            {
+                forwarder = button.gameObject.AddComponent<MenuButtonHoverForwarder>();
+            }
+
+            UnityAction clickAction = HandleMenuButtonClicked;
+            button.onClick.AddListener(clickAction);
+            _clickSubscriptions.Add(new ButtonClickSubscription(button, clickAction));
+
+            forwarder.SetOwner(this);
+            _hoverForwarders.Add(forwarder);
+        }
+
+        private void HandleMenuButtonPointerEnter()
+        {
+            _hoveredButtonCount = Mathf.Max(0, _hoveredButtonCount + 1);
+            ApplyHoverCursor();
+        }
+
+        private void HandleMenuButtonPointerExit()
+        {
+            _hoveredButtonCount = Mathf.Max(0, _hoveredButtonCount - 1);
+            if (_hoveredButtonCount == 0)
+            {
+                RestoreDefaultCursor();
+            }
+        }
+
+        private void ApplyHoverCursor()
+        {
+            if (_hoverCursorTexture == null)
+            {
+                return;
+            }
+
+            Cursor.SetCursor(_hoverCursorTexture, _hoverCursorHotspot, CursorMode.Auto);
+        }
+
+        private void RestoreDefaultCursor()
+        {
+            Cursor.SetCursor(_defaultCursorTexture, _defaultCursorHotspot, CursorMode.Auto);
+        }
+
+        private void HandleMenuButtonClicked()
+        {
+            PlayClickSfx();
+        }
+
+        private void PlayClickSfx()
+        {
+            if (_clickSfxClip == null)
+            {
+                return;
+            }
+
+            if (Time.unscaledTime - _lastClickSfxTime < Mathf.Max(0f, _clickSfxCooldown))
+            {
+                return;
+            }
+
+            float volume = Mathf.Clamp(_clickSfxVolume, 0f, 1.5f);
+            if (_clickAudioSource != null)
+            {
+                _clickAudioSource.PlayOneShot(_clickSfxClip, volume);
+            }
+            else
+            {
+                AudioSource.PlayClipAtPoint(_clickSfxClip, Vector3.zero, volume);
+            }
+
+            _lastClickSfxTime = Time.unscaledTime;
+        }
+
+        private bool ContainsSubscription(Button button)
+        {
+            for (int i = 0; i < _clickSubscriptions.Count; i++)
+            {
+                if (_clickSubscriptions[i].Button == button)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private void HandleShopLabelChanged(string localizedValue)
         {
             LocalizationCacheDiagnostics.LogDisplay(_shopLabel, "PreparationPopupMenu.ShopLabel", this);
@@ -141,6 +359,43 @@ namespace SevenBattles.Preparation
         private static bool HasLocalizedValue(LocalizedString localized)
         {
             return localized != null && !localized.IsEmpty;
+        }
+
+        private sealed class MenuButtonHoverForwarder : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+        {
+            private PreparationPopupMenuLocalizationController _owner;
+
+            public void SetOwner(PreparationPopupMenuLocalizationController owner)
+            {
+                _owner = owner;
+            }
+
+            public void OnPointerEnter(PointerEventData eventData)
+            {
+                _owner?.HandleMenuButtonPointerEnter();
+            }
+
+            public void OnPointerExit(PointerEventData eventData)
+            {
+                _owner?.HandleMenuButtonPointerExit();
+            }
+
+            private void OnDisable()
+            {
+                _owner?.HandleMenuButtonPointerExit();
+            }
+        }
+
+        private readonly struct ButtonClickSubscription
+        {
+            public readonly Button Button;
+            public readonly UnityAction ClickAction;
+
+            public ButtonClickSubscription(Button button, UnityAction clickAction)
+            {
+                Button = button;
+                ClickAction = clickAction;
+            }
         }
     }
 }

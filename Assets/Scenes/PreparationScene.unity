@@ -7050,6 +7050,8 @@ MonoBehaviour:
   _squadLabelTMP: {fileID: 154403118125679531}
   _shopButtonObjectName: ShopButtonMenu
   _squadButtonObjectName: SquadButtonMenu
+  _shopButton: {fileID: 0}
+  _squadButton: {fileID: 0}
   _shopLabel:
     m_TableReference:
       m_TableCollectionName: GUID:4ef3c00478f1f3e41863062f04ff4ada
@@ -7068,6 +7070,14 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
+  _hoverCursorTexture: {fileID: 0}
+  _hoverCursorHotspot: {x: 16, y: 16}
+  _defaultCursorTexture: {fileID: 0}
+  _defaultCursorHotspot: {x: 4, y: 4}
+  _clickAudioSource: {fileID: 0}
+  _clickSfxClip: {fileID: 0}
+  _clickSfxVolume: 1
+  _clickSfxCooldown: 0.05
   references:
     version: 2
     RefIds: []
@@ -7333,6 +7343,26 @@ MonoBehaviour:
   _goldValueTMP: {fileID: 4905508967741221535}
   _gemsValueTMP: {fileID: 1706960720679748122}
   _logSaveDirectoryOnEnable: 1
+  _animateBattleVictoryRewards: 1
+  _goldNumberPrefab: {fileID: 5898165573350529163, guid: fd89d25fcf8612341a6b13d9d7df2da3, type: 3}
+  _gemNumberPrefab: {fileID: 5898165573350529163, guid: 8be0ff8b91deb45418ef835f9eaaea20, type: 3}
+  _currencyNumberCamera: {fileID: 470502799}
+  _currencyNumberOffset: {x: 0, y: 0}
+  _goldNumberOffset: {x: -180, y: 30}
+  _gemNumberOffset: {x: -150, y: 30}
+  _goldNumberSpawnAnchor: {fileID: 0}
+  _gemNumberSpawnAnchor: {fileID: 0}
+  _currencyNumberSpawnDepth: 10
+  _rewardAnimationMinSeconds: 1.5
+  _rewardAnimationMaxSeconds: 3
+  _rewardAmountForFastDuration: 180
+  _counterPunchScale: 1.1
+  _counterPunchDuration: 0.08
+  _floatingNumberLifetimePadding: 0.1
+  _enableDebugSpawnHotkeys: 0
+  _debugSpawnGoldKey: 288
+  _debugSpawnGemsKey: 289
+  _debugSpawnAmount: 25
 --- !u!224 &8741457869144064895
 RectTransform:
   m_ObjectHideFlags: 0

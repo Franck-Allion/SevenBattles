@@ -28,6 +28,7 @@
     - `PreparationPopupMenuLocalizationController` localizes action labels for menu buttons.
   - `ResourcesPanel`
     - `PreparationResourcesPanelPresenter` updates `CoinValue` and `GemValue` TMP labels from `PlayerContext`.
+    - Consumes `BattleVictoryRewardTransfer` to animate post-battle gold/gems gains from pre-battle values to final totals.
 
 **Extension Points:**
 - New preparation controllers attach as new roots or under a future `_System` root if added.
@@ -69,9 +70,27 @@
 - `PopupMenu` (`PreparationPopupMenuLocalizationController`)
   - `_shopLabelTMP` -> `PopupMenu/ShopButtonMenu/Text` (`TMP_Text`).
   - `_squadLabelTMP` -> `PopupMenu/SquadButtonMenu/Text` (`TMP_Text`).
+  - `_shopButton` -> `PopupMenu/ShopButtonMenu` (`Button`) (optional; auto-found by name when empty).
+  - `_squadButton` -> `PopupMenu/SquadButtonMenu` (`Button`) (optional; auto-found by name when empty).
   - `_shopLabel` -> table `UI.Common`, key `Preparation.Popup.Shop`.
   - `_squadLabel` -> table `UI.Common`, key `Preparation.Popup.Squad`.
+  - `_hoverCursorTexture` -> cursor texture shown while hovering menu buttons (example: `Assets/Art/Cursors/hand002.png`).
+  - `_hoverCursorHotspot` -> cursor hotspot for `_hoverCursorTexture` (match texture tip).
+  - `_defaultCursorTexture` -> default preparation cursor (example: `Assets/Art/Cursors/pointer002.png`).
+  - `_defaultCursorHotspot` -> cursor hotspot for `_defaultCursorTexture`.
+  - `_clickAudioSource` -> optional UI `AudioSource` used to play menu button click SFX.
+  - `_clickSfxClip` -> SFX clip played when clicking Shop/Squad buttons.
+  - `_clickSfxVolume` -> click SFX volume multiplier.
+  - `_clickSfxCooldown` -> minimum time between click SFX plays.
 - `ResourcesPanel` (`PreparationResourcesPanelPresenter`)
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
   - `_goldValueTMP` -> `Canvas/ResourcesPanel/Coin/CoinValue` (`TMP_Text`).
   - `_gemsValueTMP` -> `Canvas/ResourcesPanel/Gem/GemValue` (`TMP_Text`).
+  - `_goldNumberPrefab` -> `Assets/Prefabs/DamageNumber/GoldNumber.prefab`.
+  - `_gemNumberPrefab` -> `Assets/Prefabs/DamageNumber/GemNumber.prefab`.
+  - `_goldNumberSpawnAnchor` / `_gemNumberSpawnAnchor` -> optional per-currency spawn anchor overrides (`RectTransform`).
+  - `_currencyNumberOffset` -> base spawn offset from the anchor top-right corner.
+  - `_goldNumberOffset` / `_gemNumberOffset` -> optional per-currency additional offset.
+  - `_animateBattleVictoryRewards` -> enabled to animate pending battle victory rewards on scene entry.
+  - `_currencyNumberSpawnDepth` -> world projection depth used when converting gold/gem TMP screen positions to floating number spawn positions.
+  - Debug testing (play mode): enable `_enableDebugSpawnHotkeys` and use `_debugSpawnGoldKey` / `_debugSpawnGemsKey` to spawn test floating numbers without completing a battle.

@@ -121,6 +121,7 @@
     <Compile Include="Assets\Scripts\Core\Preload\TexturePreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinitionRegistry.cs" />
+    <Compile Include="Assets\Scripts\Core\Battle\BattleVictoryRewardTransfer.cs" />
     <Compile Include="Assets\Scripts\Core\Items\ItemDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerInventoryGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\ScenePreloader.cs" />

@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Localization;
 using SevenBattles.Core;
@@ -353,6 +354,29 @@ namespace SevenBattles.UI
             return _cachedVictoryRewards;
         }
 
+        private static int GetTotalGemRewards(BattleRewardResult rewards)
+        {
+            if (rewards == null || rewards.BonusRewards == null || rewards.BonusRewards.Length == 0)
+            {
+                return 0;
+            }
+
+            int total = 0;
+            var bonusRewards = rewards.BonusRewards;
+            for (int i = 0; i < bonusRewards.Length; i++)
+            {
+                var entry = bonusRewards[i];
+                if (entry == null || entry.Type != BattleRewardType.Gems)
+                {
+                    continue;
+                }
+
+                total += Mathf.Max(0, entry.Amount);
+            }
+
+            return total;
+        }
+
         private void ShowDefeatPopup()
         {
             var popup = ResolveDefeatPopup(out var presenterOverride);
@@ -699,11 +723,29 @@ namespace SevenBattles.UI
                 return;
             }
 
-            context.SetGold(context.Gold + rewards.GoldAmount);
+            int goldBefore = context.Gold;
+            int gemsBefore = context.Gems;
+            int goldGained = GetTotalGoldRewards(rewards);
+            int gemsGained = GetTotalGemRewards(rewards);
+            if (goldGained > 0 || gemsGained > 0)
+            {
+                BattleVictoryRewardTransfer.SetPending(goldBefore, gemsBefore, goldGained, gemsGained);
+            }
+
+            if (goldGained > 0)
+            {
+                context.SetGold(goldBefore + goldGained);
+            }
+
+            if (gemsGained > 0)
+            {
+                context.SetGems(gemsBefore + gemsGained);
+            }
 
             var bonusRewards = rewards.BonusRewards;
             if (bonusRewards == null)
             {
+                TryApplyTournamentProgressOnly();
                 return;
             }
 
@@ -717,8 +759,9 @@ namespace SevenBattles.UI
 
                 switch (bonus.Type)
                 {
+                    case BattleRewardType.Gold:
                     case BattleRewardType.Gems:
-                        context.SetGems(context.Gems + bonus.Amount);
+                        // Currency was already applied in one pass above.
                         break;
                     case BattleRewardType.Equipment:
                         context.Inventory?.AddEquipment(bonus.EquipmentDef);
@@ -733,6 +776,34 @@ namespace SevenBattles.UI
             }
 
             TryApplyTournamentProgressOnly();
+        }
+
+        private static int GetTotalGoldRewards(BattleRewardResult rewards)
+        {
+            if (rewards == null)
+            {
+                return 0;
+            }
+
+            int total = Mathf.Max(0, rewards.GoldAmount);
+            var bonusRewards = rewards.BonusRewards;
+            if (bonusRewards == null || bonusRewards.Length == 0)
+            {
+                return total;
+            }
+
+            for (int i = 0; i < bonusRewards.Length; i++)
+            {
+                var bonus = bonusRewards[i];
+                if (bonus == null || bonus.Type != BattleRewardType.Gold)
+                {
+                    continue;
+                }
+
+                total += Mathf.Max(0, bonus.Amount);
+            }
+
+            return total;
         }
 
         private void TryApplyTournamentProgressOnly()
@@ -934,5 +1005,6 @@ namespace SevenBattles.UI
 
             return _battleSessionService;
         }
+
     }
 }

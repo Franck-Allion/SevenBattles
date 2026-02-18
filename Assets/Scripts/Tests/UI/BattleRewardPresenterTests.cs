@@ -116,6 +116,44 @@ namespace SevenBattles.Tests.UI
             Object.DestroyImmediate(presenterRoot);
         }
 
+        [Test]
+        public void Show_WithGemsReward_ExposesCurrencyAmountTexts_AndSupportsDisplayOverride()
+        {
+            var presenterRoot = new GameObject("Presenter");
+            var container = new GameObject("Container").transform;
+            container.SetParent(presenterRoot.transform);
+            var presenter = presenterRoot.AddComponent<BattleRewardPresenter>();
+
+            var rewardPrefab = BuildRewardItemObject("RewardItemPrefab");
+            SetPrivate(presenter, "_rewardItemPrefab", rewardPrefab);
+            SetPrivate(presenter, "_container", container);
+
+            var result = new BattleRewardResult(
+                50,
+                new[]
+                {
+                    new BattleRewardResultEntry(BattleRewardType.Gems, 9)
+                });
+
+            presenter.Show(result);
+
+            Assert.IsTrue(presenter.TryGetCurrencyAmountText(BattleRewardType.Gold, out TMP_Text goldAmount, out RectTransform goldRect));
+            Assert.IsTrue(presenter.TryGetCurrencyAmountText(BattleRewardType.Gems, out TMP_Text gemsAmount, out RectTransform gemsRect));
+            Assert.IsNotNull(goldRect);
+            Assert.IsNotNull(gemsRect);
+            Assert.AreEqual("50", goldAmount.text);
+            Assert.AreEqual("9", gemsAmount.text);
+
+            presenter.SetCurrencyAmountDisplay(BattleRewardType.Gold, 3);
+            presenter.SetCurrencyAmountDisplay(BattleRewardType.Gems, 2);
+
+            Assert.AreEqual("3", goldAmount.text);
+            Assert.AreEqual("2", gemsAmount.text);
+
+            Object.DestroyImmediate(rewardPrefab);
+            Object.DestroyImmediate(presenterRoot);
+        }
+
         private static GameObject BuildRewardItemObject(string name)
         {
             var root = new GameObject(name);

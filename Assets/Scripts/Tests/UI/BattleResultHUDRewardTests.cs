@@ -11,6 +11,18 @@ namespace SevenBattles.Tests.UI
 {
     public class BattleResultHUDRewardTests
     {
+        [SetUp]
+        public void SetUp()
+        {
+            BattleVictoryRewardTransfer.Clear();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            BattleVictoryRewardTransfer.Clear();
+        }
+
         private sealed class FakeBattleSessionService : MonoBehaviour, IBattleSessionService
         {
             public BattleSessionConfig CurrentSession { get; private set; }
@@ -111,6 +123,40 @@ namespace SevenBattles.Tests.UI
             Assert.AreEqual(2, context.CurrentTournamentRoundIndex);
 
             Object.DestroyImmediate(sessionGo);
+            Object.DestroyImmediate(context);
+            Object.DestroyImmediate(go);
+        }
+
+        [Test]
+        public void ApplyRewardsToPlayerContext_SetsPreparationTransferUsingPreAndPostCurrency()
+        {
+            var go = new GameObject("BattleResultHUD");
+            var hud = go.AddComponent<BattleResultHUD>();
+
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            context.SetResources(40, 3);
+
+            var rewards = new BattleRewardResult(
+                20,
+                new[]
+                {
+                    new BattleRewardResultEntry(BattleRewardType.Gold, 5),
+                    new BattleRewardResultEntry(BattleRewardType.Gems, 4)
+                });
+
+            SetPrivate(hud, "_playerContext", context);
+            InvokePrivate(hud, "ApplyRewardsToPlayerContext", rewards);
+
+            Assert.AreEqual(65, context.Gold);
+            Assert.AreEqual(7, context.Gems);
+            Assert.IsTrue(BattleVictoryRewardTransfer.TryConsume(out var pending));
+            Assert.AreEqual(40, pending.FromGold);
+            Assert.AreEqual(3, pending.FromGems);
+            Assert.AreEqual(25, pending.GoldGained);
+            Assert.AreEqual(4, pending.GemsGained);
+            Assert.AreEqual(65, pending.ToGold);
+            Assert.AreEqual(7, pending.ToGems);
+
             Object.DestroyImmediate(context);
             Object.DestroyImmediate(go);
         }

@@ -24,6 +24,7 @@ namespace SevenBattles.UI
         [SerializeField] private Color _itemGlowColor = Color.white;
         [SerializeField] private Color _goldGlowColor = Color.white;
         [SerializeField] private Color _gemsGlowColor = Color.white;
+        private BattleRewardType _currentRewardType = BattleRewardType.Item;
 
         private void Awake()
         {
@@ -33,6 +34,7 @@ namespace SevenBattles.UI
         public void SetReward(BattleRewardResultEntry entry)
         {
             AutoResolveReferences();
+            _currentRewardType = entry != null ? entry.Type : BattleRewardType.Item;
 
             if (entry == null)
             {
@@ -52,6 +54,25 @@ namespace SevenBattles.UI
         public void SetGold(int amount)
         {
             SetReward(new BattleRewardResultEntry(BattleRewardType.Gold, amount));
+        }
+
+        public BattleRewardType CurrentRewardType => _currentRewardType;
+
+        public TMP_Text AmountText => _amountText;
+
+        public RectTransform AmountRectTransform => _amountText != null ? _amountText.rectTransform : null;
+
+        public void SetCurrencyAmountDisplay(int amount)
+        {
+            AutoResolveReferences();
+            if (_amountText == null)
+            {
+                return;
+            }
+
+            int clamped = Mathf.Max(0, amount);
+            _amountText.gameObject.SetActive(true);
+            _amountText.text = clamped.ToString(CultureInfo.InvariantCulture);
         }
 
         private void AutoResolveReferences()

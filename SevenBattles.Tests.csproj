@@ -71,6 +71,7 @@
     <Compile Include="Assets\Scripts\Tests\Core\BattleSessionConfigTransferTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PlayerInventoryGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridBilinearTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\BattleVictoryRewardTransferTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SpellAmountPreviewTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitMovementTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsShootPersistenceTests.cs" />
@@ -78,7 +79,6 @@
     <Compile Include="Assets\Scripts\Tests\UI\SaveLoadHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleTurnGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\BattleRewardServiceTests.cs" />
-    <Compile Include="Assets\Scripts\Tests\Core\PlayerContextAutoSaveUtilityTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsHealTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\BattlefieldDefinitionTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\TileColorEffectsTests.cs" />
@@ -105,6 +105,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\UnitAttackTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattlefieldServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\PreparationPopupMenuLocalizationControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattleResultHUDRewardTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Spells\UnitSpellDeckTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Preparation\PreparationResourcesPanelPresenterTests.cs" />
