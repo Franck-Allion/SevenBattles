@@ -789,6 +789,13 @@ namespace SevenBattles.UI
                 return _playerContext;
             }
 
+            // Prefer the runtime clone to avoid mutating the asset.
+            if (PlayerContext.HasRuntimeInstance)
+            {
+                _playerContext = PlayerContext.RuntimeInstance;
+                return _playerContext;
+            }
+
             if (_playerContextAsset != null)
             {
                 _playerContext = _playerContextAsset;

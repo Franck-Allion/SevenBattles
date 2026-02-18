@@ -38,6 +38,39 @@ namespace SevenBattles.Core.Players
         public event Action ResourcesChanged;
         public event Action TournamentProgressChanged;
 
+        /// <summary>
+        /// Runtime-only clone used during play. All gameplay mutations go through this instance.
+        /// Null until initialized by PreparationAutoSaveLoader.
+        /// </summary>
+        private static PlayerContext _runtimeInstance;
+
+        /// <summary>
+        /// Returns the active runtime clone if initialized, or null.
+        /// </summary>
+        public static PlayerContext RuntimeInstance => _runtimeInstance;
+
+        /// <summary>
+        /// Returns true if a runtime clone has been initialized.
+        /// </summary>
+        public static bool HasRuntimeInstance => _runtimeInstance != null;
+
+        /// <summary>
+        /// Sets the runtime instance. Called by PreparationAutoSaveLoader.
+        /// </summary>
+        public static void SetRuntimeInstance(PlayerContext instance)
+        {
+            _runtimeInstance = instance;
+        }
+
+        /// <summary>
+        /// Clears the runtime instance. Used in tests and domain reloads.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStaticState()
+        {
+            _runtimeInstance = null;
+        }
+
         public void SetResources(int gold, int gems)
         {
             int clampedGold = Mathf.Max(0, gold);

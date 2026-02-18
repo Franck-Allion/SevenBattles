@@ -89,7 +89,7 @@ For each `SaveSlotAsync(int slotIndex)` call:
 
 ---
 
-## 2.3 PlayerContext Autosave (battle end → preparation scene load)
+## 2.3 PlayerContext Autosave (battle end -> preparation scene load)
 
 - `Assets/Scripts/Core/Save/PlayerContextAutoSaveUtility.cs`
   - Serializes/deserializes player runtime progression:
@@ -102,17 +102,26 @@ For each `SaveSlotAsync(int slotIndex)` call:
 - `Assets/Scripts/UI/BattleResultHUD.cs`
   - Triggers autosave once per battle result popup (Victory or Defeat) after progression/reward application.
   - Calls `PlayerContextAutoSaveUtility.TrySaveFromPlayerContext` directly (no reflection).
+  - Resolves `PlayerContext.RuntimeInstance` first so autosave writes the runtime clone.
 
 - `Assets/Scripts/Preparation/PreparationAutoSaveLoader.cs`
   - MonoBehaviour placed on the PreparationScene's _System GameObject.
-  - On Awake, loads autosave JSON into the serialized PlayerContext reference.
-  - No clone/rebind — modifies the in-memory ScriptableObject directly.
+  - On Awake, creates a runtime clone of `PlayerContext` (and deep clones `PlayerSquad` loadouts + `PlayerInventory` entries).
+  - Sets `PlayerContext.SetRuntimeInstance(runtimeClone)` and rebinds scene `PlayerContext` / `PlayerSquad` / `PlayerInventory` field references from asset to clone.
+  - Loads autosave JSON into the runtime clone (never into authored asset references).
+
+- `Assets/Scripts/Core/Players/PlayerContext.cs`
+  - Exposes static runtime session accessors:
+    - `RuntimeInstance`
+    - `HasRuntimeInstance`
+    - `SetRuntimeInstance(PlayerContext)`
+  - Resets static runtime state on domain init with:
+    - `[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]`
 
 Notes:
 - Autosave is independent from manual save slots (save_slot_01.json ... save_slot_08.json).
-- In builds, ScriptableObject modifications are transient and never persist to disk.
-- In the Editor, a warning is logged because Play Mode changes to ScriptableObjects can persist. Use Domain Reload or restart Play Mode to reset.
-- Deleting the autosave file resets progression to authored defaults on next startup.
+- Runtime gameplay mutations target the clone, not `PlayerContext.asset`.
+- Deleting the autosave file resets progression to authored defaults on next startup (because authored asset data is no longer mutated by runtime autosave load/apply).
 
 ---
 
@@ -552,4 +561,5 @@ When you add a new persistent game‑state feature, answer these questions (see 
      - Ensures bad JSON does not crash and falls back to a safe state.
 
 Keeping these invariants in mind will ensure the save format remains robust, debuggable, and easy to extend as SevenBattles grows.
+
 
