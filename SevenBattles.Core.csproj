@@ -73,10 +73,9 @@
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\AssemblyInfo.cs" />
+    <Compile Include="Assets\Scripts\Core\Save\PlayerContextAutoSaveUtility.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleTurnController.cs" />
     <Compile Include="Assets\Scripts\Core\Save\SaveGameService.cs" />
-    <Compile Include="Assets\Scripts\Core\Save\PlayerContextAutoSaveBootstrap.cs" />
-    <Compile Include="Assets\Scripts\Core\Save\PlayerContextAutoSaveUtility.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerSquadGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Diagnostics\SBLog.cs" />
     <Compile Include="Assets\Scripts\Core\Players\PlayerSquad.cs" />

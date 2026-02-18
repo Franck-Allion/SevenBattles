@@ -89,29 +89,30 @@ For each `SaveSlotAsync(int slotIndex)` call:
 
 ---
 
-## 2.3 PlayerContext Autosave (startup + battle end)
-
-- `Assets/Scripts/Core/Save/PlayerContextAutoSaveBootstrap.cs`
-  - Uses `RuntimeInitializeOnLoadMethod(AfterSceneLoad)` to initialize runtime progression once when the game starts.
-  - Creates a runtime-only clone of `PlayerContext` (plus `PlayerSquad` and `PlayerInventory`) and rebinds scene `PlayerContext` references to that clone.
-  - Loads autosave JSON into the runtime clone (not into the `.asset` defaults).
-  - Autosave path:
-    - `<Application.persistentDataPath>/Saves/autosave_player_context.json`
+## 2.3 PlayerContext Autosave (battle end → preparation scene load)
 
 - `Assets/Scripts/Core/Save/PlayerContextAutoSaveUtility.cs`
   - Serializes/deserializes player runtime progression:
     - Gold/Gems
-    - Tournament progress (`CurrentRoundIndex`, `CompletedBattles`)
-    - Player squad unit progression per slot (`Level`, `Xp`, `SpellIds`)
+    - Tournament progress (CurrentRoundIndex, CompletedBattles)
+    - Player squad unit progression per slot (Level, Xp, SpellIds)
     - Player inventory entries
+  - Autosave path: `<Application.persistentDataPath>/Saves/autosave_player_context.json`
 
 - `Assets/Scripts/UI/BattleResultHUD.cs`
-  - Triggers autosave once per battle result popup (`Victory` or `Defeat`) after progression/reward application.
+  - Triggers autosave once per battle result popup (Victory or Defeat) after progression/reward application.
+  - Calls `PlayerContextAutoSaveUtility.TrySaveFromPlayerContext` directly (no reflection).
+
+- `Assets/Scripts/Preparation/PreparationAutoSaveLoader.cs`
+  - MonoBehaviour placed on the PreparationScene's _System GameObject.
+  - On Awake, loads autosave JSON into the serialized PlayerContext reference.
+  - No clone/rebind — modifies the in-memory ScriptableObject directly.
 
 Notes:
-- Autosave is independent from manual save slots (`save_slot_01.json` ... `save_slot_08.json`).
-- Runtime progression now uses a cloned context, so `PlayerContext.asset` remains default authoring data.
-- Deleting autosave resets runtime progression to authored defaults on next startup.
+- Autosave is independent from manual save slots (save_slot_01.json ... save_slot_08.json).
+- In builds, ScriptableObject modifications are transient and never persist to disk.
+- In the Editor, a warning is logged because Play Mode changes to ScriptableObjects can persist. Use Domain Reload or restart Play Mode to reset.
+- Deleting the autosave file resets progression to authored defaults on next startup.
 
 ---
 

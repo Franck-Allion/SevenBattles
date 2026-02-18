@@ -68,6 +68,7 @@
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleMapPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationPopupMenuLocalizationController.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentOpponentHoverPanelPresenter.cs" />
+    <Compile Include="Assets\Scripts\Preparation\PreparationAutoSaveLoader.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\Scripts\Preparation\Preparation.asmdef" />

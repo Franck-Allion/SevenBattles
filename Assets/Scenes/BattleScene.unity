@@ -33495,6 +33495,7 @@ MonoBehaviour:
   _returnFadeOutDuration: 0.5
   _returnFadeInDuration: 0.5
   _returnFadeColor: {r: 0, g: 0, b: 0, a: 1}
+  _playerContextAsset: {fileID: 11400000, guid: c073641df4db2fd4ca1ea6cfa9b9325d, type: 2}
   _popupDelaySeconds: 1.5
   _animateXpProgressBars: 1
   _victoryXpPresenter: {fileID: 6605955385478697459}

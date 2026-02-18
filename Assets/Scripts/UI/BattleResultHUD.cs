@@ -5,6 +5,7 @@ using UnityEngine.Localization;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Contracts;
+using SevenBattles.Core.Save;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Preload;
 
@@ -57,6 +58,10 @@ namespace SevenBattles.UI
         [SerializeField] private float _returnFadeOutDuration = 0.5f;
         [SerializeField] private float _returnFadeInDuration = 0.5f;
         [SerializeField] private Color _returnFadeColor = Color.black;
+
+        [Header("Autosave")]
+        [SerializeField, Tooltip("Player context used for autosave progression. If not assigned, auto-resolved at runtime.")]
+        private PlayerContext _playerContextAsset;
 
         private IBattleTurnController _controller;
         private IBattleXpResultProvider _xpResultProvider;
@@ -402,37 +407,7 @@ namespace SevenBattles.UI
 
         private static bool TrySavePlayerContextAutosave(PlayerContext context, out string path)
         {
-            path = null;
-            if (context == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                var utilityType = Type.GetType("SevenBattles.Core.Save.PlayerContextAutoSaveUtility, SevenBattles.Core");
-                if (utilityType == null)
-                {
-                    return false;
-                }
-
-                var method = utilityType.GetMethod(
-                    "TrySaveFromPlayerContext",
-                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                if (method == null)
-                {
-                    return false;
-                }
-
-                object[] args = new object[] { context, null, null };
-                object invokeResult = method.Invoke(null, args);
-                path = args[1] as string;
-                return invokeResult is bool ok && ok;
-            }
-            catch
-            {
-                return false;
-            }
+            return PlayerContextAutoSaveUtility.TrySaveFromPlayerContext(context, out path);
         }
 
         private void TryPlayXpProgress(ConfirmationMessageBoxHUD popup, BattleResultXpProgressPresenter presenterOverride)
@@ -811,6 +786,12 @@ namespace SevenBattles.UI
         {
             if (_playerContext != null)
             {
+                return _playerContext;
+            }
+
+            if (_playerContextAsset != null)
+            {
+                _playerContext = _playerContextAsset;
                 return _playerContext;
             }
 
