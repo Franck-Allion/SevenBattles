@@ -302,9 +302,21 @@ namespace SevenBattles.Battle.Start
         private UnitSpellLoadout[] GetPlayerSquadLoadouts()
         {
             // Prefer session service
-            if (_sessionService?.CurrentSession?.PlayerSquad != null)
+            if (_sessionService?.CurrentSession?.PlayerSquad != null &&
+                _sessionService.CurrentSession.PlayerSquad.Length > 0)
             {
                 return _sessionService.CurrentSession.PlayerSquad;
+            }
+
+            // Fallback to runtime player context progression when available.
+            if (PlayerContext.HasRuntimeInstance && PlayerContext.RuntimeInstance != null)
+            {
+                var runtimeSquad = PlayerContext.RuntimeInstance.PlayerSquad;
+                var runtimeLoadouts = runtimeSquad != null ? runtimeSquad.GetLoadouts() : null;
+                if (runtimeLoadouts != null && runtimeLoadouts.Length > 0)
+                {
+                    return runtimeLoadouts;
+                }
             }
 
             // Fallback to legacy ScriptableObject reference

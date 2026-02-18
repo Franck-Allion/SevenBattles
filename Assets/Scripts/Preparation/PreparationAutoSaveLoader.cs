@@ -36,12 +36,8 @@ namespace SevenBattles.Preparation
             {
                 int reboundCount = RebindSceneReferences(_playerContext, PlayerContext.RuntimeInstance);
                 SBLog.Info($"PreparationAutoSaveLoader: Reusing existing runtime PlayerContext. Rebound {reboundCount} references.", this);
-                // Still try to load autosave in case progression was updated.
-                if (_enableAutoLoad)
-                {
-                    PlayerContextAutoSaveUtility.TryLoadIntoPlayerContext(PlayerContext.RuntimeInstance, out _);
-                }
-
+                // Runtime instance already carries up-to-date progression from the previous scene.
+                // Do not reload autosave here to avoid overwriting in-memory progression with stale data.
                 return;
             }
 

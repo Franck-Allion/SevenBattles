@@ -65,6 +65,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\BattleBoardGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\TournamentMissionIdUtilTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\TurnOrderControllerTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Battle\BattleXpAwarderSyncTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleCursorControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitDefinitionControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\TurnOrderHUDTests.cs" />

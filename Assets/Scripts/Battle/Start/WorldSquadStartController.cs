@@ -52,6 +52,11 @@ namespace SevenBattles.Battle.Start
                 return;
             }
 
+            if (PlayerContext.HasRuntimeInstance)
+            {
+                _playerContext = PlayerContext.RuntimeInstance;
+            }
+
             var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
             var loadouts = playerSquad != null ? playerSquad.GetLoadouts() : null;
             if ((loadouts == null || loadouts.Length == 0) && (_wizardPrefabs == null || _wizardPrefabs.Length == 0))

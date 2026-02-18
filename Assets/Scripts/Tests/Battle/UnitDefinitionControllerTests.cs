@@ -11,6 +11,12 @@ namespace SevenBattles.Tests.Battle
 {
     public class UnitDefinitionControllerTests
     {
+        [TearDown]
+        public void TearDown()
+        {
+            PlayerContext.SetRuntimeInstance(null);
+        }
+
         [Test]
         public void Spawns_From_Definition_And_Applies_Stats()
         {
@@ -71,6 +77,40 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(boardGo);
             Object.DestroyImmediate(def);
             Object.DestroyImmediate(squad);
+        }
+
+        [Test]
+        public void GetLevel_PrefersRuntimeContextLoadout_WhenSessionUnavailable()
+        {
+            var ctrlGo = new GameObject("PlacementCtrl");
+            var ctrl = ctrlGo.AddComponent<WorldSquadPlacementController>();
+
+            var def = ScriptableObject.CreateInstance<UnitDefinition>();
+            def.Id = "unit.level.test";
+
+            var assetSquad = ScriptableObject.CreateInstance<PlayerSquad>();
+            assetSquad.UnitLoadouts = new[]
+            {
+                new UnitSpellLoadout { Definition = def, Level = 1, Xp = 0 }
+            };
+            SetPrivate(ctrl, "_playerSquad", assetSquad);
+
+            var runtimeSquad = ScriptableObject.CreateInstance<PlayerSquad>();
+            runtimeSquad.UnitLoadouts = new[]
+            {
+                new UnitSpellLoadout { Definition = def, Level = 6, Xp = 0 }
+            };
+            var runtimeContext = ScriptableObject.CreateInstance<PlayerContext>();
+            runtimeContext.PlayerSquad = runtimeSquad;
+            PlayerContext.SetRuntimeInstance(runtimeContext);
+
+            Assert.AreEqual(6, ctrl.GetLevel(0), "Placement level should come from runtime context when no session squad is available.");
+
+            Object.DestroyImmediate(ctrlGo);
+            Object.DestroyImmediate(runtimeContext);
+            Object.DestroyImmediate(runtimeSquad);
+            Object.DestroyImmediate(assetSquad);
+            Object.DestroyImmediate(def);
         }
 
         private static void SetPrivate(object obj, string field, object value)

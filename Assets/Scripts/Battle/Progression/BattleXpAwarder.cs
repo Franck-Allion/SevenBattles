@@ -7,6 +7,7 @@ using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Contracts;
 using SevenBattles.Core.Players;
+using SevenBattles.Core.Save;
 
 using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.Battle.Progression
@@ -162,6 +163,7 @@ namespace SevenBattles.Battle.Progression
             // Keep player progression across scene changes by syncing awarded XP/levels
             // from the runtime battle session back into PlayerContext.
             TrySyncPlayerContextFromSession(playerSquad);
+            TryAutoSavePlayerProgress();
 
             _awarded = true;
 
@@ -514,6 +516,7 @@ namespace SevenBattles.Battle.Progression
                         loadouts[i].Xp = sessionPlayerSquad[i].EffectiveXp;
                         loadouts[i].Spells = sessionPlayerSquad[i].Spells;
                     }
+                    SBLog.Info($"BattleXpAwarder: Synced {loadouts.Length} unit(s) Level/Xp from session to PlayerContext.", this);
                     return;
                 }
             }
@@ -529,14 +532,15 @@ namespace SevenBattles.Battle.Progression
                 return;
             }
 
-            // Runtime progression must persist between scenes even when legacy inspector toggles are off.
-            if (!_syncToPlayerContextAssets && !Application.isPlaying)
+            ResolvePlayerContext();
+            if (_playerContext == null || _playerContext.PlayerSquad == null)
             {
                 return;
             }
 
-            ResolvePlayerContext();
-            if (_playerContext == null || _playerContext.PlayerSquad == null)
+            bool hasRuntimeContext = PlayerContext.HasRuntimeInstance &&
+                                     ReferenceEquals(_playerContext, PlayerContext.RuntimeInstance);
+            if (!_syncToPlayerContextAssets && !hasRuntimeContext)
             {
                 return;
             }
@@ -546,6 +550,12 @@ namespace SevenBattles.Battle.Progression
 
         private void ResolvePlayerContext()
         {
+            if (PlayerContext.HasRuntimeInstance)
+            {
+                _playerContext = PlayerContext.RuntimeInstance;
+                return;
+            }
+
             if (_playerContext != null)
             {
                 return;
@@ -559,6 +569,27 @@ namespace SevenBattles.Battle.Progression
                     _playerContext = contexts[i];
                     return;
                 }
+            }
+        }
+
+        private void TryAutoSavePlayerProgress()
+        {
+            ResolvePlayerContext();
+            if (_playerContext == null || _playerContext.PlayerSquad == null)
+            {
+                return;
+            }
+
+            bool hasRuntimeContext = PlayerContext.HasRuntimeInstance &&
+                                     ReferenceEquals(_playerContext, PlayerContext.RuntimeInstance);
+            if (!_syncToPlayerContextAssets && !hasRuntimeContext)
+            {
+                return;
+            }
+
+            if (!PlayerContextAutoSaveUtility.TrySaveFromPlayerContext(_playerContext, out string path))
+            {
+                SBLog.Warn($"BattleXpAwarder: Autosave failed at '{path}'.", this);
             }
         }
     }

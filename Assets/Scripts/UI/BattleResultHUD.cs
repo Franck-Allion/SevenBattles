@@ -855,15 +855,15 @@ namespace SevenBattles.UI
 
         private PlayerContext FindPlayerContext()
         {
-            if (_playerContext != null)
-            {
-                return _playerContext;
-            }
-
             // Prefer the runtime clone to avoid mutating the asset.
             if (PlayerContext.HasRuntimeInstance)
             {
                 _playerContext = PlayerContext.RuntimeInstance;
+                return _playerContext;
+            }
+
+            if (_playerContext != null)
+            {
                 return _playerContext;
             }
 

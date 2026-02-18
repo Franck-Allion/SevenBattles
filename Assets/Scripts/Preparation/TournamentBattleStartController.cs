@@ -153,7 +153,8 @@ namespace SevenBattles.Preparation
                 return;
             }
 
-            if (_playerContext != null && _playerContext.IsTournamentBattleCompleted(index))
+            var playerContext = ResolvePlayerContext();
+            if (playerContext != null && playerContext.IsTournamentBattleCompleted(index))
             {
                 return;
             }
@@ -285,7 +286,8 @@ namespace SevenBattles.Preparation
                 return false;
             }
 
-            var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
+            var playerContext = ResolvePlayerContext();
+            var playerSquad = playerContext != null ? playerContext.PlayerSquad : null;
             if (playerSquad == null)
             {
                 SBLog.Error("TournamentBattleStartController: PlayerContext has no PlayerSquad assigned.", this);
@@ -307,6 +309,16 @@ namespace SevenBattles.Preparation
             };
 
             return true;
+        }
+
+        private PlayerContext ResolvePlayerContext()
+        {
+            if (PlayerContext.HasRuntimeInstance)
+            {
+                _playerContext = PlayerContext.RuntimeInstance;
+            }
+
+            return _playerContext;
         }
     }
 }
