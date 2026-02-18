@@ -159,12 +159,9 @@ namespace SevenBattles.Battle.Progression
             var awards = AwardToSurvivors(playerSquad, survivorIndices, totalXp);
             var unitResults = BuildUnitResults(playerSquad, survivorIndices, awards);
 
-            if (_syncToPlayerContextAssets)
-            {
-                // Best-effort sync back to PlayerContext so progression persists across scenes.
-                // NOTE: This mutates ScriptableObject assets in-editor; prefer save/load based persistence instead.
-                SyncPlayerContextFromSession(playerSquad);
-            }
+            // Keep player progression across scene changes by syncing awarded XP/levels
+            // from the runtime battle session back into PlayerContext.
+            TrySyncPlayerContextFromSession(playerSquad);
 
             _awarded = true;
 
@@ -523,6 +520,46 @@ namespace SevenBattles.Battle.Progression
 
             // Fallback: replace the squad loadouts entirely with the session snapshot.
             squad.UnitLoadouts = sessionPlayerSquad;
+        }
+
+        private void TrySyncPlayerContextFromSession(UnitSpellLoadout[] sessionPlayerSquad)
+        {
+            if (sessionPlayerSquad == null || sessionPlayerSquad.Length == 0)
+            {
+                return;
+            }
+
+            // Runtime progression must persist between scenes even when legacy inspector toggles are off.
+            if (!_syncToPlayerContextAssets && !Application.isPlaying)
+            {
+                return;
+            }
+
+            ResolvePlayerContext();
+            if (_playerContext == null || _playerContext.PlayerSquad == null)
+            {
+                return;
+            }
+
+            SyncPlayerContextFromSession(UnitSpellLoadout.CloneArray(sessionPlayerSquad));
+        }
+
+        private void ResolvePlayerContext()
+        {
+            if (_playerContext != null)
+            {
+                return;
+            }
+
+            var contexts = Resources.FindObjectsOfTypeAll<PlayerContext>();
+            for (int i = 0; i < contexts.Length; i++)
+            {
+                if (contexts[i] != null)
+                {
+                    _playerContext = contexts[i];
+                    return;
+                }
+            }
         }
     }
 }

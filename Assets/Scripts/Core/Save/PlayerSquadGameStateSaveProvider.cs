@@ -34,6 +34,13 @@ namespace SevenBattles.Core.Save
                 Gems = gems
             };
 
+            var tournamentProgress = _playerContext != null ? _playerContext.TournamentProgress : null;
+            data.TournamentProgress = new TournamentProgressSaveData
+            {
+                CurrentRoundIndex = tournamentProgress != null ? tournamentProgress.CurrentRoundIndex : 1,
+                CompletedBattles = tournamentProgress != null ? tournamentProgress.GetCompletedFlagsCopy() : Array.Empty<bool>()
+            };
+
             var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
 
             var loadouts = playerSquad != null ? playerSquad.GetLoadouts() : null;

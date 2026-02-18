@@ -169,6 +169,14 @@ When adding new functionality, prefer extending these areas instead of inventing
 - `SaveLoadHUD` (under `SaveLoadHUD` root)
   - Wired to save/load services for persisting game state.
 
+- `BattleResultHUD` (under `BattleResultHUD` root)
+  - `_controllerBehaviour` -> component implementing `IBattleTurnController`.
+  - `_rewardPresenter` -> optional `BattleRewardPresenter` under Victory popup.
+  - `_battlefieldServiceBehaviour` -> component implementing `IBattlefieldService`.
+  - `_battleSessionServiceBehaviour` -> component implementing `IBattleSessionService` (used to resolve tournament round id).
+  - `_preparationSceneName` -> `PreparationScene` for post-victory return transition.
+  - On victory confirm ("Collect"), triggers `SceneTransitionFader` transition back to PreparationScene.
+
 - `ConfirmationMessageBoxHUD` (under `ConfirmationHUD` root)
   - Generic confirmation dialog, can be invoked by any system needing user confirmation.
 

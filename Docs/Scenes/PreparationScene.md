@@ -18,6 +18,8 @@
   - `TournamentPathPreview` (`TournamentPathPreviewRenderer`)
     - `SpriteRenderer` displays the tournament path image.
     - `TournamentBattleMapPresenter` spawns battle ellipses and enemy prefabs from the tournament definition.
+      - Completed battles hide their enemy prefab and remain visible as completed ellipses.
+      - Only the next unlocked battle is clickable/hoverable.
     - `TournamentBattleStartController` handles click -> confirmation -> battle start.
     - `TournamentBattleEllipseGizmo` draws ellipse layout gizmos for authoring.
   - `ConfirmationHUD`
@@ -39,6 +41,7 @@
     - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.
     - `_camera` -> `Main Camera`.
     - `_battleRoot` -> `TournamentPathPreview` (`Transform`).
+    - `_playerContext` -> `Assets/Data/PlayerContext.asset` (drives completed battles + unlocked round).
     - `_currentRoundIndex` -> `1` (current round highlight target).
     - `_defaultCursorTexture` -> `Assets/Art/Cursors/pointer002.png` (or the desired default cursor asset).
     - `_defaultCursorHotspot` -> set to match the cursor tip (e.g., `4,4`).

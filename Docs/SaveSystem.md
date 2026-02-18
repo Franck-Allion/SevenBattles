@@ -25,7 +25,8 @@ It reflects the current **Save + Load** implementation.
   - `BattleEnchantmentGameStateSaveProvider`: captures active battlefield enchantments (spell id, quad index, caster identity).
 
 - **Players domain**
-  - `PlayerSquadGameStateSaveProvider`: captures player-owned state from `PlayerContext` (squad + resources).
+  - `PlayerSquadGameStateSaveProvider`: captures player-owned state from `PlayerContext` (squad + resources + tournament progress).
+  - `PlayerInventoryGameStateSaveProvider`: captures player inventory entries from `PlayerContext.Inventory`.
   - `PlayerResourcesLoadHandler`: restores player resources into `PlayerContext` when loading.
 
 - **UI domain**
@@ -68,8 +69,10 @@ For each `SaveSlotAsync(int slotIndex)` call:
      - Fills in safe defaults if the provider leaves fields `null`:
        - `PlayerSquad`: always non‑null with an empty `WizardIds` array.
        - `UnitPlacements`: always non‑null, possibly empty.
-       - `BattleTurn`: always non‑null, defaults to `Phase = "unknown"`, zeroed indices and AP.
-       - `PlayerResources`: always non‑null, defaults to `Gold = 0` and `Gems = 0`.
+     - `BattleTurn`: always non‑null, defaults to `Phase = "unknown"`, zeroed indices and AP.
+     - `PlayerResources`: always non‑null, defaults to `Gold = 0` and `Gems = 0`.
+      - `PlayerInventory`: always non‑null with an empty `Entries` array.
+      - `TournamentProgress`: always non‑null with a clamped `CurrentRoundIndex` and sanitized `CompletedBattles`.
 
 4. **JSON serialization**
    - Uses `JsonUtility.ToJson(SaveGameData, prettyPrint: true)` to obtain the JSON string.
@@ -83,6 +86,32 @@ For each `SaveSlotAsync(int slotIndex)` call:
    - If the file does not exist:
      - `File.Move(temp, path)`.
    - Disk IO happens on a background `Task` so the UI thread does not block.
+
+---
+
+## 2.3 PlayerContext Autosave (startup + battle end)
+
+- `Assets/Scripts/Core/Save/PlayerContextAutoSaveBootstrap.cs`
+  - Uses `RuntimeInitializeOnLoadMethod(AfterSceneLoad)` to initialize runtime progression once when the game starts.
+  - Creates a runtime-only clone of `PlayerContext` (plus `PlayerSquad` and `PlayerInventory`) and rebinds scene `PlayerContext` references to that clone.
+  - Loads autosave JSON into the runtime clone (not into the `.asset` defaults).
+  - Autosave path:
+    - `<Application.persistentDataPath>/Saves/autosave_player_context.json`
+
+- `Assets/Scripts/Core/Save/PlayerContextAutoSaveUtility.cs`
+  - Serializes/deserializes player runtime progression:
+    - Gold/Gems
+    - Tournament progress (`CurrentRoundIndex`, `CompletedBattles`)
+    - Player squad unit progression per slot (`Level`, `Xp`, `SpellIds`)
+    - Player inventory entries
+
+- `Assets/Scripts/UI/BattleResultHUD.cs`
+  - Triggers autosave once per battle result popup (`Victory` or `Defeat`) after progression/reward application.
+
+Notes:
+- Autosave is independent from manual save slots (`save_slot_01.json` ... `save_slot_08.json`).
+- Runtime progression now uses a cloned context, so `PlayerContext.asset` remains default authoring data.
+- Deleting autosave resets runtime progression to authored defaults on next startup.
 
 ---
 
@@ -120,8 +149,9 @@ File: `Assets/Scripts/Core/Save/CompositeGameStateSaveProvider.cs`
 Typical configuration:
 
 - Element 0: `PlayerSquadGameStateSaveProvider`
-- Element 1: `BattleBoardGameStateSaveProvider`
-- Element 2: `BattleTurnGameStateSaveProvider`
+- Element 1: `PlayerInventoryGameStateSaveProvider`
+- Element 2: `BattleBoardGameStateSaveProvider`
+- Element 3: `BattleTurnGameStateSaveProvider`
 
 ### 3.3 Player Squad Provider
 
@@ -147,8 +177,38 @@ File: `Assets/Scripts/Core/Save/PlayerSquadGameStateSaveProvider.cs`
   ```
 
 - Gold and gems are sanitized to non-negative values by `SaveGameService` defaults.
+- Also fills `SaveGameData.TournamentProgress` with:
 
-### 3.4 Battle Board Provider (Placements + Stats)
+  ```csharp
+  public sealed class TournamentProgressSaveData {
+      public int CurrentRoundIndex;   // 1-based next unlocked battle
+      public bool[] CompletedBattles; // per-battle completion flags
+  }
+  ```
+
+### 3.4 Player Inventory Provider
+
+File: `Assets/Scripts/Core/Save/PlayerInventoryGameStateSaveProvider.cs`
+
+- Reads from `PlayerContext.Inventory`.
+- Fills `SaveGameData.PlayerInventory` with:
+
+  ```csharp
+  public sealed class InventoryEntrySaveData {
+      public string Kind;         // "Equipment" | "Spell" | "Item"
+      public string DefinitionId; // stable definition id
+      public int Quantity;        // Item is stackable, Equipment/Spell forced to 1
+  }
+
+  public sealed class PlayerInventorySaveData {
+      public InventoryEntrySaveData[] Entries;
+  }
+  ```
+
+- Invalid entries (null/empty `DefinitionId`) are skipped by the provider.
+- `SaveGameService` load sanitization treats corrupt or missing inventory data as empty/default and clamps quantities safely.
+
+### 3.5 Battle Board Provider (Placements + Stats)
 
 File: `Assets/Scripts/Battle/Save/BattleBoardGameStateSaveProvider.cs`
 
@@ -207,7 +267,7 @@ Result: `SaveGameData.UnitPlacements` contains one entry per unit with:
 - Death flag (`Dead`)
 - Full stats (`Stats`)
 
-### 3.5 Battle Turn Provider (Phase + Turn + Active Unit)
+### 3.6 Battle Turn Provider (Phase + Turn + Active Unit)
 
 File: `Assets/Scripts/Battle/Save/BattleTurnGameStateSaveProvider.cs`
 
@@ -262,7 +322,7 @@ public sealed class BattleTurnSaveData {
 }
 ```
 
-### 3.6 Battle Session Provider (Original Configuration)
+### 3.7 Battle Session Provider (Original Configuration)
 
 File: `Assets/Scripts/Battle/Save/BattleSessionSaveProvider.cs`
 
@@ -293,7 +353,7 @@ public sealed class BattleSessionSaveData {
 
 **Purpose**: This captures the original battle configuration, not just the current unit placements. This allows complete battle reconstruction when loading a save, including the ability to restart the battle with the same squads.
 
-### 3.7 Battle Enchantment Provider (Active Enchantments)
+### 3.8 Battle Enchantment Provider (Active Enchantments)
 
 File: `Assets/Scripts/Battle/Save/BattleEnchantmentGameStateSaveProvider.cs`
 
@@ -316,12 +376,13 @@ public sealed class BattleEnchantmentSaveData {
 }
 ```
 
-### 3.8 Player Resources Load Handler
+### 3.9 Player Resources Load Handler
 
 File: `Assets/Scripts/Core/Save/PlayerResourcesLoadHandler.cs`
 
 - Applies `SaveGameData.PlayerResources` back to `PlayerContext`.
 - Uses `PlayerContext.SetResources(gold, gems)` so negative values clamp safely to `0`.
+- Applies `SaveGameData.TournamentProgress` back to `PlayerContext` via `SetTournamentProgress(...)`.
 - Wire this handler into `CompositeGameStateLoadHandler` for scenes that can execute load flows.
 
 ---
@@ -399,6 +460,17 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
   "PlayerResources": {
     "Gold": 1000,
     "Gems": 10
+  },
+  "PlayerInventory": {
+    "Entries": [
+      { "Kind": "Equipment", "DefinitionId": "eq.sword", "Quantity": 1 },
+      { "Kind": "Spell", "DefinitionId": "spell.firebolt", "Quantity": 1 },
+      { "Kind": "Item", "DefinitionId": "item.potion", "Quantity": 3 }
+    ]
+  },
+  "TournamentProgress": {
+    "CurrentRoundIndex": 3,
+    "CompletedBattles": [true, true, false, false, false, false, false]
   }
 }
 ```

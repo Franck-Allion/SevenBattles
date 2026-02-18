@@ -16,6 +16,9 @@ namespace SevenBattles.Tests.Core
             public string BattlefieldId;
             public int Gold;
             public int Gems;
+            public InventoryEntrySaveData[] InventoryEntries;
+            public int TournamentCurrentRound = 1;
+            public bool[] TournamentCompletedBattles;
 
             public void PopulateGameState(SaveGameData data)
             {
@@ -28,6 +31,17 @@ namespace SevenBattles.Tests.Core
                 {
                     Gold = Gold,
                     Gems = Gems
+                };
+
+                data.PlayerInventory = new PlayerInventorySaveData
+                {
+                    Entries = InventoryEntries ?? Array.Empty<InventoryEntrySaveData>()
+                };
+
+                data.TournamentProgress = new TournamentProgressSaveData
+                {
+                    CurrentRoundIndex = TournamentCurrentRound,
+                    CompletedBattles = TournamentCompletedBattles ?? Array.Empty<bool>()
                 };
 
                 if (!string.IsNullOrEmpty(BattlefieldId))
@@ -257,6 +271,81 @@ namespace SevenBattles.Tests.Core
         }
 
         [Test]
+        public async Task Save_IncludesPlayerInventory_WhenProvided()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "WizA" },
+                InventoryEntries = new[]
+                {
+                    new InventoryEntrySaveData
+                    {
+                        Kind = "Equipment",
+                        DefinitionId = "eq.sword",
+                        Quantity = 1
+                    },
+                    new InventoryEntrySaveData
+                    {
+                        Kind = "Item",
+                        DefinitionId = "item.potion",
+                        Quantity = 3
+                    }
+                }
+            };
+
+            var service = new SaveGameService(provider, dir);
+            await service.SaveSlotAsync(1);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            string json = File.ReadAllText(path);
+            var data = JsonUtility.FromJson<SaveGameData>(json);
+
+            Assert.IsNotNull(data.PlayerInventory);
+            Assert.IsNotNull(data.PlayerInventory.Entries);
+            Assert.AreEqual(2, data.PlayerInventory.Entries.Length);
+            Assert.AreEqual("Equipment", data.PlayerInventory.Entries[0].Kind);
+            Assert.AreEqual("eq.sword", data.PlayerInventory.Entries[0].DefinitionId);
+            Assert.AreEqual(1, data.PlayerInventory.Entries[0].Quantity);
+            Assert.AreEqual("Item", data.PlayerInventory.Entries[1].Kind);
+            Assert.AreEqual("item.potion", data.PlayerInventory.Entries[1].DefinitionId);
+            Assert.AreEqual(3, data.PlayerInventory.Entries[1].Quantity);
+        }
+
+        [Test]
+        public async Task Save_IncludesTournamentProgress_WhenProvided()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "WizA" },
+                TournamentCurrentRound = 3,
+                TournamentCompletedBattles = new[] { true, true, false, false, false, false, false }
+            };
+
+            var service = new SaveGameService(provider, dir);
+            await service.SaveSlotAsync(1);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            string json = File.ReadAllText(path);
+            var data = JsonUtility.FromJson<SaveGameData>(json);
+
+            Assert.IsNotNull(data.TournamentProgress);
+            Assert.AreEqual(3, data.TournamentProgress.CurrentRoundIndex);
+            Assert.IsNotNull(data.TournamentProgress.CompletedBattles);
+            Assert.AreEqual(7, data.TournamentProgress.CompletedBattles.Length);
+            Assert.IsTrue(data.TournamentProgress.CompletedBattles[0]);
+            Assert.IsTrue(data.TournamentProgress.CompletedBattles[1]);
+            Assert.IsFalse(data.TournamentProgress.CompletedBattles[2]);
+        }
+
+        [Test]
         public async Task Save_IncludesLevelFields_WhenProvided()
         {
             string dir = CreateTestDirectory();
@@ -406,6 +495,120 @@ namespace SevenBattles.Tests.Core
             Assert.IsNotNull(data.PlayerResources, "PlayerResources should default to a non-null DTO when missing.");
             Assert.AreEqual(0, data.PlayerResources.Gold);
             Assert.AreEqual(0, data.PlayerResources.Gems);
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_MissingPlayerInventory_DefaultsToEmpty()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            File.WriteAllText(path, "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1 }");
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "Any" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNotNull(data, "LoadSlotDataAsync should return a SaveGameData instance for valid JSON.");
+            Assert.IsNotNull(data.PlayerInventory, "PlayerInventory should default to a non-null DTO when missing.");
+            Assert.IsNotNull(data.PlayerInventory.Entries, "PlayerInventory.Entries should default to a non-null array when missing.");
+            Assert.AreEqual(0, data.PlayerInventory.Entries.Length);
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_MissingTournamentProgress_DefaultsSafely()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            File.WriteAllText(path, "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1 }");
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "Any" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNotNull(data);
+            Assert.IsNotNull(data.TournamentProgress);
+            Assert.AreEqual(1, data.TournamentProgress.CurrentRoundIndex);
+            Assert.IsNotNull(data.TournamentProgress.CompletedBattles);
+            Assert.AreEqual(7, data.TournamentProgress.CompletedBattles.Length);
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_CorruptTournamentProgress_IsSanitized()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            File.WriteAllText(
+                path,
+                "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1, \"TournamentProgress\": { \"CurrentRoundIndex\": -15, \"CompletedBattles\": [ true, true, true, true, true, true, true, true, true ] } }");
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "Any" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNotNull(data);
+            Assert.IsNotNull(data.TournamentProgress);
+            Assert.AreEqual(7, data.TournamentProgress.CurrentRoundIndex);
+            Assert.IsNotNull(data.TournamentProgress.CompletedBattles);
+            Assert.AreEqual(7, data.TournamentProgress.CompletedBattles.Length);
+            for (int i = 0; i < data.TournamentProgress.CompletedBattles.Length; i++)
+            {
+                Assert.IsTrue(data.TournamentProgress.CompletedBattles[i]);
+            }
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_CorruptPlayerInventoryEntries_AreSanitized()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            File.WriteAllText(
+                path,
+                "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1, \"PlayerInventory\": { \"Entries\": [ { \"Kind\": \"Unknown\", \"DefinitionId\": \"bad\", \"Quantity\": -8 }, { \"Kind\": \"Item\", \"DefinitionId\": \"item.potion\", \"Quantity\": 0 }, { \"Kind\": \"Spell\", \"DefinitionId\": \"\", \"Quantity\": 10 }, { \"Kind\": \"Equipment\", \"DefinitionId\": \"eq.sword\", \"Quantity\": 99 } ] } }");
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "Any" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNotNull(data);
+            Assert.IsNotNull(data.PlayerInventory);
+            Assert.IsNotNull(data.PlayerInventory.Entries);
+            Assert.AreEqual(2, data.PlayerInventory.Entries.Length);
+
+            Assert.AreEqual("Item", data.PlayerInventory.Entries[0].Kind);
+            Assert.AreEqual("item.potion", data.PlayerInventory.Entries[0].DefinitionId);
+            Assert.AreEqual(1, data.PlayerInventory.Entries[0].Quantity);
+
+            Assert.AreEqual("Equipment", data.PlayerInventory.Entries[1].Kind);
+            Assert.AreEqual("eq.sword", data.PlayerInventory.Entries[1].DefinitionId);
+            Assert.AreEqual(1, data.PlayerInventory.Entries[1].Quantity);
         }
     }
 }

@@ -5,6 +5,8 @@ using UnityEngine.Localization;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Contracts;
+using SevenBattles.Core.Players;
+using SevenBattles.Core.Preload;
 
 using SevenBattles.Core.Diagnostics;
 namespace SevenBattles.UI
@@ -44,8 +46,23 @@ namespace SevenBattles.UI
         [SerializeField, Tooltip("If enabled, the popup message is replaced by the localized XP summary (UI.Common/BattleResult.XpSummary) after XP is awarded.")]
         private bool _showXpSummaryMessage = true;
 
+        [Header("Rewards (optional)")]
+        [SerializeField] private BattleRewardPresenter _rewardPresenter;
+        [SerializeField] private MonoBehaviour _battlefieldServiceBehaviour;
+        [SerializeField] private MonoBehaviour _battleSessionServiceBehaviour;
+
+        [Header("Post-Victory Transition")]
+        [SerializeField] private string _preparationSceneName = "PreparationScene";
+        [SerializeField] private ScenePreloadManifest _preparationScenePreload;
+        [SerializeField] private float _returnFadeOutDuration = 0.5f;
+        [SerializeField] private float _returnFadeInDuration = 0.5f;
+        [SerializeField] private Color _returnFadeColor = Color.black;
+
         private IBattleTurnController _controller;
         private IBattleXpResultProvider _xpResultProvider;
+        private IBattlefieldService _battlefieldService;
+        private IBattleSessionService _battleSessionService;
+        private PlayerContext _playerContext;
         private bool _interactionLocked;
         [SerializeField, Tooltip("Delay in seconds before showing the victory/defeat popup after the battle ends. Uses unscaled time.")]
         private float _popupDelaySeconds = 0.5f;
@@ -59,6 +76,12 @@ namespace SevenBattles.UI
         private BattleResultXpProgressPresenter _defeatXpPresenter;
 
         private bool _battleOutcomeHandled;
+        private bool _battleAutoSaved;
+        private bool _returnTransitionInProgress;
+        private bool _victoryRewardsApplied;
+        private bool _tournamentProgressApplied;
+        private BattleRewardResult _cachedVictoryRewards;
+        private BattleOutcome _lastOutcome = BattleOutcome.None;
         private Coroutine _popupRoutine;
         private Coroutine _xpProgressRoutine;
 
@@ -123,6 +146,8 @@ namespace SevenBattles.UI
                 _controller.SetInteractionLocked(false);
                 _interactionLocked = false;
             }
+
+            _returnTransitionInProgress = false;
         }
 
         private void ResolveController()
@@ -199,6 +224,14 @@ namespace SevenBattles.UI
             }
 
             _battleOutcomeHandled = true;
+            _battleAutoSaved = false;
+            _lastOutcome = outcome;
+            if (outcome == BattleOutcome.PlayerVictory)
+            {
+                _victoryRewardsApplied = false;
+                _tournamentProgressApplied = false;
+                _cachedVictoryRewards = null;
+            }
 
             if (_popupRoutine != null)
             {
@@ -271,7 +304,48 @@ namespace SevenBattles.UI
                 _victoryPopup.Show(OnPopupConfirmed, OnPopupCancelled);
             }
 
+            var rewards = GetOrComputeVictoryRewards();
+            if (_rewardPresenter != null)
+            {
+                if (rewards != null)
+                {
+                    _rewardPresenter.Show(rewards);
+                }
+                else
+                {
+                    _rewardPresenter.Clear();
+                }
+            }
+
+            TryAutoSaveBattleProgress();
             TryPlayXpProgress(_victoryPopup, _victoryXpPresenter);
+        }
+
+        private BattleRewardResult GetOrComputeVictoryRewards()
+        {
+            if (_cachedVictoryRewards != null)
+            {
+                return _cachedVictoryRewards;
+            }
+
+            var battlefieldService = ResolveBattlefieldService();
+            var rewardTable = battlefieldService?.Current?.RewardTable;
+            if (rewardTable == null)
+            {
+                TryApplyTournamentProgressOnly();
+                return null;
+            }
+
+            var rewardService = new BattleRewardService();
+            _cachedVictoryRewards = rewardService.ComputeRewards(rewardTable);
+
+            if (!_victoryRewardsApplied)
+            {
+                ApplyRewardsToPlayerContext(_cachedVictoryRewards);
+                _victoryRewardsApplied = true;
+            }
+
+            return _cachedVictoryRewards;
         }
 
         private void ShowDefeatPopup()
@@ -298,7 +372,67 @@ namespace SevenBattles.UI
                 popup.Show(OnPopupConfirmed, OnPopupCancelled);
             }
 
+            TryAutoSaveBattleProgress();
             TryPlayXpProgress(popup, presenterOverride);
+        }
+
+        private void TryAutoSaveBattleProgress()
+        {
+            if (_battleAutoSaved)
+            {
+                return;
+            }
+
+            var context = FindPlayerContext();
+            if (context == null)
+            {
+                SBLog.Warn("BattleResultHUD: Autosave skipped because PlayerContext could not be resolved.", this);
+                return;
+            }
+
+            if (TrySavePlayerContextAutosave(context, out string path))
+            {
+                _battleAutoSaved = true;
+            }
+            else
+            {
+                SBLog.Warn($"BattleResultHUD: Autosave failed for path '{path}'.", this);
+            }
+        }
+
+        private static bool TrySavePlayerContextAutosave(PlayerContext context, out string path)
+        {
+            path = null;
+            if (context == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                var utilityType = Type.GetType("SevenBattles.Core.Save.PlayerContextAutoSaveUtility, SevenBattles.Core");
+                if (utilityType == null)
+                {
+                    return false;
+                }
+
+                var method = utilityType.GetMethod(
+                    "TrySaveFromPlayerContext",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                if (method == null)
+                {
+                    return false;
+                }
+
+                object[] args = new object[] { context, null, null };
+                object invokeResult = method.Invoke(null, args);
+                path = args[1] as string;
+                return invokeResult is bool ok && ok;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private void TryPlayXpProgress(ConfirmationMessageBoxHUD popup, BattleResultXpProgressPresenter presenterOverride)
@@ -547,8 +681,190 @@ namespace SevenBattles.UI
             }
         }
 
+        private IBattlefieldService ResolveBattlefieldService()
+        {
+            if (_battlefieldService != null)
+            {
+                return _battlefieldService;
+            }
+
+            if (_battlefieldServiceBehaviour != null)
+            {
+                _battlefieldService = _battlefieldServiceBehaviour as IBattlefieldService;
+            }
+
+            if (_battlefieldService == null)
+            {
+                var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is IBattlefieldService service)
+                    {
+                        _battlefieldService = service;
+                        _battlefieldServiceBehaviour = behaviours[i];
+                        break;
+                    }
+                }
+            }
+
+            return _battlefieldService;
+        }
+
+        private void ApplyRewardsToPlayerContext(BattleRewardResult rewards)
+        {
+            if (rewards == null)
+            {
+                return;
+            }
+
+            var context = FindPlayerContext();
+            if (context == null)
+            {
+                SBLog.Warn("BattleResultHUD: PlayerContext not found. Rewards were not applied to player state.", this);
+                return;
+            }
+
+            context.SetGold(context.Gold + rewards.GoldAmount);
+
+            var bonusRewards = rewards.BonusRewards;
+            if (bonusRewards == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < bonusRewards.Length; i++)
+            {
+                var bonus = bonusRewards[i];
+                if (bonus == null)
+                {
+                    continue;
+                }
+
+                switch (bonus.Type)
+                {
+                    case BattleRewardType.Gems:
+                        context.SetGems(context.Gems + bonus.Amount);
+                        break;
+                    case BattleRewardType.Equipment:
+                        context.Inventory?.AddEquipment(bonus.EquipmentDef);
+                        break;
+                    case BattleRewardType.Spell:
+                        context.Inventory?.AddSpell(bonus.SpellDef);
+                        break;
+                    case BattleRewardType.Item:
+                        context.Inventory?.AddItem(bonus.ItemDef, bonus.Amount);
+                        break;
+                }
+            }
+
+            TryApplyTournamentProgressOnly();
+        }
+
+        private void TryApplyTournamentProgressOnly()
+        {
+            if (_tournamentProgressApplied)
+            {
+                return;
+            }
+
+            var context = FindPlayerContext();
+            if (context == null)
+            {
+                return;
+            }
+
+            if (TryApplyTournamentVictoryProgress(context))
+            {
+                _tournamentProgressApplied = true;
+            }
+        }
+
+        private bool TryApplyTournamentVictoryProgress(PlayerContext context)
+        {
+            if (context == null)
+            {
+                return false;
+            }
+
+            var sessionService = ResolveBattleSessionService();
+            var session = sessionService != null ? sessionService.CurrentSession : null;
+            if (session == null)
+            {
+                return false;
+            }
+
+            if (!string.Equals(session.BattleType, "tournament", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (!TournamentMissionIdUtil.TryParseRoundIndex(session.CampaignMissionId, out int roundIndex))
+            {
+                return false;
+            }
+
+            context.MarkTournamentBattleCompleted(roundIndex, TournamentDefinition.BattleCount);
+            return true;
+        }
+
+        private PlayerContext FindPlayerContext()
+        {
+            if (_playerContext != null)
+            {
+                return _playerContext;
+            }
+
+            var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+            const System.Reflection.BindingFlags FLAGS = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+            for (int i = 0; i < behaviours.Length; i++)
+            {
+                var behaviour = behaviours[i];
+                if (behaviour == null)
+                {
+                    continue;
+                }
+
+                var fields = behaviour.GetType().GetFields(FLAGS);
+                for (int j = 0; j < fields.Length; j++)
+                {
+                    var field = fields[j];
+                    if (field.FieldType != typeof(PlayerContext))
+                    {
+                        continue;
+                    }
+
+                    var value = field.GetValue(behaviour) as PlayerContext;
+                    if (value != null)
+                    {
+                        _playerContext = value;
+                        return _playerContext;
+                    }
+                }
+            }
+
+            var contexts = Resources.FindObjectsOfTypeAll<PlayerContext>();
+            for (int i = 0; i < contexts.Length; i++)
+            {
+                if (contexts[i] == null)
+                {
+                    continue;
+                }
+
+                _playerContext = contexts[i];
+                return _playerContext;
+            }
+
+            return null;
+        }
+
         private void OnPopupConfirmed()
         {
+            if (_lastOutcome == BattleOutcome.PlayerVictory)
+            {
+                TryReturnToPreparationScene();
+                return;
+            }
+
             ReleaseInteractionLock();
         }
 
@@ -564,6 +880,71 @@ namespace SevenBattles.UI
                 _controller.SetInteractionLocked(false);
                 _interactionLocked = false;
             }
+        }
+
+        private void TryReturnToPreparationScene()
+        {
+            if (_returnTransitionInProgress)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_preparationSceneName))
+            {
+                SBLog.Error("BattleResultHUD: Preparation scene name is empty. Cannot return after victory.", this);
+                ReleaseInteractionLock();
+                return;
+            }
+
+            _returnTransitionInProgress = true;
+
+            bool started = SceneTransitionFader.TryStartTransition(
+                _preparationSceneName,
+                _preparationScenePreload,
+                _returnFadeOutDuration,
+                _returnFadeInDuration,
+                _returnFadeColor,
+                HandleReturnTransitionFailed);
+
+            if (!started)
+            {
+                HandleReturnTransitionFailed();
+            }
+        }
+
+        private void HandleReturnTransitionFailed()
+        {
+            _returnTransitionInProgress = false;
+            ReleaseInteractionLock();
+        }
+
+        private IBattleSessionService ResolveBattleSessionService()
+        {
+            if (_battleSessionService != null)
+            {
+                return _battleSessionService;
+            }
+
+            if (_battleSessionServiceBehaviour != null)
+            {
+                _battleSessionService = _battleSessionServiceBehaviour as IBattleSessionService;
+            }
+
+            if (_battleSessionService == null)
+            {
+                var behaviours = UnityEngine.Object.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None);
+                for (int i = 0; i < behaviours.Length; i++)
+                {
+                    if (behaviours[i] is IBattleSessionService service)
+                    {
+                        _battleSessionService = service;
+                        _battleSessionServiceBehaviour = behaviours[i];
+                        break;
+                    }
+                }
+            }
+
+            return _battleSessionService;
         }
     }
 }

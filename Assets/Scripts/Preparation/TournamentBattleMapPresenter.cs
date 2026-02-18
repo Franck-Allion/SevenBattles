@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Players;
 
 namespace SevenBattles.Preparation
 {
@@ -11,6 +12,7 @@ namespace SevenBattles.Preparation
         [SerializeField] private TournamentDefinition _tournament;
         [SerializeField] private Camera _camera;
         [SerializeField] private Transform _battleRoot;
+        [SerializeField] private PlayerContext _playerContext;
 
         [Header("Ellipse Rendering")]
         [SerializeField, Range(12, 128)] private int _segments = 48;
@@ -19,6 +21,7 @@ namespace SevenBattles.Preparation
         [SerializeField] private Color _outlineColor = new Color(0.9f, 0.8f, 0.6f, 0.65f);
         [SerializeField] private Color _hoverColor = new Color(1f, 0.9f, 0.35f, 1f);
         [SerializeField] private Color _hoverOtherColor = new Color(0.7f, 0.7f, 0.7f, 0.9f);
+        [SerializeField] private Color _completedColor = new Color(0.35f, 0.85f, 0.45f, 0.95f);
         [SerializeField] private float _hoverSpeed = 10f;
         [SerializeField] private int _sortingOrder = 1;
         [SerializeField] private float _ellipseZOffset = -0.05f;
@@ -40,6 +43,7 @@ namespace SevenBattles.Preparation
         private bool _interactionsEnabled = true;
         private bool _cursorActive;
         private bool _defaultCursorApplied;
+        private bool _progressSubscribed;
         private int _lastHoveredIndex = -1;
         private TournamentBattleDefinition _lastHoveredDefinition;
 
@@ -47,7 +51,7 @@ namespace SevenBattles.Preparation
         public event Action<TournamentBattleDefinition, int> BattleHoverChanged;
 
         public TournamentDefinition TournamentDefinition => _tournament;
-        public int CurrentRoundIndex => GetClampedRoundIndex();
+        public int CurrentRoundIndex => ResolveCurrentRoundIndex();
 
         private void Awake()
         {
@@ -56,6 +60,8 @@ namespace SevenBattles.Preparation
 
         private void OnEnable()
         {
+            ResolvePlayerContext();
+            SubscribeProgress();
             BuildViews();
             ApplyDefaultCursor();
             ClearHoverState();
@@ -63,6 +69,7 @@ namespace SevenBattles.Preparation
 
         private void OnDisable()
         {
+            UnsubscribeProgress();
             ClearViews();
             ApplyDefaultCursor();
             ClearHoverState();
@@ -88,7 +95,7 @@ namespace SevenBattles.Preparation
                 return;
             }
 
-            int currentRoundIndex = GetClampedRoundIndex();
+            int currentRoundIndex = ResolveCurrentRoundIndex();
             var screen = Input.mousePosition;
             var toPlane = _battleRoot.position - _camera.transform.position;
             screen.z = Vector3.Dot(toPlane, _camera.transform.forward);
@@ -96,28 +103,36 @@ namespace SevenBattles.Preparation
             var local = _battleRoot.InverseTransformPoint(world);
             var localPoint = new Vector2(local.x, local.y);
 
-            BattleView hoveredView = null;
+            BattleView hoveredSelectableView = null;
+            BattleView hoveredInfoView = null;
 
             for (int i = 0; i < _views.Count; i++)
             {
                 var view = _views[i];
-                bool hovered = view.Definition != null && view.Definition.Ellipse.ContainsPoint(localPoint);
-                float target = hovered ? 1f : 0f;
+                bool containsPoint = view.Definition != null &&
+                                     view.Definition.Ellipse.ContainsPoint(localPoint);
+                if (containsPoint && hoveredInfoView == null)
+                {
+                    hoveredInfoView = view;
+                }
+
+                bool hoveredSelectable = containsPoint && IsBattleSelectable(view, currentRoundIndex);
+                float target = hoveredSelectable ? 1f : 0f;
                 view.Hover = Mathf.MoveTowards(view.Hover, target, _hoverSpeed * Time.deltaTime);
                 ApplyHover(view, currentRoundIndex);
-                if (hovered)
+                if (hoveredSelectable)
                 {
-                    hoveredView = view;
+                    hoveredSelectableView = view;
                 }
             }
 
-            bool isNextBattleHovered = hoveredView != null && hoveredView.Index == currentRoundIndex;
+            bool isNextBattleHovered = hoveredSelectableView != null && hoveredSelectableView.Index == currentRoundIndex;
             UpdateHoverCursor(isNextBattleHovered);
-            UpdateHoverState(hoveredView);
+            UpdateHoverState(hoveredInfoView);
 
-            if (hoveredView != null && Input.GetMouseButtonDown(0))
+            if (hoveredSelectableView != null && Input.GetMouseButtonDown(0))
             {
-                BattleClicked?.Invoke(hoveredView.Definition, hoveredView.Index);
+                BattleClicked?.Invoke(hoveredSelectableView.Definition, hoveredSelectableView.Index);
             }
         }
 
@@ -138,7 +153,7 @@ namespace SevenBattles.Preparation
 
             if (!_interactionsEnabled)
             {
-                int currentRoundIndex = GetClampedRoundIndex();
+                int currentRoundIndex = ResolveCurrentRoundIndex();
                 for (int i = 0; i < _views.Count; i++)
                 {
                     var view = _views[i];
@@ -231,6 +246,8 @@ namespace SevenBattles.Preparation
             {
                 _battleRoot = transform;
             }
+
+            ResolvePlayerContext();
         }
 
         private void BuildViews()
@@ -251,6 +268,7 @@ namespace SevenBattles.Preparation
 
             var material = ResolveLineMaterial();
             int count = battles.Length;
+            int currentRoundIndex = ResolveCurrentRoundIndex();
 
             for (int i = 0; i < count; i++)
             {
@@ -269,7 +287,8 @@ namespace SevenBattles.Preparation
                 ConfigureLineRenderer(line, material);
                 BuildEllipseLine(line, ellipse);
 
-                if (battle.EnemyPrefab != null)
+                bool isCompleted = IsBattleCompleted(i + 1);
+                if (!isCompleted && battle.EnemyPrefab != null)
                 {
                     var enemy = Instantiate(battle.EnemyPrefab, root.transform);
                     enemy.transform.localPosition = new Vector3(battle.PrefabOffset.x, battle.PrefabOffset.y, 0f);
@@ -277,7 +296,9 @@ namespace SevenBattles.Preparation
                     SetDownFacingIfCharacter4D(enemy);
                 }
 
-                _views.Add(new BattleView(root.transform, line, battle, i + 1));
+                var view = new BattleView(root.transform, line, battle, i + 1);
+                _views.Add(view);
+                ApplyHover(view, currentRoundIndex);
             }
         }
 
@@ -353,6 +374,15 @@ namespace SevenBattles.Preparation
                 return;
             }
 
+            if (IsBattleCompleted(view.Index))
+            {
+                view.Line.startColor = _completedColor;
+                view.Line.endColor = _completedColor;
+                view.Line.startWidth = _outlineWidth;
+                view.Line.endWidth = _outlineWidth;
+                return;
+            }
+
             var targetColor = view.Index == currentRoundIndex ? _hoverColor : _hoverOtherColor;
             var color = Color.Lerp(_outlineColor, targetColor, view.Hover);
             float width = Mathf.Lerp(_outlineWidth, _hoverWidth, view.Hover);
@@ -364,12 +394,89 @@ namespace SevenBattles.Preparation
 
         private int GetClampedRoundIndex()
         {
-            if (_views.Count == 0)
+            int maxRound = _views.Count;
+            if (maxRound == 0 && _tournament != null && _tournament.Battles != null)
+            {
+                maxRound = _tournament.Battles.Length;
+            }
+
+            if (maxRound <= 0)
             {
                 return 1;
             }
 
-            return Mathf.Clamp(_currentRoundIndex, 1, _views.Count);
+            return Mathf.Clamp(_currentRoundIndex, 1, maxRound);
+        }
+
+        private int ResolveCurrentRoundIndex()
+        {
+            if (_playerContext != null)
+            {
+                int maxRound = _views.Count > 0 ? _views.Count : (_tournament != null && _tournament.Battles != null ? _tournament.Battles.Length : 1);
+                return Mathf.Clamp(_playerContext.CurrentTournamentRoundIndex, 1, Mathf.Max(1, maxRound));
+            }
+
+            return GetClampedRoundIndex();
+        }
+
+        private bool IsBattleCompleted(int roundIndex)
+        {
+            return _playerContext != null && _playerContext.IsTournamentBattleCompleted(roundIndex);
+        }
+
+        private bool IsBattleSelectable(BattleView view, int currentRoundIndex)
+        {
+            if (view == null)
+            {
+                return false;
+            }
+
+            return !IsBattleCompleted(view.Index) && view.Index == currentRoundIndex;
+        }
+
+        private void ResolvePlayerContext()
+        {
+            if (_playerContext != null)
+            {
+                return;
+            }
+
+            var contexts = Resources.FindObjectsOfTypeAll<PlayerContext>();
+            for (int i = 0; i < contexts.Length; i++)
+            {
+                if (contexts[i] != null)
+                {
+                    _playerContext = contexts[i];
+                    return;
+                }
+            }
+        }
+
+        private void SubscribeProgress()
+        {
+            if (_progressSubscribed || _playerContext == null)
+            {
+                return;
+            }
+
+            _playerContext.TournamentProgressChanged += HandleTournamentProgressChanged;
+            _progressSubscribed = true;
+        }
+
+        private void UnsubscribeProgress()
+        {
+            if (!_progressSubscribed || _playerContext == null)
+            {
+                return;
+            }
+
+            _playerContext.TournamentProgressChanged -= HandleTournamentProgressChanged;
+            _progressSubscribed = false;
+        }
+
+        private void HandleTournamentProgressChanged()
+        {
+            BuildViews();
         }
 
         private static void SetDownFacingIfCharacter4D(GameObject instance)

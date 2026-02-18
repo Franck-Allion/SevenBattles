@@ -58,6 +58,7 @@ namespace SevenBattles.Core.Save
                 ? Application.persistentDataPath
                 : _baseDirectoryOverride;
 
+            SBLog.Info($"SaveGameServiceComponent: Save base directory is '{baseDir}'.", this);
             _service = new SaveGameService(_gameStateProvider, baseDir);
         }
 

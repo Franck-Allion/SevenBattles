@@ -70,5 +70,36 @@ namespace SevenBattles.Tests.Core
             Object.DestroyImmediate(go);
             Object.DestroyImmediate(context);
         }
+
+        [Test]
+        public void ApplyLoadedGame_RestoresTournamentProgress()
+        {
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            context.SetTournamentProgress(1, new[] { false, false, false, false, false, false, false });
+
+            var go = new GameObject("PlayerResourcesLoadHandler");
+            var handler = go.AddComponent<PlayerResourcesLoadHandler>();
+            SetPrivate(handler, "_playerContext", context);
+
+            var data = new SaveGameData
+            {
+                TournamentProgress = new TournamentProgressSaveData
+                {
+                    CurrentRoundIndex = 4,
+                    CompletedBattles = new[] { true, true, true, false, false, false, false }
+                }
+            };
+
+            handler.ApplyLoadedGame(data);
+
+            Assert.AreEqual(4, context.CurrentTournamentRoundIndex);
+            Assert.IsTrue(context.IsTournamentBattleCompleted(1));
+            Assert.IsTrue(context.IsTournamentBattleCompleted(2));
+            Assert.IsTrue(context.IsTournamentBattleCompleted(3));
+            Assert.IsFalse(context.IsTournamentBattleCompleted(4));
+
+            Object.DestroyImmediate(go);
+            Object.DestroyImmediate(context);
+        }
     }
 }

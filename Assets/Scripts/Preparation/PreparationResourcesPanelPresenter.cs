@@ -1,8 +1,11 @@
 using System;
 using System.Globalization;
+using System.IO;
 using TMPro;
 using UnityEngine;
 using SevenBattles.Core.Players;
+
+using SevenBattles.Core.Diagnostics;
 
 namespace SevenBattles.Preparation
 {
@@ -17,8 +20,11 @@ namespace SevenBattles.Preparation
         private TMP_Text _goldValueTMP;
         [SerializeField, Tooltip("TMP label showing the current gems amount.")]
         private TMP_Text _gemsValueTMP;
+        [SerializeField, Tooltip("If enabled, logs the save slots directory path once when this panel is enabled.")]
+        private bool _logSaveDirectoryOnEnable = true;
 
         private bool _isSubscribed;
+        private bool _saveDirectoryLogged;
 
         private void Awake()
         {
@@ -28,6 +34,7 @@ namespace SevenBattles.Preparation
         private void OnEnable()
         {
             AutoResolveTextReferences();
+            TryLogSaveDirectoryHint();
             Subscribe();
             Refresh();
         }
@@ -95,6 +102,19 @@ namespace SevenBattles.Preparation
                     _gemsValueTMP = tmp;
                 }
             }
+        }
+
+        private void TryLogSaveDirectoryHint()
+        {
+            if (!_logSaveDirectoryOnEnable || _saveDirectoryLogged)
+            {
+                return;
+            }
+
+            string saveDirectory = Path.Combine(Application.persistentDataPath, "Saves");
+            string contextName = _playerContext != null ? _playerContext.name : "<none>";
+            SBLog.Info($"PreparationResourcesPanelPresenter: PlayerContext='{contextName}'. Save slots path hint: '{saveDirectory}'.");
+            _saveDirectoryLogged = true;
         }
 
         public void Refresh()

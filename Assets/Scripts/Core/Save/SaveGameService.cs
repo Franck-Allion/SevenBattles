@@ -3,6 +3,8 @@ using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using UnityEngine;
+using SevenBattles.Core.Battle;
+using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
 
 using SevenBattles.Core.Diagnostics;
@@ -150,6 +152,27 @@ namespace SevenBattles.Core.Save
     }
 
     [Serializable]
+    public sealed class InventoryEntrySaveData
+    {
+        public string Kind;
+        public string DefinitionId;
+        public int Quantity;
+    }
+
+    [Serializable]
+    public sealed class PlayerInventorySaveData
+    {
+        public InventoryEntrySaveData[] Entries;
+    }
+
+    [Serializable]
+    public sealed class TournamentProgressSaveData
+    {
+        public int CurrentRoundIndex;
+        public bool[] CompletedBattles;
+    }
+
+    [Serializable]
     public sealed class SaveGameData
     {
         public string Timestamp;
@@ -160,6 +183,8 @@ namespace SevenBattles.Core.Save
         public BattleSessionSaveData BattleSession; // NEW: Original battle configuration
         public BattleEnchantmentSaveData[] BattleEnchantments;
         public PlayerResourcesSaveData PlayerResources;
+        public PlayerInventorySaveData PlayerInventory;
+        public TournamentProgressSaveData TournamentProgress;
     }
 
     public sealed class SaveGameService : ISaveGameService
@@ -189,6 +214,7 @@ namespace SevenBattles.Core.Save
             {
                 var result = new SaveSlotMetadata[MaxSlots];
                 string directory = GetSaveDirectory();
+                SBLog.Info($"SaveGameService: Scanning save slots in '{directory}'.");
 
                 try
                 {
@@ -203,6 +229,7 @@ namespace SevenBattles.Core.Save
                 {
                     int slotIndex = i + 1;
                     string path = GetSlotFilePath(directory, slotIndex);
+                    SBLog.Info($"SaveGameService: Load metadata slot {slotIndex} path '{path}'.");
 
                     if (!File.Exists(path))
                     {
@@ -227,7 +254,9 @@ namespace SevenBattles.Core.Save
                         }
 
                         bool hasSave = !string.IsNullOrEmpty(data.Timestamp) ||
-                                       (data.PlayerSquad != null && data.PlayerSquad.WizardIds != null && data.PlayerSquad.WizardIds.Length > 0);
+                                       (data.PlayerSquad != null && data.PlayerSquad.WizardIds != null && data.PlayerSquad.WizardIds.Length > 0) ||
+                                       (data.PlayerInventory != null && data.PlayerInventory.Entries != null && data.PlayerInventory.Entries.Length > 0) ||
+                                       HasTournamentProgress(data.TournamentProgress);
 
                         string timestamp = data.Timestamp;
                         int runNumber = data.RunNumber;
@@ -266,8 +295,10 @@ namespace SevenBattles.Core.Save
                 }
 
                 string path = GetSlotFilePath(directory, slotIndex);
+                SBLog.Info($"SaveGameService: Load slot {slotIndex} from '{path}'.");
                 if (!File.Exists(path))
                 {
+                    SBLog.Info($"SaveGameService: Slot {slotIndex} file not found at '{path}'.");
                     return null;
                 }
 
@@ -318,6 +349,8 @@ namespace SevenBattles.Core.Save
                     }
 
                     data.PlayerResources = SanitizePlayerResources(data.PlayerResources);
+                    data.PlayerInventory = SanitizePlayerInventory(data.PlayerInventory);
+                    data.TournamentProgress = SanitizeTournamentProgress(data.TournamentProgress);
 
                     return data;
                 }
@@ -502,6 +535,8 @@ namespace SevenBattles.Core.Save
             }
 
             data.PlayerResources = SanitizePlayerResources(data.PlayerResources);
+            data.PlayerInventory = SanitizePlayerInventory(data.PlayerInventory);
+            data.TournamentProgress = SanitizeTournamentProgress(data.TournamentProgress);
 
             return data;
         }
@@ -529,6 +564,118 @@ namespace SevenBattles.Core.Save
                 Gold = gold,
                 Gems = gems
             };
+        }
+
+        private static PlayerInventorySaveData SanitizePlayerInventory(PlayerInventorySaveData value)
+        {
+            if (value == null || value.Entries == null || value.Entries.Length == 0)
+            {
+                return new PlayerInventorySaveData
+                {
+                    Entries = Array.Empty<InventoryEntrySaveData>()
+                };
+            }
+
+            var entries = new System.Collections.Generic.List<InventoryEntrySaveData>(value.Entries.Length);
+            for (int i = 0; i < value.Entries.Length; i++)
+            {
+                var entry = value.Entries[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.DefinitionId))
+                {
+                    continue;
+                }
+
+                if (!Enum.TryParse(entry.Kind, ignoreCase: true, out InventoryEntry.EntryKind parsedKind))
+                {
+                    continue;
+                }
+
+                int quantity = parsedKind == InventoryEntry.EntryKind.Item
+                    ? Mathf.Max(1, entry.Quantity)
+                    : 1;
+
+                entries.Add(new InventoryEntrySaveData
+                {
+                    Kind = parsedKind.ToString(),
+                    DefinitionId = entry.DefinitionId,
+                    Quantity = quantity
+                });
+            }
+
+            return new PlayerInventorySaveData
+            {
+                Entries = entries.Count > 0 ? entries.ToArray() : Array.Empty<InventoryEntrySaveData>()
+            };
+        }
+
+        private static TournamentProgressSaveData SanitizeTournamentProgress(TournamentProgressSaveData value)
+        {
+            int totalBattles = TournamentDefinition.BattleCount;
+            bool[] completed = new bool[totalBattles];
+
+            if (value != null && value.CompletedBattles != null && value.CompletedBattles.Length > 0)
+            {
+                Array.Copy(value.CompletedBattles, completed, Mathf.Min(totalBattles, value.CompletedBattles.Length));
+            }
+
+            int currentRound = value != null ? value.CurrentRoundIndex : 1;
+            currentRound = Mathf.Clamp(currentRound, 1, totalBattles);
+            if (completed[currentRound - 1])
+            {
+                currentRound = ResolveFirstIncompleteOrLast(completed);
+            }
+
+            return new TournamentProgressSaveData
+            {
+                CurrentRoundIndex = currentRound,
+                CompletedBattles = completed
+            };
+        }
+
+        private static int ResolveFirstIncompleteOrLast(bool[] completed)
+        {
+            if (completed == null || completed.Length == 0)
+            {
+                return 1;
+            }
+
+            for (int i = 0; i < completed.Length; i++)
+            {
+                if (!completed[i])
+                {
+                    return i + 1;
+                }
+            }
+
+            return completed.Length;
+        }
+
+        private static bool HasTournamentProgress(TournamentProgressSaveData value)
+        {
+            if (value == null)
+            {
+                return false;
+            }
+
+            if (value.CurrentRoundIndex > 1)
+            {
+                return true;
+            }
+
+            if (value.CompletedBattles == null || value.CompletedBattles.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < value.CompletedBattles.Length; i++)
+            {
+                if (value.CompletedBattles[i])
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

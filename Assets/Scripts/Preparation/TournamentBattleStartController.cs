@@ -153,6 +153,11 @@ namespace SevenBattles.Preparation
                 return;
             }
 
+            if (_playerContext != null && _playerContext.IsTournamentBattleCompleted(index))
+            {
+                return;
+            }
+
             if (_confirmation == null)
             {
                 SBLog.Error("TournamentBattleStartController: No confirmation message box assigned or found in the scene.", this);
@@ -167,7 +172,7 @@ namespace SevenBattles.Preparation
                 _confirmMessage,
                 _confirmLabel,
                 _cancelLabel,
-                () => ConfirmStartBattle(battle),
+                () => ConfirmStartBattle(battle, index),
                 CancelStartBattle);
         }
 
@@ -181,14 +186,14 @@ namespace SevenBattles.Preparation
             }
         }
 
-        private void ConfirmStartBattle(TournamentBattleDefinition battle)
+        private void ConfirmStartBattle(TournamentBattleDefinition battle, int roundIndex)
         {
             if (_transitioning)
             {
                 return;
             }
 
-            if (!TryBuildBattleSessionConfig(battle, out var config))
+            if (!TryBuildBattleSessionConfig(battle, roundIndex, out var config))
             {
                 SBLog.Error("TournamentBattleStartController: Battle start aborted due to missing data.", this);
                 _inputLocked = false;
@@ -249,7 +254,7 @@ namespace SevenBattles.Preparation
             }
         }
 
-        private bool TryBuildBattleSessionConfig(TournamentBattleDefinition battle, out BattleSessionConfig config)
+        private bool TryBuildBattleSessionConfig(TournamentBattleDefinition battle, int roundIndex, out BattleSessionConfig config)
         {
             config = null;
 
@@ -296,6 +301,7 @@ namespace SevenBattles.Preparation
 
             config = new BattleSessionConfig(playerLoadouts, enemyLoadouts, "tournament", 0)
             {
+                CampaignMissionId = TournamentMissionIdUtil.BuildMissionId(roundIndex),
                 Battlefield = battlefield,
                 BattlefieldId = battlefield != null ? battlefield.Id : null
             };

@@ -9,6 +9,10 @@
   - `TournamentDefinition.Battles` holds 7 `TournamentBattleDefinition` entries in order.
 - `Assets/Scripts/Core/Battle/TournamentBattleDefinition.cs`
   - Fields: `Battlefield`, `EnemySquad`, `EnemyPrefab`, `Ellipse`, `PrefabOffset`, `PrefabScale`.
+- `Assets/Scripts/Core/Players/TournamentProgressState.cs`
+  - Persistent completed-battle flags + current unlocked round index (stored on `PlayerContext`).
+- `Assets/Scripts/Core/Battle/TournamentMissionIdUtil.cs`
+  - Encodes/decodes the tournament round into `BattleSessionConfig.CampaignMissionId` for battle->preparation progression handoff.
 - `Assets/Scripts/Core/Players/PlayerSquad.cs`
   - `LocalizedSquadName` stores the localized squad title used by preparation hover UI.
   - `UnitLoadouts` still provides the per-unit roster/spell loadouts.
@@ -18,8 +22,12 @@
 ## Runtime Components (Preparation)
 - `Assets/Scripts/Preparation/TournamentBattleMapPresenter.cs`
   - Spawns one ellipse outline + enemy prefab per battle and handles hover highlighting.
+  - Reads `PlayerContext` tournament progression:
+    - Completed battles keep ellipse visible and switch to completed color.
+    - Enemy prefab is hidden for completed battles.
+    - Only the current unlocked battle is hoverable/clickable.
   - Forces HeroEditor4D character prefabs to face down for consistent preview.
-  - Uses `_currentRoundIndex` to color hover highlights (current = yellow, others = gray).
+  - Uses `PlayerContext.CurrentTournamentRoundIndex` when available, with `_currentRoundIndex` as fallback.
   - Uses `EllipseDefinition.ContainsPoint` for hover hit testing.
   - Optional cursor texture for the next battle hover (assign in inspector).
 - `Assets/Scripts/Preparation/TournamentOpponentHoverPanelPresenter.cs`
@@ -28,6 +36,8 @@
   - Uses `PlayerSquad.LocalizedSquadName` when configured, with asset-name fallback.
 - `Assets/Scripts/Preparation/TournamentBattleStartController.cs`
   - Listens for clicks on the current battle ellipse, shows confirmation, and starts BattleScene with injected battle data.
+  - Sets `BattleSessionConfig.CampaignMissionId` with the selected tournament round id.
+  - Prevents replay of already completed battles.
 - `Assets/Scripts/Preparation/TournamentBattleEllipseGizmo.cs`
   - Draws ellipse gizmos in the scene view for authoring.
 - `Assets/Scripts/Preparation/Editor/TournamentBattleEllipseGizmoEditor.cs`
