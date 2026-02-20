@@ -53,14 +53,22 @@ namespace SevenBattles.Preparation
         private LocalizedString _squadLabel;
 
         [Header("Hover Feedback")]
-        [SerializeField, Tooltip("Cursor texture used while hovering menu buttons.")]
-        private Texture2D _hoverCursorTexture;
-        [SerializeField, Tooltip("Hotspot used with the hover cursor texture.")]
-        private Vector2 _hoverCursorHotspot = new Vector2(16f, 16f);
+        [SerializeField, FormerlySerializedAs("_hoverCursorTexture"), Tooltip("Cursor texture used while hovering menu buttons.")]
+        private Texture2D _buttonHoverCursorTexture;
+        [SerializeField, FormerlySerializedAs("_hoverCursorHotspot"), Tooltip("Hotspot used with the menu button hover cursor texture.")]
+        private Vector2 _buttonHoverCursorHotspot = new Vector2(16f, 16f);
+        [SerializeField, Tooltip("Cursor texture used while hovering unit portraits in the Squad panel. Falls back to the menu button hover cursor when not assigned.")]
+        private Texture2D _portraitHoverCursorTexture;
+        [SerializeField, Tooltip("Hotspot used with the portrait hover cursor texture.")]
+        private Vector2 _portraitHoverCursorHotspot = new Vector2(16f, 16f);
         [SerializeField, Tooltip("Default cursor texture restored when no menu button is hovered.")]
         private Texture2D _defaultCursorTexture;
         [SerializeField, Tooltip("Hotspot used with the default cursor texture.")]
         private Vector2 _defaultCursorHotspot = new Vector2(4f, 4f);
+        [SerializeField, Tooltip("Cursor texture used while dragging unit portraits in the Squad panel.")]
+        private Texture2D _portraitDragCursorTexture;
+        [SerializeField, Tooltip("Hotspot used with the portrait drag cursor texture.")]
+        private Vector2 _portraitDragCursorHotspot = new Vector2(16f, 16f);
         [SerializeField, Tooltip("Optional AudioSource used to play button click SFX.")]
         [FormerlySerializedAs("_hoverAudioSource")]
         private AudioSource _clickAudioSource;
@@ -77,6 +85,7 @@ namespace SevenBattles.Preparation
         private readonly List<MenuButtonHoverForwarder> _hoverForwarders = new List<MenuButtonHoverForwarder>(2);
         private readonly List<ButtonClickSubscription> _clickSubscriptions = new List<ButtonClickSubscription>(2);
         private readonly List<ButtonClickSubscription> _panelClickSubscriptions = new List<ButtonClickSubscription>(1);
+        private readonly List<RaycastResult> _raycastBuffer = new List<RaycastResult>(16);
         private int _hoveredButtonCount;
         private float _lastClickSfxTime = -999f;
         private Coroutine _squadPanelRoutine;
@@ -116,6 +125,12 @@ namespace SevenBattles.Preparation
 
         private void LateUpdate()
         {
+            if (IsPointerTopmostButton())
+            {
+                ApplyHoverCursor();
+                return;
+            }
+
             if (_hoveredButtonCount > 0)
             {
                 ApplyHoverCursor();
@@ -425,12 +440,12 @@ namespace SevenBattles.Preparation
 
         private void ApplyHoverCursor()
         {
-            if (_hoverCursorTexture == null)
+            if (_buttonHoverCursorTexture == null)
             {
                 return;
             }
 
-            Cursor.SetCursor(_hoverCursorTexture, _hoverCursorHotspot, CursorMode.Auto);
+            Cursor.SetCursor(_buttonHoverCursorTexture, _buttonHoverCursorHotspot, CursorMode.Auto);
         }
 
         private void RestoreDefaultCursor()
@@ -438,9 +453,75 @@ namespace SevenBattles.Preparation
             Cursor.SetCursor(_defaultCursorTexture, _defaultCursorHotspot, CursorMode.Auto);
         }
 
+        private bool IsPointerTopmostButton()
+        {
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem == null)
+            {
+                return false;
+            }
+
+            var probe = new PointerEventData(eventSystem)
+            {
+                position = Input.mousePosition
+            };
+
+            _raycastBuffer.Clear();
+            eventSystem.RaycastAll(probe, _raycastBuffer);
+            for (int i = 0; i < _raycastBuffer.Count; i++)
+            {
+                GameObject target = _raycastBuffer[i].gameObject;
+                if (target == null || !target.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                return target.GetComponentInParent<Button>() != null;
+            }
+
+            return false;
+        }
+
         private void HandleMenuButtonClicked()
         {
             PlayClickSfx();
+        }
+
+        public bool TryGetSquadPortraitCursorProfile(
+            out Texture2D defaultCursorTexture,
+            out Vector2 defaultCursorHotspot,
+            out Texture2D hoverCursorTexture,
+            out Vector2 hoverCursorHotspot,
+            out Texture2D dragCursorTexture,
+            out Vector2 dragCursorHotspot)
+        {
+            Texture2D portraitHover = _portraitHoverCursorTexture != null ? _portraitHoverCursorTexture : _buttonHoverCursorTexture;
+            Vector2 portraitHoverHotspot = _portraitHoverCursorTexture != null ? _portraitHoverCursorHotspot : _buttonHoverCursorHotspot;
+
+            defaultCursorTexture = _defaultCursorTexture;
+            defaultCursorHotspot = _defaultCursorHotspot;
+            hoverCursorTexture = portraitHover;
+            hoverCursorHotspot = portraitHoverHotspot;
+            dragCursorTexture = _portraitDragCursorTexture != null ? _portraitDragCursorTexture : portraitHover;
+            dragCursorHotspot = _portraitDragCursorTexture != null ? _portraitDragCursorHotspot : portraitHoverHotspot;
+
+            return defaultCursorTexture != null || hoverCursorTexture != null || dragCursorTexture != null;
+        }
+
+        public bool IsSquadPanelVisible()
+        {
+            ResolveSquadPanel();
+            if (_squadPanel == null || !_squadPanel.activeInHierarchy)
+            {
+                return false;
+            }
+
+            if (_squadPanelCanvasGroup == null)
+            {
+                return true;
+            }
+
+            return _squadPanelCanvasGroup.alpha > 0.001f && _squadPanelCanvasGroup.blocksRaycasts;
         }
 
         private void HandleSquadButtonClicked()

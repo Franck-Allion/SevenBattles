@@ -74,8 +74,10 @@
   - `_squadButton` -> `PopupMenu/SquadButtonMenu` (`Button`) (optional; auto-found by name when empty).
   - `_shopLabel` -> table `UI.Common`, key `Preparation.Popup.Shop`.
   - `_squadLabel` -> table `UI.Common`, key `Preparation.Popup.Squad`.
-  - `_hoverCursorTexture` -> cursor texture shown while hovering menu buttons (example: `Assets/Art/Cursors/hand002.png`).
-  - `_hoverCursorHotspot` -> cursor hotspot for `_hoverCursorTexture` (match texture tip).
+  - `_buttonHoverCursorTexture` -> cursor texture shown while hovering menu buttons (example: `Assets/Art/Cursors/hand002.png`).
+  - `_buttonHoverCursorHotspot` -> cursor hotspot for `_buttonHoverCursorTexture` (match texture tip).
+  - `_portraitHoverCursorTexture` -> optional cursor texture shown while hovering unit portraits in the squad panel (falls back to `_buttonHoverCursorTexture` when empty).
+  - `_portraitHoverCursorHotspot` -> cursor hotspot for `_portraitHoverCursorTexture`.
   - `_defaultCursorTexture` -> default preparation cursor (example: `Assets/Art/Cursors/pointer002.png`).
   - `_defaultCursorHotspot` -> cursor hotspot for `_defaultCursorTexture`.
   - `_clickAudioSource` -> optional UI `AudioSource` used to play menu button click SFX.

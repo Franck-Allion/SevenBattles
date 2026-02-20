@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 
@@ -88,6 +89,15 @@ namespace SevenBattles.Preparation
 
         private void Update()
         {
+            EventSystem eventSystem = EventSystem.current;
+            if (eventSystem != null && eventSystem.IsPointerOverGameObject())
+            {
+                // UI (menu buttons, panels) owns cursor feedback while hovered.
+                UpdateHoverCursor(false);
+                ClearHoverState();
+                return;
+            }
+
             if (!_interactionsEnabled || _camera == null || _battleRoot == null || _views.Count == 0)
             {
                 ApplyDefaultCursor();
