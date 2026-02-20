@@ -20,6 +20,14 @@ namespace SevenBattles.Preparation
 
         public static UnitSpellLoadout DraggingLoadout { get; private set; }
         public static bool IsDragging { get; private set; }
+        private static bool _hasDragOriginZone;
+        private static UnitDropZone.ZoneType _dragOriginZone;
+
+        public static bool TryGetDragOriginZone(out UnitDropZone.ZoneType zoneType)
+        {
+            zoneType = _dragOriginZone;
+            return _hasDragOriginZone;
+        }
 
         public void SetDragGhostRoot(RectTransform dragGhostRoot)
         {
@@ -47,6 +55,17 @@ namespace SevenBattles.Preparation
             if (loadout == null || _canvasGroup == null)
             {
                 return;
+            }
+
+            UnitDropZone originZone = GetComponentInParent<UnitDropZone>();
+            if (originZone != null)
+            {
+                _dragOriginZone = originZone.Type;
+                _hasDragOriginZone = true;
+            }
+            else
+            {
+                _hasDragOriginZone = false;
             }
 
             _previousBlocksRaycasts = _canvasGroup.blocksRaycasts;
@@ -108,6 +127,7 @@ namespace SevenBattles.Preparation
             DraggingLoadout = null;
             IsDragging = false;
             _isDraggingThis = false;
+            _hasDragOriginZone = false;
         }
 
         private void ResolveGhostImage()
