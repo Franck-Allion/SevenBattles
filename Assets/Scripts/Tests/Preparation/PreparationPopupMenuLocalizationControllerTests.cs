@@ -109,5 +109,66 @@ namespace SevenBattles.Tests.Preparation
             Object.DestroyImmediate(clickClip);
             Object.DestroyImmediate(root);
         }
+
+        [Test]
+        public void SquadButtonClick_ShowsSquadPanel_AndEnablesPanelInteraction()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+            var squadButtonGo = CreateButton(root.transform, "SquadButtonMenu");
+            var squadPanel = new GameObject("SquadPanel", typeof(RectTransform));
+            squadPanel.transform.SetParent(root.transform, false);
+            squadPanel.SetActive(false);
+
+            SetPrivate(controller, "_squadPanelFadeDuration", 0f);
+
+            CallPrivate(controller, "ResolveButtonTargets");
+            CallPrivate(controller, "ResolveSquadPanel");
+            CallPrivate(controller, "WireSquadPanelButton");
+
+            squadButtonGo.GetComponent<Button>().onClick.Invoke();
+
+            Assert.IsTrue(squadPanel.activeSelf);
+
+            var canvasGroup = squadPanel.GetComponent<CanvasGroup>();
+            Assert.IsNotNull(canvasGroup);
+            Assert.AreEqual(1f, canvasGroup.alpha, 0.001f);
+            Assert.IsTrue(canvasGroup.interactable);
+            Assert.IsTrue(canvasGroup.blocksRaycasts);
+
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void ResolveSquadPanel_ForceHidesInitiallyActivePanel_UntilButtonClick()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+            var squadButtonGo = CreateButton(root.transform, "SquadButtonMenu");
+            var squadPanel = new GameObject("SquadPanel", typeof(RectTransform));
+            squadPanel.transform.SetParent(root.transform, false);
+            squadPanel.SetActive(true);
+
+            CallPrivate(controller, "ResolveButtonTargets");
+            CallPrivate(controller, "ResolveSquadPanel");
+            CallPrivate(controller, "WireSquadPanelButton");
+
+            var canvasGroup = squadPanel.GetComponent<CanvasGroup>();
+            Assert.IsNotNull(canvasGroup);
+            Assert.IsFalse(squadPanel.activeSelf);
+            Assert.AreEqual(0f, canvasGroup.alpha, 0.001f);
+            Assert.IsFalse(canvasGroup.interactable);
+            Assert.IsFalse(canvasGroup.blocksRaycasts);
+
+            SetPrivate(controller, "_squadPanelFadeDuration", 0f);
+            squadButtonGo.GetComponent<Button>().onClick.Invoke();
+
+            Assert.IsTrue(squadPanel.activeSelf);
+            Assert.AreEqual(1f, canvasGroup.alpha, 0.001f);
+            Assert.IsTrue(canvasGroup.interactable);
+            Assert.IsTrue(canvasGroup.blocksRaycasts);
+
+            Object.DestroyImmediate(root);
+        }
     }
 }

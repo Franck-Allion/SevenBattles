@@ -25,14 +25,15 @@ namespace SevenBattles.Core.Save
             public int Gems;
             public int CurrentRoundIndex;
             public bool[] CompletedBattles;
-            public UnitProgressData[] Units;
+            public OwnedUnitProgressData[] OwnedUnits;
+            public string[] ActiveSquadOwnedUnitIds;
             public InventorySaveEntry[] InventoryEntries;
         }
 
         [Serializable]
-        private sealed class UnitProgressData
+        private sealed class OwnedUnitProgressData
         {
-            public int SlotIndex;
+            public string OwnedUnitId;
             public string UnitId;
             public int Level;
             public int Xp;
@@ -138,47 +139,11 @@ namespace SevenBattles.Core.Save
                 CompletedBattles = context.TournamentProgress != null
                     ? context.TournamentProgress.GetCompletedFlagsCopy()
                     : Array.Empty<bool>(),
-                Units = BuildUnitProgress(context.PlayerSquad),
+                OwnedUnits = BuildOwnedUnits(context),
+                ActiveSquadOwnedUnitIds = BuildActiveSquadOwnedUnitIds(context),
                 InventoryEntries = BuildInventoryEntries(context.Inventory)
             };
             return data;
-        }
-
-        private static UnitProgressData[] BuildUnitProgress(PlayerSquad squad)
-        {
-            var loadouts = squad != null ? squad.GetLoadouts() : Array.Empty<UnitSpellLoadout>();
-            if (loadouts == null || loadouts.Length == 0)
-            {
-                return Array.Empty<UnitProgressData>();
-            }
-
-            var results = new List<UnitProgressData>(loadouts.Length);
-            for (int i = 0; i < loadouts.Length; i++)
-            {
-                var loadout = loadouts[i];
-                if (loadout == null)
-                {
-                    continue;
-                }
-
-                var spells = loadout.Spells ?? Array.Empty<SpellDefinition>();
-                var spellIds = new string[spells.Length];
-                for (int j = 0; j < spells.Length; j++)
-                {
-                    spellIds[j] = spells[j] != null ? spells[j].Id : null;
-                }
-
-                results.Add(new UnitProgressData
-                {
-                    SlotIndex = i,
-                    UnitId = loadout.Definition != null ? loadout.Definition.Id : null,
-                    Level = loadout.EffectiveLevel,
-                    Xp = loadout.EffectiveXp,
-                    SpellIds = spellIds
-                });
-            }
-
-            return results.Count == 0 ? Array.Empty<UnitProgressData>() : results.ToArray();
         }
 
         private static InventorySaveEntry[] BuildInventoryEntries(PlayerInventory inventory)
@@ -210,6 +175,66 @@ namespace SevenBattles.Core.Save
             return results.Count == 0 ? Array.Empty<InventorySaveEntry>() : results.ToArray();
         }
 
+        private static OwnedUnitProgressData[] BuildOwnedUnits(PlayerContext context)
+        {
+            if (context == null || context.OwnedUnits == null || context.OwnedUnits.Count == 0)
+            {
+                return Array.Empty<OwnedUnitProgressData>();
+            }
+
+            var results = new List<OwnedUnitProgressData>(context.OwnedUnits.Count);
+            for (int i = 0; i < context.OwnedUnits.Count; i++)
+            {
+                OwnedUnitData owned = context.OwnedUnits[i];
+                if (owned == null || owned.Definition == null || string.IsNullOrWhiteSpace(owned.OwnedUnitId))
+                {
+                    continue;
+                }
+
+                SpellDefinition[] spells = owned.Spells ?? Array.Empty<SpellDefinition>();
+                var spellIds = new List<string>(spells.Length);
+                for (int j = 0; j < spells.Length; j++)
+                {
+                    SpellDefinition spell = spells[j];
+                    if (spell != null && !string.IsNullOrWhiteSpace(spell.Id))
+                    {
+                        spellIds.Add(spell.Id);
+                    }
+                }
+
+                results.Add(new OwnedUnitProgressData
+                {
+                    OwnedUnitId = owned.OwnedUnitId,
+                    UnitId = owned.Definition.Id,
+                    Level = owned.EffectiveLevel,
+                    Xp = owned.EffectiveXp,
+                    SpellIds = spellIds.Count > 0 ? spellIds.ToArray() : Array.Empty<string>()
+                });
+            }
+
+            return results.Count == 0 ? Array.Empty<OwnedUnitProgressData>() : results.ToArray();
+        }
+
+        private static string[] BuildActiveSquadOwnedUnitIds(PlayerContext context)
+        {
+            if (context == null || context.ActiveSquadOwnedUnitIds == null || context.ActiveSquadOwnedUnitIds.Count == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            var ids = new List<string>(context.ActiveSquadOwnedUnitIds.Count);
+            for (int i = 0; i < context.ActiveSquadOwnedUnitIds.Count; i++)
+            {
+                string id = context.ActiveSquadOwnedUnitIds[i];
+                if (!string.IsNullOrWhiteSpace(id))
+                {
+                    ids.Add(id);
+                }
+            }
+
+            return ids.Count == 0 ? Array.Empty<string>() : ids.ToArray();
+        }
+
         private static void ApplyData(PlayerContext context, AutoSaveData data)
         {
             int gold = Mathf.Max(0, data != null ? data.Gold : 0);
@@ -220,54 +245,52 @@ namespace SevenBattles.Core.Save
             bool[] completed = data != null ? data.CompletedBattles : null;
             context.SetTournamentProgress(currentRound, completed, TournamentDefinition.BattleCount);
 
-            ApplyUnitProgress(context.PlayerSquad, data != null ? data.Units : null);
+            // Backward compatibility: when legacy autosave JSON has no OwnedUnits field,
+            // keep the current context-owned units instead of wiping progression.
+            if (data != null && data.OwnedUnits != null)
+            {
+                ApplyOwnedUnits(context, data.OwnedUnits, data.ActiveSquadOwnedUnitIds);
+            }
+            else
+            {
+                EnsureActiveSquadFallback(context);
+            }
+
             ApplyInventory(context.Inventory, data != null ? data.InventoryEntries : null);
         }
 
-        private static void ApplyUnitProgress(PlayerSquad squad, UnitProgressData[] units)
+        private static void EnsureActiveSquadFallback(PlayerContext context)
         {
-            if (squad == null || units == null || units.Length == 0)
+            if (context == null)
             {
                 return;
             }
 
-            var loadouts = squad.GetLoadouts();
-            if (loadouts == null || loadouts.Length == 0)
+            if (context.ActiveSquadOwnedUnitIds != null && context.ActiveSquadOwnedUnitIds.Count > 0)
             {
                 return;
             }
 
-            var spellLookup = BuildSpellLookup();
-            for (int i = 0; i < units.Length; i++)
+            if (context.OwnedUnits == null || context.OwnedUnits.Count == 0)
             {
-                var saved = units[i];
-                if (saved == null)
+                return;
+            }
+
+            var activeIds = new List<string>(Mathf.Min(context.MaxSquadSize, context.OwnedUnits.Count));
+            for (int i = 0; i < context.OwnedUnits.Count && activeIds.Count < context.MaxSquadSize; i++)
+            {
+                OwnedUnitData unit = context.OwnedUnits[i];
+                if (unit == null || string.IsNullOrWhiteSpace(unit.OwnedUnitId))
                 {
                     continue;
                 }
 
-                int slotIndex = saved.SlotIndex;
-                if (slotIndex < 0 || slotIndex >= loadouts.Length)
-                {
-                    continue;
-                }
+                activeIds.Add(unit.OwnedUnitId);
+            }
 
-                var target = loadouts[slotIndex];
-                if (target == null)
-                {
-                    continue;
-                }
-
-                if (!string.IsNullOrWhiteSpace(saved.UnitId) &&
-                    target.Definition != null &&
-                    !string.Equals(target.Definition.Id, saved.UnitId, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                target.Level = Mathf.Max(UnitSpellLoadout.DefaultLevel, saved.Level);
-                target.Xp = Mathf.Max(0, saved.Xp);
-                target.Spells = ResolveSpells(saved.SpellIds, spellLookup);
+            if (activeIds.Count > 0)
+            {
+                context.SetActiveSquadOwnedUnitIds(activeIds);
             }
         }
 
@@ -307,6 +330,112 @@ namespace SevenBattles.Core.Save
                     Quantity = quantity
                 });
             }
+        }
+
+        private static void ApplyOwnedUnits(PlayerContext context, OwnedUnitProgressData[] ownedUnits, string[] activeOwnedUnitIds)
+        {
+            if (context == null)
+            {
+                return;
+            }
+
+            if (ownedUnits == null || ownedUnits.Length == 0)
+            {
+                context.SetOwnedUnits(Array.Empty<OwnedUnitData>());
+                context.SetActiveSquadOwnedUnitIds(Array.Empty<string>());
+                return;
+            }
+
+            var unitLookup = BuildUnitLookup();
+            var spellLookup = BuildSpellLookup();
+            var ownedList = new List<OwnedUnitData>(ownedUnits.Length);
+            var seenIds = new HashSet<string>(StringComparer.Ordinal);
+
+            for (int i = 0; i < ownedUnits.Length; i++)
+            {
+                OwnedUnitProgressData saved = ownedUnits[i];
+                if (saved == null || string.IsNullOrWhiteSpace(saved.UnitId))
+                {
+                    continue;
+                }
+
+                if (!unitLookup.TryGetValue(saved.UnitId, out UnitDefinition definition) || definition == null)
+                {
+                    continue;
+                }
+
+                string ownedId = string.IsNullOrWhiteSpace(saved.OwnedUnitId)
+                    ? Guid.NewGuid().ToString("N")
+                    : saved.OwnedUnitId;
+                while (!seenIds.Add(ownedId))
+                {
+                    ownedId = Guid.NewGuid().ToString("N");
+                }
+
+                ownedList.Add(new OwnedUnitData
+                {
+                    OwnedUnitId = ownedId,
+                    Definition = definition,
+                    Level = Mathf.Max(UnitSpellLoadout.DefaultLevel, saved.Level),
+                    Xp = Mathf.Max(0, saved.Xp),
+                    Spells = ResolveSpells(saved.SpellIds, spellLookup)
+                });
+            }
+
+            context.SetOwnedUnits(ownedList);
+
+            var activeIds = new List<string>();
+            if (activeOwnedUnitIds != null && activeOwnedUnitIds.Length > 0)
+            {
+                var ownedSet = new HashSet<string>(StringComparer.Ordinal);
+                var selectedSet = new HashSet<string>(StringComparer.Ordinal);
+                for (int i = 0; i < ownedList.Count; i++)
+                {
+                    ownedSet.Add(ownedList[i].OwnedUnitId);
+                }
+
+                for (int i = 0; i < activeOwnedUnitIds.Length && activeIds.Count < context.MaxSquadSize; i++)
+                {
+                    string id = activeOwnedUnitIds[i];
+                    if (string.IsNullOrWhiteSpace(id) || !ownedSet.Contains(id) || !selectedSet.Add(id))
+                    {
+                        continue;
+                    }
+
+                    activeIds.Add(id);
+                }
+            }
+
+            if (activeIds.Count == 0)
+            {
+                for (int i = 0; i < ownedList.Count && activeIds.Count < context.MaxSquadSize; i++)
+                {
+                    activeIds.Add(ownedList[i].OwnedUnitId);
+                }
+            }
+
+            context.SetActiveSquadOwnedUnitIds(activeIds);
+        }
+
+        private static Dictionary<string, UnitDefinition> BuildUnitLookup()
+        {
+            var lookup = new Dictionary<string, UnitDefinition>(StringComparer.Ordinal);
+            var units = Resources.FindObjectsOfTypeAll<UnitDefinition>();
+            for (int i = 0; i < units.Length; i++)
+            {
+                UnitDefinition definition = units[i];
+                if (definition == null || string.IsNullOrWhiteSpace(definition.Id))
+                {
+                    continue;
+                }
+
+                if (!lookup.ContainsKey(definition.Id))
+                {
+                    lookup.Add(definition.Id, definition);
+                }
+            }
+
+            return lookup;
         }
 
         private static Dictionary<string, SpellDefinition> BuildSpellLookup()

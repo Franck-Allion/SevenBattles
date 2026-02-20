@@ -24,10 +24,6 @@ namespace SevenBattles.Battle.Start
         [SerializeField, Tooltip("Battle session service (implements IBattleSessionService). If null, will auto-find at runtime.")]
         private MonoBehaviour _sessionServiceBehaviour;
 
-        [Header("Legacy Squad Data (DEPRECATED)")]
-        [Tooltip("DEPRECATED: Player squad asset (1..8 unit loadouts). Only used as fallback if session service is not available.")]
-        [SerializeField] private PlayerSquad _playerSquad;
-
         [Header("Placement Rules")]
         [SerializeField, Tooltip("Number of front rows on the player's side that are valid for placement.")]
         private int _playerRows = 2;
@@ -255,7 +251,7 @@ namespace SevenBattles.Battle.Start
         public Sprite GetPortrait(int index)
         {
             var squad = GetPlayerSquadLoadouts();
-            if (squad != null && index >= 0 && index < squad.Length)
+            if (squad != null && index >= 0 && index < squad.Count)
             {
                 var def = squad[index] != null ? squad[index].Definition : null;
                 return def != null ? def.Portrait : null;
@@ -266,7 +262,7 @@ namespace SevenBattles.Battle.Start
         public int GetLevel(int index)
         {
             var squad = GetPlayerSquadLoadouts();
-            if (squad != null && index >= 0 && index < squad.Length)
+            if (squad != null && index >= 0 && index < squad.Count)
             {
                 var loadout = squad[index];
                 return loadout != null ? loadout.EffectiveLevel : UnitSpellLoadout.DefaultLevel;
@@ -292,14 +288,14 @@ namespace SevenBattles.Battle.Start
         private int GetSquadSizeInternal()
         {
             var squad = GetPlayerSquadLoadouts();
-            int defCount = squad != null ? squad.Length : 0;
+            int defCount = squad != null ? squad.Count : 0;
             return Mathf.Clamp(defCount, 0, 8);
         }
 
         /// <summary>
-        /// Resolves the player squad from the session service, or falls back to the legacy ScriptableObject reference.
+        /// Resolves the player squad from the session service, or falls back to the runtime player context owned active squad.
         /// </summary>
-        private UnitSpellLoadout[] GetPlayerSquadLoadouts()
+        private IReadOnlyList<UnitSpellLoadout> GetPlayerSquadLoadouts()
         {
             // Prefer session service
             if (_sessionService?.CurrentSession?.PlayerSquad != null &&
@@ -311,18 +307,11 @@ namespace SevenBattles.Battle.Start
             // Fallback to runtime player context progression when available.
             if (PlayerContext.HasRuntimeInstance && PlayerContext.RuntimeInstance != null)
             {
-                var runtimeSquad = PlayerContext.RuntimeInstance.PlayerSquad;
-                var runtimeLoadouts = runtimeSquad != null ? runtimeSquad.GetLoadouts() : null;
-                if (runtimeLoadouts != null && runtimeLoadouts.Length > 0)
+                var runtimeLoadouts = PlayerContext.RuntimeInstance.GetActiveSquadLoadoutsNonAlloc();
+                if (runtimeLoadouts != null && runtimeLoadouts.Count > 0)
                 {
                     return runtimeLoadouts;
                 }
-            }
-
-            // Fallback to legacy ScriptableObject reference
-            if (_playerSquad != null)
-            {
-                return _playerSquad.GetLoadouts();
             }
 
             return null;
@@ -370,7 +359,7 @@ namespace SevenBattles.Battle.Start
         {
             var squad = GetPlayerSquadLoadouts();
             if (squad == null) return null;
-            if (index < 0 || index >= squad.Length) return null;
+            if (index < 0 || index >= squad.Count) return null;
             var def = squad[index] != null ? squad[index].Definition : null;
             return def != null ? def.Prefab : null;
         }
@@ -379,7 +368,7 @@ namespace SevenBattles.Battle.Start
         {
             var squad = GetPlayerSquadLoadouts();
             if (squad == null) return;
-            if (index < 0 || index >= squad.Length) return;
+            if (index < 0 || index >= squad.Count) return;
             var loadout = squad[index];
             var def = loadout != null ? loadout.Definition : null;
             if (def == null) return;
@@ -394,7 +383,7 @@ namespace SevenBattles.Battle.Start
             if (go == null) return;
             var squad = GetPlayerSquadLoadouts();
             if (squad == null) return;
-            if (index < 0 || index >= squad.Length) return;
+            if (index < 0 || index >= squad.Count) return;
             var loadout = squad[index];
             if (loadout == null) return;
 
@@ -408,7 +397,7 @@ namespace SevenBattles.Battle.Start
         {
             var squad = GetPlayerSquadLoadouts();
             if (squad == null) return null;
-            if (index < 0 || index >= squad.Length) return null;
+            if (index < 0 || index >= squad.Count) return null;
             var def = squad[index] != null ? squad[index].Definition : null;
             if (def == null) return null;
             return UnitBattleMetadata.Ensure(go, true, def, tile);
@@ -418,13 +407,13 @@ namespace SevenBattles.Battle.Start
         {
             if (_playerRows < 1) _playerRows = 1;
             var squad = GetPlayerSquadLoadouts();
-            if (squad != null && squad.Length > 8)
+            if (squad != null && squad.Count > 8)
             {
                 SBLog.Warn("WorldSquadPlacementController: Only first 8 UnitLoadouts will be used.", this);
             }
-            if (squad == null || squad.Length == 0)
+            if (squad == null || squad.Count == 0)
             {
-                SBLog.Warn("WorldSquadPlacementController: Assign a PlayerSquad with 1..8 UnitLoadouts or ensure BattleSessionService is configured.", this);
+                SBLog.Warn("WorldSquadPlacementController: Runtime player active squad is empty and no battle session player squad is configured.", this);
             }
         }
     }

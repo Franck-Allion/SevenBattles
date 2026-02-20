@@ -81,23 +81,6 @@ namespace SevenBattles.Preparation
             clone.name = $"{source.name} (Runtime)";
             clone.hideFlags = HideFlags.DontSave;
 
-            // Deep-clone PlayerSquad so the asset's loadouts are untouched.
-            if (source.PlayerSquad != null)
-            {
-                var squadClone = Instantiate(source.PlayerSquad);
-                squadClone.name = $"{source.PlayerSquad.name} (Runtime)";
-                squadClone.hideFlags = HideFlags.DontSave;
-
-                // Clone the loadout array so mutations don't affect the asset.
-                var sourceLoadouts = source.PlayerSquad.GetLoadouts();
-                if (sourceLoadouts != null && sourceLoadouts.Length > 0)
-                {
-                    squadClone.UnitLoadouts = global::SevenBattles.Core.Battle.UnitSpellLoadout.CloneArray(sourceLoadouts);
-                }
-
-                clone.PlayerSquad = squadClone;
-            }
-
             // Deep-clone PlayerInventory so the asset's entries are untouched.
             if (source.Inventory != null)
             {
@@ -137,7 +120,7 @@ namespace SevenBattles.Preparation
         /// <summary>
         /// Scans all MonoBehaviours in the scene and replaces PlayerContext fields
         /// pointing to <paramref name="source"/> with <paramref name="runtime"/>.
-        /// Also handles PlayerSquad and PlayerInventory fields.
+        /// Also handles PlayerInventory fields.
         /// </summary>
         private static int RebindSceneReferences(PlayerContext source, PlayerContext runtime)
         {
@@ -173,15 +156,6 @@ namespace SevenBattles.Preparation
                             if (ReferenceEquals(current, source))
                             {
                                 field.SetValue(mb, runtime);
-                                count++;
-                            }
-                        }
-                        else if (field.FieldType == typeof(PlayerSquad) && source.PlayerSquad != null)
-                        {
-                            var current = field.GetValue(mb) as PlayerSquad;
-                            if (ReferenceEquals(current, source.PlayerSquad))
-                            {
-                                field.SetValue(mb, runtime.PlayerSquad);
                                 count++;
                             }
                         }

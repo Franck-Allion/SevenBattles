@@ -32,6 +32,20 @@ namespace SevenBattles.Preparation
         [SerializeField, Tooltip("Optional explicit reference to the Squad menu button. Auto-found when null.")]
         private Button _squadButton;
 
+        [Header("Squad Panel Transition")]
+        [SerializeField, Tooltip("Optional explicit reference to the Squad panel root. Auto-found by name when null.")]
+        private GameObject _squadPanel;
+        [SerializeField, Tooltip("Object name used to auto-find the Squad panel when _squadPanel is not assigned.")]
+        private string _squadPanelObjectName = "SquadPanel";
+        [SerializeField, Tooltip("CanvasGroup used to animate the Squad panel. Auto-added when missing.")]
+        private CanvasGroup _squadPanelCanvasGroup;
+        [SerializeField, Min(0f), Tooltip("Reveal duration in seconds for the Squad panel. Uses unscaled time.")]
+        private float _squadPanelFadeDuration = 0.24f;
+        [SerializeField, Range(0.8f, 1f), Tooltip("Starting scale multiplier used during Squad panel reveal.")]
+        private float _squadPanelStartScale = 0.95f;
+        [SerializeField, Tooltip("Easing curve used for Squad panel reveal.")]
+        private AnimationCurve _squadPanelRevealCurve = null;
+
         [Header("Localization")]
         [SerializeField, Tooltip("Localized label for the Shop button.")]
         private LocalizedString _shopLabel;
@@ -62,14 +76,21 @@ namespace SevenBattles.Preparation
 
         private readonly List<MenuButtonHoverForwarder> _hoverForwarders = new List<MenuButtonHoverForwarder>(2);
         private readonly List<ButtonClickSubscription> _clickSubscriptions = new List<ButtonClickSubscription>(2);
+        private readonly List<ButtonClickSubscription> _panelClickSubscriptions = new List<ButtonClickSubscription>(1);
         private int _hoveredButtonCount;
         private float _lastClickSfxTime = -999f;
+        private Coroutine _squadPanelRoutine;
+        private Vector3 _squadPanelBaseScale = Vector3.one;
+        private bool _squadPanelScaleCaptured;
+        private bool _squadPanelStartupHiddenApplied;
+        private Transform _squadPanelAnimatedRoot;
 
         private void Awake()
         {
             SetupLocalizationDefaults();
             ResolveLabelTargets();
             ResolveButtonTargets();
+            ResolveSquadPanel();
         }
 
         private void OnEnable()
@@ -77,8 +98,10 @@ namespace SevenBattles.Preparation
             SetupLocalizationDefaults();
             ResolveLabelTargets();
             ResolveButtonTargets();
+            ResolveSquadPanel();
             BindLabels();
             WireHoverFeedback();
+            WireSquadPanelButton();
             RefreshLabels();
         }
 
@@ -86,6 +109,8 @@ namespace SevenBattles.Preparation
         {
             UnbindLabels();
             UnwireHoverFeedback();
+            UnwireSquadPanelButton();
+            StopSquadPanelRoutine();
             RestoreDefaultCursor();
         }
 
@@ -134,6 +159,97 @@ namespace SevenBattles.Preparation
             {
                 _squadButton = FindButton(_squadButtonObjectName);
             }
+        }
+
+        private void ResolveSquadPanel()
+        {
+            if (_squadPanel == null)
+            {
+                _squadPanel = FindObjectByNameInSceneRoot(_squadPanelObjectName);
+            }
+
+            if (_squadPanel == null)
+            {
+                return;
+            }
+
+            if (_squadPanelCanvasGroup != null)
+            {
+                _squadPanelAnimatedRoot = _squadPanelCanvasGroup.transform;
+            }
+            else
+            {
+                _squadPanelAnimatedRoot = ResolveSquadPanelAnimatedRoot();
+                if (_squadPanelAnimatedRoot == null)
+                {
+                    _squadPanelAnimatedRoot = _squadPanel.transform;
+                }
+
+                _squadPanelCanvasGroup = _squadPanelAnimatedRoot.GetComponent<CanvasGroup>();
+                if (_squadPanelCanvasGroup == null)
+                {
+                    _squadPanelCanvasGroup = _squadPanelAnimatedRoot.gameObject.AddComponent<CanvasGroup>();
+                }
+            }
+
+            if (!_squadPanelScaleCaptured)
+            {
+                Transform animatedRoot = _squadPanelAnimatedRoot != null ? _squadPanelAnimatedRoot : _squadPanel.transform;
+                _squadPanelBaseScale = animatedRoot.localScale;
+                if (_squadPanelBaseScale.sqrMagnitude < 0.000001f)
+                {
+                    // Some scenes hide UI panels by scaling to zero in the editor; treat that as "unknown base scale".
+                    _squadPanelBaseScale = Vector3.one;
+                }
+                _squadPanelScaleCaptured = true;
+            }
+
+            EnsureSquadPanelStartupHidden();
+        }
+
+        private Transform ResolveSquadPanelAnimatedRoot()
+        {
+            if (_squadPanel == null)
+            {
+                return null;
+            }
+
+            // PreparationScene currently nests the visible UI under SquadPanel/Canvas.
+            Transform directCanvas = _squadPanel.transform.Find("Canvas");
+            if (directCanvas != null && directCanvas.GetComponent<Canvas>() != null)
+            {
+                return directCanvas;
+            }
+
+            Canvas anyCanvas = _squadPanel.GetComponentInChildren<Canvas>(true);
+            if (anyCanvas != null)
+            {
+                return anyCanvas.transform;
+            }
+
+            return _squadPanel.transform;
+        }
+
+        private GameObject FindObjectByNameInSceneRoot(string objectName)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            Transform searchRoot = transform.root != null ? transform.root : transform;
+            var transforms = searchRoot.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node != null && string.Equals(node.name, objectName, System.StringComparison.Ordinal))
+                {
+                    return node.gameObject;
+                }
+            }
+
+            var global = GameObject.Find(objectName);
+            return global;
         }
 
         private TMP_Text FindButtonLabel(string buttonObjectName)
@@ -213,6 +329,19 @@ namespace SevenBattles.Preparation
             RegisterButtonHover(_squadButton);
         }
 
+        private void WireSquadPanelButton()
+        {
+            UnwireSquadPanelButton();
+            if (_squadButton == null)
+            {
+                return;
+            }
+
+            UnityAction clickAction = HandleSquadButtonClicked;
+            _squadButton.onClick.AddListener(clickAction);
+            _panelClickSubscriptions.Add(new ButtonClickSubscription(_squadButton, clickAction));
+        }
+
         private void UnwireHoverFeedback()
         {
             for (int i = 0; i < _hoverForwarders.Count; i++)
@@ -237,6 +366,20 @@ namespace SevenBattles.Preparation
 
             _clickSubscriptions.Clear();
             _hoveredButtonCount = 0;
+        }
+
+        private void UnwireSquadPanelButton()
+        {
+            for (int i = 0; i < _panelClickSubscriptions.Count; i++)
+            {
+                var sub = _panelClickSubscriptions[i];
+                if (sub.Button != null && sub.ClickAction != null)
+                {
+                    sub.Button.onClick.RemoveListener(sub.ClickAction);
+                }
+            }
+
+            _panelClickSubscriptions.Clear();
         }
 
         private void RegisterButtonHover(Button button)
@@ -298,6 +441,140 @@ namespace SevenBattles.Preparation
         private void HandleMenuButtonClicked()
         {
             PlayClickSfx();
+        }
+
+        private void HandleSquadButtonClicked()
+        {
+            ResolveSquadPanel();
+            ShowSquadPanel();
+        }
+
+        private void ShowSquadPanel()
+        {
+            if (_squadPanel == null || _squadPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            StopSquadPanelRoutine();
+
+            if (!_squadPanel.activeSelf)
+            {
+                _squadPanel.SetActive(true);
+            }
+
+            float duration = Mathf.Max(0f, _squadPanelFadeDuration);
+            if (duration <= 0.0001f)
+            {
+                SetSquadPanelVisibleImmediate();
+                return;
+            }
+
+            _squadPanelRoutine = StartCoroutine(ShowSquadPanelRoutine(duration));
+        }
+
+        private System.Collections.IEnumerator ShowSquadPanelRoutine(float duration)
+        {
+            if (_squadPanel == null || _squadPanelCanvasGroup == null)
+            {
+                yield break;
+            }
+
+            Transform animatedRoot = _squadPanelAnimatedRoot != null ? _squadPanelAnimatedRoot : _squadPanel.transform;
+            float fromAlpha = Mathf.Clamp01(_squadPanelCanvasGroup.alpha);
+            Vector3 toScale = _squadPanelBaseScale;
+            float startScaleFactor = Mathf.Clamp(_squadPanelStartScale, 0.8f, 1f);
+            Vector3 fromScale = fromAlpha > 0.001f
+                ? animatedRoot.localScale
+                : new Vector3(toScale.x * startScaleFactor, toScale.y * startScaleFactor, toScale.z);
+
+            _squadPanelCanvasGroup.alpha = fromAlpha;
+            _squadPanelCanvasGroup.interactable = false;
+            _squadPanelCanvasGroup.blocksRaycasts = true;
+            animatedRoot.localScale = fromScale;
+
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                float normalized = Mathf.Clamp01(t / duration);
+                float eased = EvaluateRevealCurve(normalized);
+                _squadPanelCanvasGroup.alpha = Mathf.LerpUnclamped(fromAlpha, 1f, eased);
+                animatedRoot.localScale = Vector3.LerpUnclamped(fromScale, toScale, eased);
+                yield return null;
+            }
+
+            SetSquadPanelVisibleImmediate();
+            _squadPanelRoutine = null;
+        }
+
+        private float EvaluateRevealCurve(float value)
+        {
+            float clamped = Mathf.Clamp01(value);
+            if (_squadPanelRevealCurve == null || _squadPanelRevealCurve.length == 0)
+            {
+                // SmoothStep fallback keeps the reveal polished even when no custom curve is assigned.
+                return clamped * clamped * (3f - (2f * clamped));
+            }
+
+            return _squadPanelRevealCurve.Evaluate(clamped);
+        }
+
+        private void StopSquadPanelRoutine()
+        {
+            if (_squadPanelRoutine != null)
+            {
+                StopCoroutine(_squadPanelRoutine);
+                _squadPanelRoutine = null;
+            }
+        }
+
+        private void SetSquadPanelVisibleImmediate()
+        {
+            if (_squadPanel == null || _squadPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            if (!_squadPanel.activeSelf)
+            {
+                _squadPanel.SetActive(true);
+            }
+
+            _squadPanelCanvasGroup.alpha = 1f;
+            _squadPanelCanvasGroup.interactable = true;
+            _squadPanelCanvasGroup.blocksRaycasts = true;
+            Transform animatedRoot = _squadPanelAnimatedRoot != null ? _squadPanelAnimatedRoot : _squadPanel.transform;
+            animatedRoot.localScale = _squadPanelBaseScale;
+        }
+
+        private void SetSquadPanelHiddenImmediate()
+        {
+            if (_squadPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            _squadPanelCanvasGroup.alpha = 0f;
+            _squadPanelCanvasGroup.interactable = false;
+            _squadPanelCanvasGroup.blocksRaycasts = false;
+        }
+
+        private void EnsureSquadPanelStartupHidden()
+        {
+            if (_squadPanelStartupHiddenApplied)
+            {
+                return;
+            }
+
+            StopSquadPanelRoutine();
+            SetSquadPanelHiddenImmediate();
+            if (_squadPanel != null && _squadPanel.activeSelf)
+            {
+                _squadPanel.SetActive(false);
+            }
+
+            _squadPanelStartupHiddenApplied = true;
         }
 
         private void PlayClickSfx()

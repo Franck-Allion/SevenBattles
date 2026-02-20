@@ -44,16 +44,21 @@ namespace SevenBattles.Tests.Battle
             var ctrlGo = new GameObject("SquadPlacementCtrl");
             var ctrl = ctrlGo.AddComponent<WorldSquadPlacementController>();
             SetPrivate(ctrl, "_board", board);
-            var squad = ScriptableObject.CreateInstance<PlayerSquad>();
-            squad.UnitLoadouts = new[]
+
+            var runtimeContext = ScriptableObject.CreateInstance<PlayerContext>();
+            runtimeContext.SetOwnedUnits(new[]
             {
-                new UnitSpellLoadout
+                new OwnedUnitData
                 {
+                    OwnedUnitId = "owned_1",
                     Definition = def,
+                    Level = 1,
+                    Xp = 0,
                     Spells = System.Array.Empty<SpellDefinition>()
                 }
-            };
-            SetPrivate(ctrl, "_playerSquad", squad);
+            });
+            runtimeContext.SetActiveSquadOwnedUnitIds(new[] { "owned_1" });
+            PlayerContext.SetRuntimeInstance(runtimeContext);
             SetPrivate(ctrl, "_playerRows", 2);
 
             // Initialize controller (Start won't be called in EditMode tests, ensure model exists)
@@ -75,8 +80,8 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(wizPrefab);
             Object.DestroyImmediate(boardGo);
+            Object.DestroyImmediate(runtimeContext);
             Object.DestroyImmediate(def);
-            Object.DestroyImmediate(squad);
         }
 
         [Test]
@@ -88,28 +93,25 @@ namespace SevenBattles.Tests.Battle
             var def = ScriptableObject.CreateInstance<UnitDefinition>();
             def.Id = "unit.level.test";
 
-            var assetSquad = ScriptableObject.CreateInstance<PlayerSquad>();
-            assetSquad.UnitLoadouts = new[]
-            {
-                new UnitSpellLoadout { Definition = def, Level = 1, Xp = 0 }
-            };
-            SetPrivate(ctrl, "_playerSquad", assetSquad);
-
-            var runtimeSquad = ScriptableObject.CreateInstance<PlayerSquad>();
-            runtimeSquad.UnitLoadouts = new[]
-            {
-                new UnitSpellLoadout { Definition = def, Level = 6, Xp = 0 }
-            };
             var runtimeContext = ScriptableObject.CreateInstance<PlayerContext>();
-            runtimeContext.PlayerSquad = runtimeSquad;
+            runtimeContext.SetOwnedUnits(new[]
+            {
+                new OwnedUnitData
+                {
+                    OwnedUnitId = "owned_runtime_1",
+                    Definition = def,
+                    Level = 6,
+                    Xp = 0,
+                    Spells = System.Array.Empty<SpellDefinition>()
+                }
+            });
+            runtimeContext.SetActiveSquadOwnedUnitIds(new[] { "owned_runtime_1" });
             PlayerContext.SetRuntimeInstance(runtimeContext);
 
             Assert.AreEqual(6, ctrl.GetLevel(0), "Placement level should come from runtime context when no session squad is available.");
 
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(runtimeContext);
-            Object.DestroyImmediate(runtimeSquad);
-            Object.DestroyImmediate(assetSquad);
             Object.DestroyImmediate(def);
         }
 

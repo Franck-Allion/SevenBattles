@@ -17,16 +17,13 @@ namespace SevenBattles.Tests.Core
             public int Gold;
             public int Gems;
             public InventoryEntrySaveData[] InventoryEntries;
+            public OwnedUnitSaveData[] OwnedUnits;
+            public string[] ActiveSquadOwnedUnitIds;
             public int TournamentCurrentRound = 1;
             public bool[] TournamentCompletedBattles;
 
             public void PopulateGameState(SaveGameData data)
             {
-                data.PlayerSquad = new PlayerSquadSaveData
-                {
-                    WizardIds = WizardIds ?? Array.Empty<string>()
-                };
-
                 data.PlayerResources = new PlayerResourcesSaveData
                 {
                     Gold = Gold,
@@ -36,6 +33,12 @@ namespace SevenBattles.Tests.Core
                 data.PlayerInventory = new PlayerInventorySaveData
                 {
                     Entries = InventoryEntries ?? Array.Empty<InventoryEntrySaveData>()
+                };
+
+                data.PlayerOwnedUnits = new PlayerOwnedUnitsSaveData
+                {
+                    Units = OwnedUnits ?? Array.Empty<OwnedUnitSaveData>(),
+                    ActiveSquadOwnedUnitIds = ActiveSquadOwnedUnitIds ?? Array.Empty<string>()
                 };
 
                 data.TournamentProgress = new TournamentProgressSaveData
@@ -212,7 +215,6 @@ namespace SevenBattles.Tests.Core
             string json = File.ReadAllText(path);
             var data = JsonUtility.FromJson<SaveGameData>(json);
             Assert.IsNotNull(data, "Deserialized SaveGameData should not be null.");
-            Assert.IsNotNull(data.PlayerSquad, "PlayerSquad should be populated by provider.");
             Assert.IsNotNull(data.UnitPlacements, "UnitPlacements should be initialized even if provider left it null.");
             Assert.IsNotNull(data.BattleTurn, "BattleTurn should be initialized even if provider left it null.");
             Assert.IsNotNull(data.BattleEnchantments, "BattleEnchantments should be initialized even if provider left it null.");
@@ -346,6 +348,47 @@ namespace SevenBattles.Tests.Core
         }
 
         [Test]
+        public async Task Save_IncludesPlayerOwnedUnits_WhenProvided()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "WizA" },
+                OwnedUnits = new[]
+                {
+                    new OwnedUnitSaveData
+                    {
+                        OwnedUnitId = "owned_1",
+                        UnitId = "WizA",
+                        Level = 3,
+                        Xp = 12,
+                        SpellIds = new[] { "SpellA" }
+                    }
+                },
+                ActiveSquadOwnedUnitIds = new[] { "owned_1" }
+            };
+
+            var service = new SaveGameService(provider, dir);
+            await service.SaveSlotAsync(1);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            string json = File.ReadAllText(path);
+            var data = JsonUtility.FromJson<SaveGameData>(json);
+
+            Assert.IsNotNull(data.PlayerOwnedUnits);
+            Assert.IsNotNull(data.PlayerOwnedUnits.Units);
+            Assert.AreEqual(1, data.PlayerOwnedUnits.Units.Length);
+            Assert.AreEqual("owned_1", data.PlayerOwnedUnits.Units[0].OwnedUnitId);
+            Assert.AreEqual("WizA", data.PlayerOwnedUnits.Units[0].UnitId);
+            Assert.IsNotNull(data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds);
+            Assert.AreEqual("owned_1", data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds[0]);
+            StringAssert.Contains("\"PlayerOwnedUnits\"", json);
+        }
+
+        [Test]
         public async Task Save_IncludesLevelFields_WhenProvided()
         {
             string dir = CreateTestDirectory();
@@ -444,7 +487,6 @@ namespace SevenBattles.Tests.Core
             var data = await service.LoadSlotDataAsync(1);
 
             Assert.IsNotNull(data, "LoadSlotDataAsync should return a SaveGameData instance for a valid save.");
-            Assert.IsNotNull(data.PlayerSquad, "PlayerSquad should be non-null after load.");
             Assert.IsNotNull(data.UnitPlacements, "UnitPlacements should be non-null after load.");
             Assert.IsNotNull(data.BattleTurn, "BattleTurn should be non-null after load.");
             Assert.IsNotNull(data.BattleEnchantments, "BattleEnchantments should be non-null after load.");
@@ -519,6 +561,68 @@ namespace SevenBattles.Tests.Core
             Assert.IsNotNull(data.PlayerInventory, "PlayerInventory should default to a non-null DTO when missing.");
             Assert.IsNotNull(data.PlayerInventory.Entries, "PlayerInventory.Entries should default to a non-null array when missing.");
             Assert.AreEqual(0, data.PlayerInventory.Entries.Length);
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_MissingPlayerOwnedUnits_DefaultsToEmpty()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            File.WriteAllText(path, "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1 }");
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "Any" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNotNull(data);
+            Assert.IsNotNull(data.PlayerOwnedUnits);
+            Assert.IsNotNull(data.PlayerOwnedUnits.Units);
+            Assert.AreEqual(0, data.PlayerOwnedUnits.Units.Length);
+            Assert.IsNotNull(data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds);
+            Assert.AreEqual(0, data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds.Length);
+        }
+
+        [Test]
+        public async Task LoadSlotDataAsync_CorruptPlayerOwnedUnits_AreSanitized()
+        {
+            string dir = CreateTestDirectory();
+            string saveDir = Path.Combine(dir, "Saves");
+            Directory.CreateDirectory(saveDir);
+
+            string path = Path.Combine(saveDir, "save_slot_01.json");
+            File.WriteAllText(
+                path,
+                "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1, \"PlayerOwnedUnits\": { \"Units\": [ { \"OwnedUnitId\": \"\", \"UnitId\": \"WizA\", \"Level\": -1, \"Xp\": -3, \"SpellIds\": [\"SpellA\"] }, { \"OwnedUnitId\": \"owned_ok\", \"UnitId\": \"WizB\", \"Level\": 0, \"Xp\": -7, \"SpellIds\": [null, \"SpellB\", \"\"] } ], \"ActiveSquadOwnedUnitIds\": [null, \"\", \"owned_ok\"] } }");
+
+            var provider = new FakeGameStateProvider
+            {
+                WizardIds = new[] { "Any" }
+            };
+            var service = new SaveGameService(provider, dir);
+
+            var data = await service.LoadSlotDataAsync(1);
+
+            Assert.IsNotNull(data);
+            Assert.IsNotNull(data.PlayerOwnedUnits);
+            Assert.IsNotNull(data.PlayerOwnedUnits.Units);
+            Assert.AreEqual(1, data.PlayerOwnedUnits.Units.Length);
+            Assert.AreEqual("owned_ok", data.PlayerOwnedUnits.Units[0].OwnedUnitId);
+            Assert.AreEqual("WizB", data.PlayerOwnedUnits.Units[0].UnitId);
+            Assert.AreEqual(1, data.PlayerOwnedUnits.Units[0].Level);
+            Assert.AreEqual(0, data.PlayerOwnedUnits.Units[0].Xp);
+            Assert.IsNotNull(data.PlayerOwnedUnits.Units[0].SpellIds);
+            Assert.AreEqual(1, data.PlayerOwnedUnits.Units[0].SpellIds.Length);
+            Assert.AreEqual("SpellB", data.PlayerOwnedUnits.Units[0].SpellIds[0]);
+            Assert.IsNotNull(data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds);
+            Assert.AreEqual(1, data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds.Length);
+            Assert.AreEqual("owned_ok", data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds[0]);
         }
 
         [Test]

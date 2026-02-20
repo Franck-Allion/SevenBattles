@@ -22,9 +22,9 @@ namespace SevenBattles.Battle.Progression
         private MonoBehaviour _sessionServiceBehaviour;
         [SerializeField, Tooltip("Turn controller (IBattleTurnController). If not assigned, one will be auto-found.")]
         private MonoBehaviour _turnControllerBehaviour;
-        [SerializeField, Tooltip("Optional PlayerContext whose PlayerSquad can be updated with awarded XP/levels. Disabled by default to avoid mutating ScriptableObject assets during play mode.")]
+        [SerializeField, Tooltip("Optional PlayerContext whose owned active squad can be updated with awarded XP/levels. Disabled by default to avoid mutating ScriptableObject assets during play mode.")]
         private PlayerContext _playerContext;
-        [SerializeField, Tooltip("If enabled, writes awarded XP/levels back into PlayerContext.PlayerSquad (this mutates ScriptableObject assets in-editor).")]
+        [SerializeField, Tooltip("If enabled, writes awarded XP/levels back into PlayerContext owned active squad (this mutates ScriptableObject assets in-editor).")]
         private bool _syncToPlayerContextAssets;
 
         [Header("Debug")]
@@ -474,55 +474,83 @@ namespace SevenBattles.Battle.Progression
 
         private void SyncPlayerContextFromSession(UnitSpellLoadout[] sessionPlayerSquad)
         {
-            if (_playerContext == null || _playerContext.PlayerSquad == null || sessionPlayerSquad == null)
+            if (_playerContext == null || sessionPlayerSquad == null || sessionPlayerSquad.Length == 0)
             {
                 return;
             }
 
-            var squad = _playerContext.PlayerSquad;
-            var loadouts = squad.GetLoadouts();
-            if (loadouts == null || loadouts.Length == 0)
+            IReadOnlyList<OwnedUnitData> currentOwned = _playerContext.OwnedUnits;
+            IReadOnlyList<string> currentActiveIds = _playerContext.ActiveSquadOwnedUnitIds;
+
+            var nextOwned = new List<OwnedUnitData>(Mathf.Max(currentOwned.Count, sessionPlayerSquad.Length));
+            var ownedIndexById = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int i = 0; i < currentOwned.Count; i++)
             {
-                squad.UnitLoadouts = sessionPlayerSquad;
-                return;
+                OwnedUnitData existing = OwnedUnitData.Clone(currentOwned[i]);
+                if (existing == null || existing.Definition == null || string.IsNullOrWhiteSpace(existing.OwnedUnitId))
+                {
+                    continue;
+                }
+
+                if (ownedIndexById.ContainsKey(existing.OwnedUnitId))
+                {
+                    continue;
+                }
+
+                ownedIndexById.Add(existing.OwnedUnitId, nextOwned.Count);
+                nextOwned.Add(existing);
             }
 
-            // Try index-based sync first (fast, preserves array shape).
-            if (loadouts.Length == sessionPlayerSquad.Length)
+            var nextActiveIds = new List<string>(Mathf.Min(_playerContext.MaxSquadSize, sessionPlayerSquad.Length));
+            var nextActiveIdSet = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < sessionPlayerSquad.Length; i++)
             {
-                bool indexMatch = true;
-                for (int i = 0; i < loadouts.Length; i++)
+                UnitSpellLoadout sessionLoadout = sessionPlayerSquad[i];
+                if (sessionLoadout == null || sessionLoadout.Definition == null)
                 {
-                    var a = loadouts[i];
-                    var b = sessionPlayerSquad[i];
-                    if (a == null || b == null || a.Definition == null || b.Definition == null)
-                    {
-                        indexMatch = false;
-                        break;
-                    }
+                    continue;
+                }
 
-                    if (!string.Equals(a.Definition.Id, b.Definition.Id, StringComparison.Ordinal))
+                string ownedId = i < currentActiveIds.Count ? currentActiveIds[i] : null;
+                if (string.IsNullOrWhiteSpace(ownedId) || !nextActiveIdSet.Add(ownedId))
+                {
+                    ownedId = Guid.NewGuid().ToString("N");
+                    while (!nextActiveIdSet.Add(ownedId))
                     {
-                        indexMatch = false;
-                        break;
+                        ownedId = Guid.NewGuid().ToString("N");
                     }
                 }
 
-                if (indexMatch)
+                var updated = new OwnedUnitData
                 {
-                    for (int i = 0; i < loadouts.Length; i++)
-                    {
-                        loadouts[i].Level = sessionPlayerSquad[i].EffectiveLevel;
-                        loadouts[i].Xp = sessionPlayerSquad[i].EffectiveXp;
-                        loadouts[i].Spells = sessionPlayerSquad[i].Spells;
-                    }
-                    SBLog.Info($"BattleXpAwarder: Synced {loadouts.Length} unit(s) Level/Xp from session to PlayerContext.", this);
-                    return;
+                    OwnedUnitId = ownedId,
+                    Definition = sessionLoadout.Definition,
+                    Level = sessionLoadout.EffectiveLevel,
+                    Xp = sessionLoadout.EffectiveXp,
+                    Spells = sessionLoadout.Spells != null
+                        ? (SpellDefinition[])sessionLoadout.Spells.Clone()
+                        : Array.Empty<SpellDefinition>()
+                };
+
+                if (ownedIndexById.TryGetValue(ownedId, out int existingIndex))
+                {
+                    nextOwned[existingIndex] = updated;
+                }
+                else
+                {
+                    ownedIndexById.Add(ownedId, nextOwned.Count);
+                    nextOwned.Add(updated);
+                }
+
+                if (nextActiveIds.Count < _playerContext.MaxSquadSize)
+                {
+                    nextActiveIds.Add(ownedId);
                 }
             }
 
-            // Fallback: replace the squad loadouts entirely with the session snapshot.
-            squad.UnitLoadouts = sessionPlayerSquad;
+            _playerContext.SetOwnedUnits(nextOwned);
+            _playerContext.SetActiveSquadOwnedUnitIds(nextActiveIds);
+            SBLog.Info($"BattleXpAwarder: Synced {nextActiveIds.Count} active owned unit(s) Level/Xp from session to PlayerContext.", this);
         }
 
         private void TrySyncPlayerContextFromSession(UnitSpellLoadout[] sessionPlayerSquad)
@@ -533,7 +561,7 @@ namespace SevenBattles.Battle.Progression
             }
 
             ResolvePlayerContext();
-            if (_playerContext == null || _playerContext.PlayerSquad == null)
+            if (_playerContext == null)
             {
                 return;
             }
@@ -545,7 +573,7 @@ namespace SevenBattles.Battle.Progression
                 return;
             }
 
-            SyncPlayerContextFromSession(UnitSpellLoadout.CloneArray(sessionPlayerSquad));
+            SyncPlayerContextFromSession(sessionPlayerSquad);
         }
 
         private void ResolvePlayerContext()
@@ -575,7 +603,7 @@ namespace SevenBattles.Battle.Progression
         private void TryAutoSavePlayerProgress()
         {
             ResolvePlayerContext();
-            if (_playerContext == null || _playerContext.PlayerSquad == null)
+            if (_playerContext == null)
             {
                 return;
             }

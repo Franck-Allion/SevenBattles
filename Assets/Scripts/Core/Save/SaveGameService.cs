@@ -65,6 +65,23 @@ namespace SevenBattles.Core.Save
     }
 
     [Serializable]
+    public sealed class OwnedUnitSaveData
+    {
+        public string OwnedUnitId;
+        public string UnitId;
+        public int Level;
+        public int Xp;
+        public string[] SpellIds;
+    }
+
+    [Serializable]
+    public sealed class PlayerOwnedUnitsSaveData
+    {
+        public OwnedUnitSaveData[] Units;
+        public string[] ActiveSquadOwnedUnitIds;
+    }
+
+    [Serializable]
     public sealed class UnitStatsSaveData
     {
         public int Life;
@@ -185,6 +202,7 @@ namespace SevenBattles.Core.Save
         public PlayerResourcesSaveData PlayerResources;
         public PlayerInventorySaveData PlayerInventory;
         public TournamentProgressSaveData TournamentProgress;
+        public PlayerOwnedUnitsSaveData PlayerOwnedUnits;
     }
 
     public sealed class SaveGameService : ISaveGameService
@@ -254,7 +272,7 @@ namespace SevenBattles.Core.Save
                         }
 
                         bool hasSave = !string.IsNullOrEmpty(data.Timestamp) ||
-                                       (data.PlayerSquad != null && data.PlayerSquad.WizardIds != null && data.PlayerSquad.WizardIds.Length > 0) ||
+                                       (data.PlayerOwnedUnits != null && data.PlayerOwnedUnits.Units != null && data.PlayerOwnedUnits.Units.Length > 0) ||
                                        (data.PlayerInventory != null && data.PlayerInventory.Entries != null && data.PlayerInventory.Entries.Length > 0) ||
                                        HasTournamentProgress(data.TournamentProgress);
 
@@ -316,14 +334,6 @@ namespace SevenBattles.Core.Save
                         return null;
                     }
 
-                    if (data.PlayerSquad == null)
-                    {
-                        data.PlayerSquad = new PlayerSquadSaveData
-                        {
-                            WizardIds = Array.Empty<string>()
-                        };
-                    }
-
                     if (data.UnitPlacements == null)
                     {
                         data.UnitPlacements = Array.Empty<UnitPlacementSaveData>();
@@ -351,6 +361,7 @@ namespace SevenBattles.Core.Save
                     data.PlayerResources = SanitizePlayerResources(data.PlayerResources);
                     data.PlayerInventory = SanitizePlayerInventory(data.PlayerInventory);
                     data.TournamentProgress = SanitizeTournamentProgress(data.TournamentProgress);
+                    data.PlayerOwnedUnits = SanitizePlayerOwnedUnits(data.PlayerOwnedUnits);
 
                     return data;
                 }
@@ -502,14 +513,6 @@ namespace SevenBattles.Core.Save
                 SBLog.Error($"SaveGameService: Game state provider threw during PopulateGameState. {ex}");
             }
 
-            if (data.PlayerSquad == null)
-            {
-                data.PlayerSquad = new PlayerSquadSaveData
-                {
-                    WizardIds = Array.Empty<string>()
-                };
-            }
-
             if (data.UnitPlacements == null)
             {
                 data.UnitPlacements = Array.Empty<UnitPlacementSaveData>();
@@ -537,6 +540,7 @@ namespace SevenBattles.Core.Save
             data.PlayerResources = SanitizePlayerResources(data.PlayerResources);
             data.PlayerInventory = SanitizePlayerInventory(data.PlayerInventory);
             data.TournamentProgress = SanitizeTournamentProgress(data.TournamentProgress);
+            data.PlayerOwnedUnits = SanitizePlayerOwnedUnits(data.PlayerOwnedUnits);
 
             return data;
         }
@@ -629,6 +633,72 @@ namespace SevenBattles.Core.Save
             {
                 CurrentRoundIndex = currentRound,
                 CompletedBattles = completed
+            };
+        }
+
+        private static PlayerOwnedUnitsSaveData SanitizePlayerOwnedUnits(PlayerOwnedUnitsSaveData value)
+        {
+            if (value == null)
+            {
+                return new PlayerOwnedUnitsSaveData
+                {
+                    Units = Array.Empty<OwnedUnitSaveData>(),
+                    ActiveSquadOwnedUnitIds = Array.Empty<string>()
+                };
+            }
+
+            var units = new System.Collections.Generic.List<OwnedUnitSaveData>();
+            if (value.Units != null)
+            {
+                for (int i = 0; i < value.Units.Length; i++)
+                {
+                    OwnedUnitSaveData unit = value.Units[i];
+                    if (unit == null || string.IsNullOrWhiteSpace(unit.OwnedUnitId) || string.IsNullOrWhiteSpace(unit.UnitId))
+                    {
+                        continue;
+                    }
+
+                    var sanitizedSpellIds = new System.Collections.Generic.List<string>();
+                    if (unit.SpellIds != null)
+                    {
+                        for (int j = 0; j < unit.SpellIds.Length; j++)
+                        {
+                            string spellId = unit.SpellIds[j];
+                            if (!string.IsNullOrWhiteSpace(spellId))
+                            {
+                                sanitizedSpellIds.Add(spellId);
+                            }
+                        }
+                    }
+
+                    units.Add(new OwnedUnitSaveData
+                    {
+                        OwnedUnitId = unit.OwnedUnitId,
+                        UnitId = unit.UnitId,
+                        Level = unit.Level > 0 ? unit.Level : UnitSpellLoadout.DefaultLevel,
+                        Xp = unit.Xp > 0 ? unit.Xp : 0,
+                        SpellIds = sanitizedSpellIds.Count > 0 ? sanitizedSpellIds.ToArray() : Array.Empty<string>()
+                    });
+                }
+            }
+
+            var activeIds = new System.Collections.Generic.List<string>();
+            if (value.ActiveSquadOwnedUnitIds != null)
+            {
+                for (int i = 0; i < value.ActiveSquadOwnedUnitIds.Length; i++)
+                {
+                    string id = value.ActiveSquadOwnedUnitIds[i];
+                    if (!string.IsNullOrWhiteSpace(id))
+                    {
+                        activeIds.Add(id);
+                    }
+                }
+            }
+
+            return new PlayerOwnedUnitsSaveData
+            {
+                Units = units.Count > 0 ? units.ToArray() : Array.Empty<OwnedUnitSaveData>(),
+                ActiveSquadOwnedUnitIds = activeIds.Count > 0 ? activeIds.ToArray() : Array.Empty<string>()
             };
         }
 

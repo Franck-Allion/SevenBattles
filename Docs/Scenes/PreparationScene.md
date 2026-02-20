@@ -82,6 +82,10 @@
   - `_clickSfxClip` -> SFX clip played when clicking Shop/Squad buttons.
   - `_clickSfxVolume` -> click SFX volume multiplier.
   - `_clickSfxCooldown` -> minimum time between click SFX plays.
+  - `_squadPanel` -> optional explicit reference to `SquadPanel` root (`GameObject`).
+  - `_squadPanelObjectName` -> name used for auto-discovery when `_squadPanel` is empty (default: `SquadPanel`).
+  - `_squadPanelCanvasGroup` -> optional `CanvasGroup` on `SquadPanel` for fade/input state (auto-added when missing).
+  - `_squadPanelFadeDuration` / `_squadPanelStartScale` / `_squadPanelRevealCurve` -> controls the unscaled-time reveal animation when `SquadButtonMenu` is clicked.
 - `ResourcesPanel` (`PreparationResourcesPanelPresenter`)
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
   - `_goldValueTMP` -> `Canvas/ResourcesPanel/Coin/CoinValue` (`TMP_Text`).

@@ -57,7 +57,7 @@ namespace SevenBattles.Battle.Save
         {
             if (data.BattleSession == null)
             {
-                SBLog.Warn("BattleSessionLoadHandler: No BattleSession data in save file. Using legacy fallback.");
+                SBLog.Warn("BattleSessionLoadHandler: No BattleSession data in save file.");
                 return;
             }
 
@@ -86,13 +86,7 @@ namespace SevenBattles.Battle.Save
 
             var existing = _sessionService.CurrentSession;
 
-            var playerIds = data.BattleSession.PlayerSquadIds;
-            if ((playerIds == null || playerIds.Length == 0) && data.PlayerSquad != null && data.PlayerSquad.WizardIds != null && data.PlayerSquad.WizardIds.Length > 0)
-            {
-                playerIds = data.PlayerSquad.WizardIds;
-            }
-
-            var resolvedPlayer = ResolveLoadouts(data.BattleSession.PlayerSquadUnits, playerIds);
+            var resolvedPlayer = ResolveLoadouts(data.BattleSession.PlayerSquadUnits, data.BattleSession.PlayerSquadIds);
             var resolvedEnemy = ResolveLoadouts(data.BattleSession.EnemySquadUnits, data.BattleSession.EnemySquadIds);
 
             if ((resolvedPlayer == null || resolvedPlayer.Length == 0) && existing != null && existing.PlayerSquad != null && existing.PlayerSquad.Length > 0)
@@ -144,8 +138,6 @@ namespace SevenBattles.Battle.Save
             if (session.EnemySquadUnits != null && session.EnemySquadUnits.Length > 0) return true;
             if (session.PlayerSquadIds != null && session.PlayerSquadIds.Length > 0) return true;
             if (session.EnemySquadIds != null && session.EnemySquadIds.Length > 0) return true;
-
-            if (data.PlayerSquad != null && data.PlayerSquad.WizardIds != null && data.PlayerSquad.WizardIds.Length > 0) return true;
 
             return false;
         }

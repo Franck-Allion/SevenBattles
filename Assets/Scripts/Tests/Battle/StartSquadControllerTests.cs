@@ -138,23 +138,33 @@ namespace SevenBattles.Tests.Battle
             unitDef.Id = "unit.runtime.test";
             unitDef.Prefab = prefab;
 
-            var assetSquad = ScriptableObject.CreateInstance<PlayerSquad>();
-            assetSquad.UnitLoadouts = new[]
-            {
-                new UnitSpellLoadout { Definition = unitDef, Level = 1, Xp = 0 }
-            };
-
-            var runtimeSquad = ScriptableObject.CreateInstance<PlayerSquad>();
-            runtimeSquad.UnitLoadouts = new[]
-            {
-                new UnitSpellLoadout { Definition = unitDef, Level = 4, Xp = 0 }
-            };
-
             var assetContext = ScriptableObject.CreateInstance<PlayerContext>();
-            assetContext.PlayerSquad = assetSquad;
+            assetContext.SetOwnedUnits(new[]
+            {
+                new OwnedUnitData
+                {
+                    OwnedUnitId = "asset_unit_1",
+                    Definition = unitDef,
+                    Level = 1,
+                    Xp = 0,
+                    Spells = System.Array.Empty<SpellDefinition>()
+                }
+            });
+            assetContext.SetActiveSquadOwnedUnitIds(new[] { "asset_unit_1" });
 
             var runtimeContext = ScriptableObject.CreateInstance<PlayerContext>();
-            runtimeContext.PlayerSquad = runtimeSquad;
+            runtimeContext.SetOwnedUnits(new[]
+            {
+                new OwnedUnitData
+                {
+                    OwnedUnitId = "runtime_unit_1",
+                    Definition = unitDef,
+                    Level = 4,
+                    Xp = 0,
+                    Spells = System.Array.Empty<SpellDefinition>()
+                }
+            });
+            runtimeContext.SetActiveSquadOwnedUnitIds(new[] { "runtime_unit_1" });
             PlayerContext.SetRuntimeInstance(runtimeContext);
 
             var ctrlGo = new GameObject("SquadStartController");
@@ -176,8 +186,6 @@ namespace SevenBattles.Tests.Battle
             Object.DestroyImmediate(ctrlGo);
             Object.DestroyImmediate(runtimeContext);
             Object.DestroyImmediate(assetContext);
-            Object.DestroyImmediate(runtimeSquad);
-            Object.DestroyImmediate(assetSquad);
             Object.DestroyImmediate(unitDef);
             Object.DestroyImmediate(prefab);
             Object.DestroyImmediate(boardGo);

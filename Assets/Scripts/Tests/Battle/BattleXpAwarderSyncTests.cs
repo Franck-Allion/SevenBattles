@@ -62,25 +62,21 @@ namespace SevenBattles.Tests.Battle
             var unitDefB = ScriptableObject.CreateInstance<UnitDefinition>();
             unitDefB.Id = "unit.b";
 
-            var assetSquad = ScriptableObject.CreateInstance<PlayerSquad>();
-            assetSquad.UnitLoadouts = new[]
-            {
-                new UnitSpellLoadout { Definition = unitDefA, Level = 1, Xp = 0 },
-                new UnitSpellLoadout { Definition = unitDefB, Level = 1, Xp = 0 }
-            };
-
-            var runtimeSquad = ScriptableObject.CreateInstance<PlayerSquad>();
-            runtimeSquad.UnitLoadouts = new[]
-            {
-                new UnitSpellLoadout { Definition = unitDefA, Level = 1, Xp = 0 },
-                new UnitSpellLoadout { Definition = unitDefB, Level = 1, Xp = 0 }
-            };
-
             var assetContext = ScriptableObject.CreateInstance<PlayerContext>();
-            assetContext.PlayerSquad = assetSquad;
+            assetContext.SetOwnedUnits(new[]
+            {
+                new OwnedUnitData { OwnedUnitId = "asset_a", Definition = unitDefA, Level = 1, Xp = 0 },
+                new OwnedUnitData { OwnedUnitId = "asset_b", Definition = unitDefB, Level = 1, Xp = 0 }
+            });
+            assetContext.SetActiveSquadOwnedUnitIds(new[] { "asset_a", "asset_b" });
 
             var runtimeContext = ScriptableObject.CreateInstance<PlayerContext>();
-            runtimeContext.PlayerSquad = runtimeSquad;
+            runtimeContext.SetOwnedUnits(new[]
+            {
+                new OwnedUnitData { OwnedUnitId = "runtime_a", Definition = unitDefA, Level = 1, Xp = 0 },
+                new OwnedUnitData { OwnedUnitId = "runtime_b", Definition = unitDefB, Level = 1, Xp = 0 }
+            });
+            runtimeContext.SetActiveSquadOwnedUnitIds(new[] { "runtime_a", "runtime_b" });
             PlayerContext.SetRuntimeInstance(runtimeContext);
 
             var go = new GameObject("BattleXpAwarderTest");
@@ -106,13 +102,13 @@ namespace SevenBattles.Tests.Battle
                 Assert.IsNotNull(method, "TrySyncPlayerContextFromSession method not found.");
                 method.Invoke(awarder, new object[] { sessionSquad });
 
-                var runtimeLoadouts = runtimeSquad.GetLoadouts();
+                var runtimeLoadouts = runtimeContext.GetActiveSquadLoadoutsNonAlloc();
                 Assert.AreEqual(3, runtimeLoadouts[0].EffectiveLevel);
                 Assert.AreEqual(15, runtimeLoadouts[0].EffectiveXp);
                 Assert.AreEqual(2, runtimeLoadouts[1].EffectiveLevel);
                 Assert.AreEqual(8, runtimeLoadouts[1].EffectiveXp);
 
-                var assetLoadouts = assetSquad.GetLoadouts();
+                var assetLoadouts = assetContext.GetActiveSquadLoadoutsNonAlloc();
                 Assert.AreEqual(1, assetLoadouts[0].EffectiveLevel, "Authored asset loadouts must remain unchanged.");
                 Assert.AreEqual(0, assetLoadouts[0].EffectiveXp, "Authored asset loadouts must remain unchanged.");
                 Assert.AreEqual(1, assetLoadouts[1].EffectiveLevel, "Authored asset loadouts must remain unchanged.");
@@ -123,8 +119,6 @@ namespace SevenBattles.Tests.Battle
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(runtimeContext);
                 Object.DestroyImmediate(assetContext);
-                Object.DestroyImmediate(runtimeSquad);
-                Object.DestroyImmediate(assetSquad);
                 Object.DestroyImmediate(unitDefB);
                 Object.DestroyImmediate(unitDefA);
             }
@@ -138,15 +132,13 @@ namespace SevenBattles.Tests.Battle
             var unitDefB = ScriptableObject.CreateInstance<UnitDefinition>();
             unitDefB.Id = "unit.b";
 
-            var squad = ScriptableObject.CreateInstance<PlayerSquad>();
-            squad.UnitLoadouts = new[]
-            {
-                new UnitSpellLoadout { Definition = unitDefA, Level = 1, Xp = 0 },
-                new UnitSpellLoadout { Definition = unitDefB, Level = 1, Xp = 0 }
-            };
-
             var context = ScriptableObject.CreateInstance<PlayerContext>();
-            context.PlayerSquad = squad;
+            context.SetOwnedUnits(new[]
+            {
+                new OwnedUnitData { OwnedUnitId = "owned_a", Definition = unitDefA, Level = 1, Xp = 0 },
+                new OwnedUnitData { OwnedUnitId = "owned_b", Definition = unitDefB, Level = 1, Xp = 0 }
+            });
+            context.SetActiveSquadOwnedUnitIds(new[] { "owned_a", "owned_b" });
             PlayerContext.SetRuntimeInstance(null);
 
             var go = new GameObject("BattleXpAwarderTest");
@@ -172,7 +164,7 @@ namespace SevenBattles.Tests.Battle
                 Assert.IsNotNull(method, "TrySyncPlayerContextFromSession method not found.");
                 method.Invoke(awarder, new object[] { sessionSquad });
 
-                var loadouts = squad.GetLoadouts();
+                var loadouts = context.GetActiveSquadLoadoutsNonAlloc();
                 Assert.AreEqual(1, loadouts[0].EffectiveLevel, "Asset sync must stay disabled when runtime context is missing.");
                 Assert.AreEqual(0, loadouts[0].EffectiveXp, "Asset sync must stay disabled when runtime context is missing.");
                 Assert.AreEqual(1, loadouts[1].EffectiveLevel, "Asset sync must stay disabled when runtime context is missing.");
@@ -182,7 +174,6 @@ namespace SevenBattles.Tests.Battle
             {
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(context);
-                Object.DestroyImmediate(squad);
                 Object.DestroyImmediate(unitDefB);
                 Object.DestroyImmediate(unitDefA);
             }
@@ -196,15 +187,13 @@ namespace SevenBattles.Tests.Battle
             var unitDefB = ScriptableObject.CreateInstance<UnitDefinition>();
             unitDefB.Id = "unit.b";
 
-            var squad = ScriptableObject.CreateInstance<PlayerSquad>();
-            squad.UnitLoadouts = new[]
-            {
-                new UnitSpellLoadout { Definition = unitDefA, Level = 1, Xp = 0 },
-                new UnitSpellLoadout { Definition = unitDefB, Level = 1, Xp = 0 }
-            };
-
             var context = ScriptableObject.CreateInstance<PlayerContext>();
-            context.PlayerSquad = squad;
+            context.SetOwnedUnits(new[]
+            {
+                new OwnedUnitData { OwnedUnitId = "owned_a", Definition = unitDefA, Level = 1, Xp = 0 },
+                new OwnedUnitData { OwnedUnitId = "owned_b", Definition = unitDefB, Level = 1, Xp = 0 }
+            });
+            context.SetActiveSquadOwnedUnitIds(new[] { "owned_a", "owned_b" });
 
             var go = new GameObject("BattleXpAwarderTest");
             var awarder = go.AddComponent<BattleXpAwarder>();
@@ -227,7 +216,7 @@ namespace SevenBattles.Tests.Battle
                 Assert.IsNotNull(syncMethod, "SyncPlayerContextFromSession method not found.");
                 syncMethod.Invoke(awarder, new object[] { sessionSquad });
 
-                var loadouts = squad.GetLoadouts();
+                var loadouts = context.GetActiveSquadLoadoutsNonAlloc();
                 Assert.AreEqual(3, loadouts[0].EffectiveLevel, "Unit A level should be 3 after sync.");
                 Assert.AreEqual(15, loadouts[0].EffectiveXp, "Unit A XP should be 15 after sync.");
                 Assert.AreEqual(2, loadouts[1].EffectiveLevel, "Unit B level should be 2 after sync.");
@@ -237,7 +226,6 @@ namespace SevenBattles.Tests.Battle
             {
                 Object.DestroyImmediate(go);
                 Object.DestroyImmediate(context);
-                Object.DestroyImmediate(squad);
                 Object.DestroyImmediate(unitDefB);
                 Object.DestroyImmediate(unitDefA);
             }

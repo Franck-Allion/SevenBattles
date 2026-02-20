@@ -68,6 +68,7 @@
     <Compile Include="Assets\Scripts\Core\Preload\ShaderWarmupPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\UnitXpProgressionUtil.cs" />
     <Compile Include="Assets\Scripts\Core\Diagnostics\LocalizationCacheDiagnostics.cs" />
+    <Compile Include="Assets\Scripts\Core\Players\SquadService.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\PreloadResult.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleOutcome.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellDefinition.cs" />
@@ -75,11 +76,15 @@
     <Compile Include="Assets\Scripts\Core\AssemblyInfo.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerContextAutoSaveUtility.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleTurnController.cs" />
+    <Compile Include="Assets\Scripts\Core\Players\OwnedUnitData.cs" />
     <Compile Include="Assets\Scripts\Core\Save\SaveGameService.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerSquadGameStateSaveProvider.cs" />
     <Compile Include="Assets\Scripts\Core\Diagnostics\SBLog.cs" />
     <Compile Include="Assets\Scripts\Core\Players\PlayerSquad.cs" />
     <Compile Include="Assets\Scripts\Core\Save\CompositeGameStateLoadHandler.cs" />
+    <Compile Include="Assets\Scripts\Core\Players\PlayerInventoryService.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\IPlayerInventoryService.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\ISquadSetupController.cs" />
     <Compile Include="Assets\Scripts\Core\Save\PlayerSquadBattleSessionLoadHandler.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleSessionConfig.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\TournamentMissionIdUtil.cs" />
@@ -96,6 +101,7 @@
     <Compile Include="Assets\Scripts\Core\Battle\TournamentBattleDefinition.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IEnchantmentInspectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattleSessionService.cs" />
+    <Compile Include="Assets\Scripts\Core\Players\UnitCatalogService.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleXpAwardResult.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IUnitInspectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Items\EquipmentDefinition.cs" />
@@ -112,12 +118,14 @@
     <Compile Include="Assets\Scripts\Core\Battle\BattleSessionConfigTransfer.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\SpellAmountPreview.cs" />
     <Compile Include="Assets\Scripts\Core\Math\Homography2D.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\ISquadService.cs" />
     <Compile Include="Assets\Scripts\Core\Items\EquipmentSlotType.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISpellSelectionController.cs" />
     <Compile Include="Assets\Scripts\Core\Items\InventoryEntry.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\LocalizationPreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\IBattlefieldService.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldTileColor.cs" />
+    <Compile Include="Assets\Scripts\Core\Contracts\IUnitCatalog.cs" />
     <Compile Include="Assets\Scripts\Core\Preload\TexturePreloadTask.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ITurnOrderController.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattlefieldDefinitionRegistry.cs" />
@@ -132,6 +140,7 @@
     <Compile Include="Assets\Scripts\Core\Units\UnitDefinitionRegistry.cs" />
     <Compile Include="Assets\Scripts\Core\Units\UnitLevelBonusData.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleRewardTable.cs" />
+    <Compile Include="Assets\Scripts\Core\Players\SquadSelectionModel.cs" />
     <Compile Include="Assets\Scripts\Core\Battle\BattleRewardService.cs" />
     <Compile Include="Assets\Scripts\Core\Contracts\ISquadPlacementController.cs" />
     <Compile Include="Assets\Scripts\Core\Save\CompositeGameStateSaveProvider.cs" />

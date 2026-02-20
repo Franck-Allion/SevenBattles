@@ -1,12 +1,13 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using SevenBattles.Core.Battle;
 using SevenBattles.Core.Players;
 
 namespace SevenBattles.Core.Save
 {
     /// <summary>
-    /// Default game state provider that captures the current PlayerSquad into SaveGameData.
-    /// This is a first step towards full game state capture; additional fields can be added later.
+    /// Default game state provider that captures player progression into SaveGameData.
     /// </summary>
     public class PlayerSquadGameStateSaveProvider : MonoBehaviour, IGameStateSaveProvider
     {
@@ -41,30 +42,64 @@ namespace SevenBattles.Core.Save
                 CompletedBattles = tournamentProgress != null ? tournamentProgress.GetCompletedFlagsCopy() : Array.Empty<bool>()
             };
 
-            var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
+            data.PlayerOwnedUnits = BuildOwnedUnitsSaveData(_playerContext);
+        }
 
-            var loadouts = playerSquad != null ? playerSquad.GetLoadouts() : null;
-
-            if (playerSquad == null || loadouts == null || loadouts.Length == 0)
+        private static PlayerOwnedUnitsSaveData BuildOwnedUnitsSaveData(PlayerContext context)
+        {
+            if (context == null)
             {
-                data.PlayerSquad = new PlayerSquadSaveData
+                return new PlayerOwnedUnitsSaveData
                 {
-                    WizardIds = Array.Empty<string>()
+                    Units = Array.Empty<OwnedUnitSaveData>(),
+                    ActiveSquadOwnedUnitIds = Array.Empty<string>()
                 };
-                return;
             }
 
-            var ids = new string[loadouts.Length];
-
-            for (int i = 0; i < loadouts.Length; i++)
+            var units = new List<OwnedUnitSaveData>(context.OwnedUnits.Count);
+            for (int i = 0; i < context.OwnedUnits.Count; i++)
             {
-                var def = loadouts[i] != null ? loadouts[i].Definition : null;
-                ids[i] = def != null ? def.Id : null;
+                OwnedUnitData owned = context.OwnedUnits[i];
+                if (owned == null || owned.Definition == null || string.IsNullOrWhiteSpace(owned.OwnedUnitId))
+                {
+                    continue;
+                }
+
+                SpellDefinition[] spells = owned.Spells ?? Array.Empty<SpellDefinition>();
+                var spellIds = new List<string>(spells.Length);
+                for (int j = 0; j < spells.Length; j++)
+                {
+                    SpellDefinition spell = spells[j];
+                    if (spell != null && !string.IsNullOrWhiteSpace(spell.Id))
+                    {
+                        spellIds.Add(spell.Id);
+                    }
+                }
+
+                units.Add(new OwnedUnitSaveData
+                {
+                    OwnedUnitId = owned.OwnedUnitId,
+                    UnitId = owned.Definition.Id,
+                    Level = owned.EffectiveLevel,
+                    Xp = owned.EffectiveXp,
+                    SpellIds = spellIds.Count > 0 ? spellIds.ToArray() : Array.Empty<string>()
+                });
             }
 
-            data.PlayerSquad = new PlayerSquadSaveData
+            var activeIds = new List<string>(context.ActiveSquadOwnedUnitIds.Count);
+            for (int i = 0; i < context.ActiveSquadOwnedUnitIds.Count; i++)
             {
-                WizardIds = ids
+                string id = context.ActiveSquadOwnedUnitIds[i];
+                if (!string.IsNullOrWhiteSpace(id))
+                {
+                    activeIds.Add(id);
+                }
+            }
+
+            return new PlayerOwnedUnitsSaveData
+            {
+                Units = units.Count > 0 ? units.ToArray() : Array.Empty<OwnedUnitSaveData>(),
+                ActiveSquadOwnedUnitIds = activeIds.Count > 0 ? activeIds.ToArray() : Array.Empty<string>()
             };
         }
     }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 using SevenBattles.Battle.Board;
 using SevenBattles.Battle.Spells;
 using SevenBattles.Core.Players;
@@ -16,9 +17,9 @@ namespace SevenBattles.Battle.Start
         [SerializeField] private WorldPerspectiveBoard _board;
 
         [Header("Squad Prefabs")]
-        [Tooltip("Optional: legacy prefabs list. If PlayerSquad is assigned, it is used instead.")]
+        [Tooltip("Optional fallback prefabs list when no active owned squad is available.")]
         [SerializeField] private GameObject[] _wizardPrefabs = new GameObject[3];
-        [Tooltip("Preferred: data-driven squad.")]
+        [Tooltip("Preferred: player context source for owned active squad.")]
         [SerializeField] private PlayerContext _playerContext;
 
         [Header("Placement")]
@@ -52,22 +53,16 @@ namespace SevenBattles.Battle.Start
                 return;
             }
 
-            if (PlayerContext.HasRuntimeInstance)
-            {
-                _playerContext = PlayerContext.RuntimeInstance;
-            }
-
-            var playerSquad = _playerContext != null ? _playerContext.PlayerSquad : null;
-            var loadouts = playerSquad != null ? playerSquad.GetLoadouts() : null;
-            if ((loadouts == null || loadouts.Length == 0) && (_wizardPrefabs == null || _wizardPrefabs.Length == 0))
+            var loadouts = ResolvePlayerLoadouts();
+            if ((loadouts == null || loadouts.Count == 0) && (_wizardPrefabs == null || _wizardPrefabs.Length == 0))
             {
                 SBLog.Warn("WorldSquadStartController: No wizard prefabs configured.");
                 return;
             }
 
-            if (loadouts != null && loadouts.Length > 0)
+            if (loadouts != null && loadouts.Count > 0)
             {
-                for (int i = 0; i < loadouts.Length; i++)
+                for (int i = 0; i < loadouts.Count; i++)
                 {
                     var loadout = loadouts[i];
                     var def = loadout != null ? loadout.Definition : null;
@@ -104,6 +99,21 @@ namespace SevenBattles.Battle.Start
                     _board.PlaceHero(go.transform, tileX, _rowY, _sortingLayer, sortingOrder);
                 }
             }
+        }
+
+        private IReadOnlyList<UnitSpellLoadout> ResolvePlayerLoadouts()
+        {
+            if (PlayerContext.HasRuntimeInstance)
+            {
+                _playerContext = PlayerContext.RuntimeInstance;
+            }
+
+            if (_playerContext == null)
+            {
+                return null;
+            }
+
+            return _playerContext.GetActiveSquadLoadoutsNonAlloc();
         }
 
         private int GetTileXForIndex(int index)

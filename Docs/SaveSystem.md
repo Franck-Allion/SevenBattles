@@ -25,9 +25,9 @@ It reflects the current **Save + Load** implementation.
   - `BattleEnchantmentGameStateSaveProvider`: captures active battlefield enchantments (spell id, quad index, caster identity).
 
 - **Players domain**
-  - `PlayerSquadGameStateSaveProvider`: captures player-owned state from `PlayerContext` (squad + resources + tournament progress).
+  - `PlayerSquadGameStateSaveProvider`: captures player-owned state from `PlayerContext` (owned units + active squad ids + resources + tournament progress).
   - `PlayerInventoryGameStateSaveProvider`: captures player inventory entries from `PlayerContext.Inventory`.
-  - `PlayerResourcesLoadHandler`: restores player resources into `PlayerContext` when loading.
+  - `PlayerResourcesLoadHandler`: restores player resources and owned-units state into `PlayerContext` when loading.
 
 - **UI domain**
   - `SaveLoadHUD`: Save/Load overlay that drives slot selection and calls into `ISaveGameService` for persistence.
@@ -67,8 +67,8 @@ For each `SaveSlotAsync(int slotIndex)` call:
      - Creates a new `SaveGameData { Timestamp, RunNumber }`.
      - Calls `IGameStateSaveProvider.PopulateGameState(SaveGameData data)` on the configured provider.
      - Fills in safe defaults if the provider leaves fields `null`:
-       - `PlayerSquad`: always non‑null with an empty `WizardIds` array.
-       - `UnitPlacements`: always non‑null, possibly empty.
+      - `PlayerOwnedUnits`: always non‑null with empty `Units` and `ActiveSquadOwnedUnitIds` arrays.
+      - `UnitPlacements`: always non‑null, possibly empty.
      - `BattleTurn`: always non‑null, defaults to `Phase = "unknown"`, zeroed indices and AP.
      - `PlayerResources`: always non‑null, defaults to `Gold = 0` and `Gems = 0`.
       - `PlayerInventory`: always non‑null with an empty `Entries` array.
@@ -95,9 +95,13 @@ For each `SaveSlotAsync(int slotIndex)` call:
   - Serializes/deserializes player runtime progression:
     - Gold/Gems
     - Tournament progress (CurrentRoundIndex, CompletedBattles)
-    - Player squad unit progression per slot (Level, Xp, SpellIds)
+    - Owned units (OwnedUnitId, UnitId, Level, Xp, SpellIds)
+    - Active squad owned-unit ids
     - Player inventory entries
   - Autosave path: `<Application.persistentDataPath>/Saves/autosave_player_context.json`
+  - Legacy compatibility:
+    - If an older autosave JSON is missing the `OwnedUnits` field, load now preserves current `PlayerContext.OwnedUnits` instead of clearing them.
+    - If active squad ids are empty in that legacy case, load seeds `ActiveSquadOwnedUnitIds` from existing owned units up to `MaxSquadSize`.
 
 - `Assets/Scripts/UI/BattleResultHUD.cs`
   - Triggers autosave once per battle result popup (Victory or Defeat) after progression/reward application.
@@ -106,8 +110,8 @@ For each `SaveSlotAsync(int slotIndex)` call:
 
 - `Assets/Scripts/Preparation/PreparationAutoSaveLoader.cs`
   - MonoBehaviour placed on the PreparationScene's _System GameObject.
-  - On Awake, creates a runtime clone of `PlayerContext` (and deep clones `PlayerSquad` loadouts + `PlayerInventory` entries).
-  - Sets `PlayerContext.SetRuntimeInstance(runtimeClone)` and rebinds scene `PlayerContext` / `PlayerSquad` / `PlayerInventory` field references from asset to clone.
+  - On Awake, creates a runtime clone of `PlayerContext` (and deep clones `PlayerInventory` entries).
+  - Sets `PlayerContext.SetRuntimeInstance(runtimeClone)` and rebinds scene `PlayerContext` / `PlayerInventory` field references from asset to clone.
   - Loads autosave JSON into the runtime clone (never into authored asset references).
 
 - `Assets/Scripts/Core/Players/PlayerContext.cs`
@@ -168,15 +172,24 @@ Typical configuration:
 File: `Assets/Scripts/Core/Save/PlayerSquadGameStateSaveProvider.cs`
 
 - Reads from `PlayerContext`.
-- Fills `SaveGameData.PlayerSquad` with:
+- Fills `SaveGameData.PlayerOwnedUnits` with:
 
   ```csharp
-  public sealed class PlayerSquadSaveData {
-      public string[] WizardIds; // UnitDefinition.Id per slot
+  public sealed class OwnedUnitSaveData {
+      public string OwnedUnitId; // stable player-owned identity
+      public string UnitId;      // UnitDefinition.Id
+      public int Level;
+      public int Xp;
+      public string[] SpellIds;
+  }
+
+  public sealed class PlayerOwnedUnitsSaveData {
+      public OwnedUnitSaveData[] Units;
+      public string[] ActiveSquadOwnedUnitIds; // ordered subset of Units
   }
   ```
 
-- If the squad is null or empty, writes an empty `WizardIds` array (no crash).
+- If no owned units are available, writes empty arrays.
 - Also fills `SaveGameData.PlayerResources` with:
 
   ```csharp
@@ -393,6 +406,9 @@ File: `Assets/Scripts/Core/Save/PlayerResourcesLoadHandler.cs`
 - Applies `SaveGameData.PlayerResources` back to `PlayerContext`.
 - Uses `PlayerContext.SetResources(gold, gems)` so negative values clamp safely to `0`.
 - Applies `SaveGameData.TournamentProgress` back to `PlayerContext` via `SetTournamentProgress(...)`.
+- Applies `SaveGameData.PlayerOwnedUnits` back to `PlayerContext`:
+  - Restores `OwnedUnits`.
+  - Restores `ActiveSquadOwnedUnitIds`.
 - Wire this handler into `CompositeGameStateLoadHandler` for scenes that can execute load flows.
 
 ---
@@ -407,8 +423,24 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
 {
   "Timestamp": "2025-11-29 21:30:12",
   "RunNumber": 3,
-  "PlayerSquad": {
-    "WizardIds": ["WizardA", "WizardB", "WizardC"]  // DEPRECATED - use BattleSession
+  "PlayerOwnedUnits": {
+    "Units": [
+      {
+        "OwnedUnitId": "owned_a1",
+        "UnitId": "WizardA",
+        "Level": 3,
+        "Xp": 12,
+        "SpellIds": ["spell.firebolt"]
+      },
+      {
+        "OwnedUnitId": "owned_b1",
+        "UnitId": "WizardB",
+        "Level": 2,
+        "Xp": 5,
+        "SpellIds": []
+      }
+    ],
+    "ActiveSquadOwnedUnitIds": ["owned_a1", "owned_b1"]
   },
   "UnitPlacements": [
     {

@@ -133,29 +133,12 @@ namespace SevenBattles.Battle.Start
         /// </summary>
         private BattleSessionConfig BuildLegacyBattleSessionConfig()
         {
-            // Try to find player and enemy squad controllers to extract their legacy references
-            var placementController = _playerPlacementBehaviour as WorldSquadPlacementController;
-            if (placementController == null)
-            {
-                placementController = UnityEngine.Object.FindFirstObjectByType<WorldSquadPlacementController>();
-            }
-
             UnitSpellLoadout[] playerSquad = null;
             UnitSpellLoadout[] enemySquad = null;
 
-            // Extract player squad from placement controller's legacy field
-            if (placementController != null)
+            if (PlayerContext.HasRuntimeInstance && PlayerContext.RuntimeInstance != null)
             {
-                var playerSquadField = typeof(WorldSquadPlacementController).GetField("_playerSquad", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                if (playerSquadField != null)
-                {
-                    var playerSquadSO = playerSquadField.GetValue(placementController) as PlayerSquad;
-                    if (playerSquadSO != null)
-                    {
-                        playerSquad = playerSquadSO.GetLoadouts();
-                    }
-                }
+                playerSquad = CloneLoadouts(PlayerContext.RuntimeInstance.GetActiveSquadLoadoutsNonAlloc());
             }
 
             // Extract enemy squad from enemy controller's legacy field
@@ -189,6 +172,34 @@ namespace SevenBattles.Battle.Start
                 Battlefield = _defaultBattlefield,
                 BattlefieldId = _defaultBattlefield != null ? _defaultBattlefield.Id : null
             };
+        }
+
+        private static UnitSpellLoadout[] CloneLoadouts(System.Collections.Generic.IReadOnlyList<UnitSpellLoadout> source)
+        {
+            if (source == null || source.Count == 0)
+            {
+                return null;
+            }
+
+            var clone = new System.Collections.Generic.List<UnitSpellLoadout>(source.Count);
+            for (int i = 0; i < source.Count; i++)
+            {
+                UnitSpellLoadout loadout = source[i];
+                if (loadout == null || loadout.Definition == null)
+                {
+                    continue;
+                }
+
+                clone.Add(new UnitSpellLoadout
+                {
+                    Definition = loadout.Definition,
+                    Level = loadout.EffectiveLevel,
+                    Xp = loadout.EffectiveXp,
+                    Spells = loadout.Spells != null ? (SpellDefinition[])loadout.Spells.Clone() : Array.Empty<SpellDefinition>()
+                });
+            }
+
+            return clone.Count > 0 ? clone.ToArray() : null;
         }
 
         private void OnDestroy()

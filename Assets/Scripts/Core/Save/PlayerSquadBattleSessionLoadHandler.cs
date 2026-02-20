@@ -9,14 +9,14 @@ using SevenBattles.Core.Units;
 namespace SevenBattles.Core.Save
 {
     /// <summary>
-    /// Updates PlayerContext.PlayerSquad from BattleSession save data, so progression
+    /// Updates PlayerContext owned active squad from BattleSession save data, so progression
     /// (XP/levels/spells) survives save/load cycles.
     /// </summary>
     public class PlayerSquadBattleSessionLoadHandler : MonoBehaviour, IGameStateLoadHandler
     {
-        [SerializeField, Tooltip("Player context whose PlayerSquad will be updated from save data.")]
+        [SerializeField, Tooltip("Player context whose owned active squad will be updated from save data.")]
         private PlayerContext _playerContext;
-        [SerializeField, Tooltip("If enabled, applies loaded progression into PlayerContext.PlayerSquad (this mutates ScriptableObject assets in-editor).")]
+        [SerializeField, Tooltip("If enabled, applies loaded progression into PlayerContext owned active squad (this mutates ScriptableObject assets in-editor).")]
         private bool _applyToPlayerContextAssets;
 
         [Header("Optional registries (recommended)")]
@@ -38,7 +38,7 @@ namespace SevenBattles.Core.Save
                 return;
             }
 
-            if (_playerContext == null || _playerContext.PlayerSquad == null)
+            if (_playerContext == null)
             {
                 return;
             }
@@ -79,7 +79,106 @@ namespace SevenBattles.Core.Save
             }
 
             loadouts = loadouts.Where(l => l != null).ToArray();
-            _playerContext.PlayerSquad.UnitLoadouts = loadouts;
+            ApplyOwnedUnitsFromBattleSession(loadouts);
+        }
+
+        private void ApplyOwnedUnitsFromBattleSession(UnitSpellLoadout[] loadouts)
+        {
+            if (_playerContext == null)
+            {
+                return;
+            }
+
+            if (loadouts == null || loadouts.Length == 0)
+            {
+                return;
+            }
+
+            var owned = new List<OwnedUnitData>();
+            var activeIds = new List<string>(Mathf.Min(_playerContext.MaxSquadSize, loadouts.Length));
+
+            IReadOnlyList<OwnedUnitData> existingOwned = _playerContext.OwnedUnits;
+            IReadOnlyList<string> existingActiveIds = _playerContext.ActiveSquadOwnedUnitIds;
+
+            int count = Mathf.Min(existingActiveIds.Count, loadouts.Length);
+            for (int i = 0; i < count; i++)
+            {
+                string existingOwnedId = existingActiveIds[i];
+                OwnedUnitData matched = FindOwnedById(existingOwned, existingOwnedId);
+                UnitSpellLoadout loadout = loadouts[i];
+                if (matched == null || loadout == null || loadout.Definition == null)
+                {
+                    continue;
+                }
+
+                var updated = new OwnedUnitData
+                {
+                    OwnedUnitId = matched.OwnedUnitId,
+                    Definition = loadout.Definition,
+                    Level = loadout.EffectiveLevel,
+                    Xp = loadout.EffectiveXp,
+                    Spells = loadout.Spells != null ? (SpellDefinition[])loadout.Spells.Clone() : Array.Empty<SpellDefinition>()
+                };
+
+                owned.Add(updated);
+                activeIds.Add(updated.OwnedUnitId);
+            }
+
+            for (int i = count; i < loadouts.Length; i++)
+            {
+                UnitSpellLoadout loadout = loadouts[i];
+                if (loadout == null || loadout.Definition == null)
+                {
+                    continue;
+                }
+
+                var created = new OwnedUnitData
+                {
+                    OwnedUnitId = Guid.NewGuid().ToString("N"),
+                    Definition = loadout.Definition,
+                    Level = loadout.EffectiveLevel,
+                    Xp = loadout.EffectiveXp,
+                    Spells = loadout.Spells != null ? (SpellDefinition[])loadout.Spells.Clone() : Array.Empty<SpellDefinition>()
+                };
+
+                owned.Add(created);
+                if (activeIds.Count < _playerContext.MaxSquadSize)
+                {
+                    activeIds.Add(created.OwnedUnitId);
+                }
+            }
+
+            if (owned.Count == 0)
+            {
+                return;
+            }
+
+            _playerContext.SetOwnedUnits(owned);
+            _playerContext.SetActiveSquadOwnedUnitIds(activeIds);
+        }
+
+        private static OwnedUnitData FindOwnedById(IReadOnlyList<OwnedUnitData> ownedUnits, string ownedUnitId)
+        {
+            if (ownedUnits == null || string.IsNullOrWhiteSpace(ownedUnitId))
+            {
+                return null;
+            }
+
+            for (int i = 0; i < ownedUnits.Count; i++)
+            {
+                OwnedUnitData candidate = ownedUnits[i];
+                if (candidate == null)
+                {
+                    continue;
+                }
+
+                if (string.Equals(candidate.OwnedUnitId, ownedUnitId, StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
 
         private UnitDefinition ResolveUnitDefinition(string id)

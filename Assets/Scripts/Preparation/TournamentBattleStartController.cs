@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Localization;
+using System;
+using System.Collections.Generic;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Contracts;
 using SevenBattles.Core.Players;
@@ -287,17 +289,16 @@ namespace SevenBattles.Preparation
             }
 
             var playerContext = ResolvePlayerContext();
-            var playerSquad = playerContext != null ? playerContext.PlayerSquad : null;
-            if (playerSquad == null)
+            if (playerContext == null)
             {
-                SBLog.Error("TournamentBattleStartController: PlayerContext has no PlayerSquad assigned.", this);
+                SBLog.Error("TournamentBattleStartController: PlayerContext is missing.", this);
                 return false;
             }
 
-            var playerLoadouts = playerSquad.GetLoadouts();
+            var playerLoadouts = CloneValidLoadouts(playerContext.GetActiveSquadLoadoutsNonAlloc());
             if (playerLoadouts == null || playerLoadouts.Length == 0)
             {
-                SBLog.Error("TournamentBattleStartController: PlayerSquad has no loadouts.", this);
+                SBLog.Error("TournamentBattleStartController: Active squad has no owned units.", this);
                 return false;
             }
 
@@ -319,6 +320,34 @@ namespace SevenBattles.Preparation
             }
 
             return _playerContext;
+        }
+
+        private static UnitSpellLoadout[] CloneValidLoadouts(IReadOnlyList<UnitSpellLoadout> source)
+        {
+            if (source == null || source.Count == 0)
+            {
+                return Array.Empty<UnitSpellLoadout>();
+            }
+
+            var result = new List<UnitSpellLoadout>(source.Count);
+            for (int i = 0; i < source.Count; i++)
+            {
+                UnitSpellLoadout loadout = source[i];
+                if (loadout == null || loadout.Definition == null)
+                {
+                    continue;
+                }
+
+                result.Add(new UnitSpellLoadout
+                {
+                    Definition = loadout.Definition,
+                    Level = loadout.EffectiveLevel,
+                    Xp = loadout.EffectiveXp,
+                    Spells = loadout.Spells != null ? (SpellDefinition[])loadout.Spells.Clone() : Array.Empty<SpellDefinition>()
+                });
+            }
+
+            return result.Count > 0 ? result.ToArray() : Array.Empty<UnitSpellLoadout>();
         }
     }
 }
