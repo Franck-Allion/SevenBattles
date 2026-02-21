@@ -72,6 +72,8 @@ namespace SevenBattles.UI
         private LocalizedString _defaultMessageString;
         private LocalizedString _defaultConfirmLabel;
         private LocalizedString _defaultCancelLabel;
+        private bool _defaultShowCancelButton;
+        private bool _showCancelButton = true;
 
         public bool IsVisible => _isVisible;
 
@@ -81,6 +83,8 @@ namespace SevenBattles.UI
             _defaultMessageString = _messageString;
             _defaultConfirmLabel = _confirmLabel;
             _defaultCancelLabel = _cancelLabel;
+            _defaultShowCancelButton = _defaultCancelLabel != null;
+            _showCancelButton = _defaultShowCancelButton;
 
             EnsureCanvasReferences();
             AutoDiscoverTextTargets();
@@ -138,6 +142,7 @@ namespace SevenBattles.UI
             _confirmCallback = onConfirm;
             _cancelCallback = onCancel;
 
+            ApplyButtonVisibility(_showCancelButton);
             SetupLocalization();
             RefreshAllLocalizedText();
 
@@ -149,6 +154,7 @@ namespace SevenBattles.UI
         /// </summary>
         public void Show(LocalizedString title, LocalizedString message, LocalizedString confirmLabel, LocalizedString cancelLabel, Action onConfirm, Action onCancel = null)
         {
+            _showCancelButton = cancelLabel != null;
             _titleString = title;
             _messageString = message;
             _confirmLabel = confirmLabel;
@@ -163,6 +169,7 @@ namespace SevenBattles.UI
         /// </summary>
         public void ShowWithOverrides(LocalizedString titleOverride, LocalizedString messageOverride, LocalizedString confirmLabelOverride, LocalizedString cancelLabelOverride, Action onConfirm, Action onCancel = null)
         {
+            _showCancelButton = cancelLabelOverride != null || (cancelLabelOverride == null && _defaultShowCancelButton);
             _titleString = titleOverride ?? _defaultTitleString;
             _messageString = messageOverride ?? _defaultMessageString;
             _confirmLabel = confirmLabelOverride ?? _defaultConfirmLabel;
@@ -289,6 +296,20 @@ namespace SevenBattles.UI
             }
 
             _buttonsWired = true;
+        }
+
+        private void ApplyButtonVisibility(bool showCancelButton)
+        {
+            if (_confirmButton != null && !_confirmButton.gameObject.activeSelf)
+            {
+                _confirmButton.gameObject.SetActive(true);
+            }
+
+            if (_cancelButton != null)
+            {
+                _cancelButton.gameObject.SetActive(showCancelButton);
+                _cancelButton.interactable = showCancelButton;
+            }
         }
 
         private void SetupLocalization()
@@ -598,6 +619,12 @@ namespace SevenBattles.UI
                 return;
             }
 
+            if (!_showCancelButton)
+            {
+                OnConfirmClicked();
+                return;
+            }
+
             InvokeCancel();
         }
 
@@ -618,6 +645,7 @@ namespace SevenBattles.UI
             _messageString = _defaultMessageString;
             _confirmLabel = _defaultConfirmLabel;
             _cancelLabel = _defaultCancelLabel;
+            _showCancelButton = _defaultShowCancelButton;
         }
     }
 }

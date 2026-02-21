@@ -154,7 +154,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 30.21463, y: 463.06165}
+  m_AnchoredPosition: {x: 30.21457, y: 463.06177}
   m_SizeDelta: {x: 100, y: -0.98098755}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &33227804
@@ -238,7 +238,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 33227804}
   m_HandleRect: {fileID: 990329236}
   m_Direction: 2
-  m_Value: 1
+  m_Value: 0
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -451,7 +451,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: -19.710907, y: -0.000030517578}
+  m_AnchoredPosition: {x: -19.710876, y: -0.000030517578}
   m_SizeDelta: {x: 844.07275, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &146574334
@@ -2706,6 +2706,33 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
+  _emptySquadTitle:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _emptySquadMessage:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _emptySquadOkLabel:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   references:
     version: 2
     RefIds: []
@@ -3681,7 +3708,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -100, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &990329237
 MonoBehaviour:
@@ -6541,7 +6568,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.000030517578}
+  m_AnchoredPosition: {x: 0, y: -0.000061035156}
   m_SizeDelta: {x: -0.00012207, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1945906372
@@ -17653,6 +17680,8 @@ MonoBehaviour:
   _squadButtonObjectName: SquadButtonMenu
   _shopButton: {fileID: 0}
   _squadButton: {fileID: 0}
+  _squadBackButton: {fileID: 7478121175407272796}
+  _squadBackButtonObjectName: Button_Back
   _squadPanel: {fileID: 0}
   _squadPanelObjectName: SquadPanel
   _squadPanelCanvasGroup: {fileID: 1150090313}

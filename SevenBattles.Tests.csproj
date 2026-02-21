@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Tests\Battle\WorldBattleBootstrapTransitionTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\TournamentBattleStartControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleBoardGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\TournamentMissionIdUtilTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\TurnOrderControllerTests.cs" />

@@ -39,6 +39,9 @@ namespace SevenBattles.Preparation
         [SerializeField] private LocalizedString _confirmMessage;
         [SerializeField] private LocalizedString _confirmLabel;
         [SerializeField] private LocalizedString _cancelLabel;
+        [SerializeField] private LocalizedString _emptySquadTitle;
+        [SerializeField] private LocalizedString _emptySquadMessage;
+        [SerializeField] private LocalizedString _emptySquadOkLabel;
 
         private IConfirmationMessageBox _confirmation;
         private bool _inputLocked;
@@ -105,24 +108,39 @@ namespace SevenBattles.Preparation
 
         private void SetupLocalizationDefaults()
         {
-            if (_confirmTitle == null)
+            if (!HasLocalizedValue(_confirmTitle))
             {
                 _confirmTitle = new LocalizedString("UI.Common", "Confirm.StartBattleTitle");
             }
 
-            if (_confirmMessage == null)
+            if (!HasLocalizedValue(_confirmMessage))
             {
                 _confirmMessage = new LocalizedString("UI.Common", "Confirm.StartBattleMessage");
             }
 
-            if (_confirmLabel == null)
+            if (!HasLocalizedValue(_confirmLabel))
             {
                 _confirmLabel = new LocalizedString("UI.Common", "Common.Yes");
             }
 
-            if (_cancelLabel == null)
+            if (!HasLocalizedValue(_cancelLabel))
             {
                 _cancelLabel = new LocalizedString("UI.Common", "Common.No");
+            }
+
+            if (!HasLocalizedValue(_emptySquadTitle))
+            {
+                _emptySquadTitle = new LocalizedString("UI.Common", "Confirm.StartBattleRequiresUnitTitle");
+            }
+
+            if (!HasLocalizedValue(_emptySquadMessage))
+            {
+                _emptySquadMessage = new LocalizedString("UI.Common", "Confirm.StartBattleRequiresUnitMessage");
+            }
+
+            if (!HasLocalizedValue(_emptySquadOkLabel))
+            {
+                _emptySquadOkLabel = new LocalizedString("UI.Common", "Common.OK");
             }
         }
 
@@ -156,7 +174,13 @@ namespace SevenBattles.Preparation
             }
 
             var playerContext = ResolvePlayerContext();
-            if (playerContext != null && playerContext.IsTournamentBattleCompleted(index))
+            if (playerContext == null)
+            {
+                SBLog.Error("TournamentBattleStartController: PlayerContext is missing.", this);
+                return;
+            }
+
+            if (playerContext.IsTournamentBattleCompleted(index))
             {
                 return;
             }
@@ -164,6 +188,12 @@ namespace SevenBattles.Preparation
             if (_confirmation == null)
             {
                 SBLog.Error("TournamentBattleStartController: No confirmation message box assigned or found in the scene.", this);
+                return;
+            }
+
+            if (!HasAtLeastOneActiveSquadUnit(playerContext))
+            {
+                ShowEmptySquadPopup();
                 return;
             }
 
@@ -177,6 +207,34 @@ namespace SevenBattles.Preparation
                 _cancelLabel,
                 () => ConfirmStartBattle(battle, index),
                 CancelStartBattle);
+        }
+
+        private void ShowEmptySquadPopup()
+        {
+            _inputLocked = true;
+
+            if (_mapPresenter != null)
+            {
+                _mapPresenter.SetInteractionsEnabled(false);
+            }
+
+            _confirmation.Show(
+                _emptySquadTitle,
+                _emptySquadMessage,
+                _emptySquadOkLabel,
+                null,
+                DismissEmptySquadPopup,
+                DismissEmptySquadPopup);
+        }
+
+        private void DismissEmptySquadPopup()
+        {
+            _inputLocked = false;
+
+            if (_mapPresenter != null)
+            {
+                _mapPresenter.SetInteractionsEnabled(true);
+            }
         }
 
         private void CancelStartBattle()
@@ -348,6 +406,46 @@ namespace SevenBattles.Preparation
             }
 
             return result.Count > 0 ? result.ToArray() : Array.Empty<UnitSpellLoadout>();
+        }
+
+        private static bool HasAtLeastOneActiveSquadUnit(PlayerContext playerContext)
+        {
+            if (playerContext == null)
+            {
+                return false;
+            }
+
+            var loadouts = playerContext.GetActiveSquadLoadoutsNonAlloc();
+            if (loadouts == null || loadouts.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < loadouts.Count; i++)
+            {
+                var loadout = loadouts[i];
+                if (loadout != null && loadout.Definition != null)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasLocalizedValue(LocalizedString localized)
+        {
+            if (localized == null)
+            {
+                return false;
+            }
+
+            var tableRef = localized.TableReference;
+            var entryRef = localized.TableEntryReference;
+
+            bool hasTable = !string.IsNullOrEmpty(tableRef.TableCollectionName);
+            bool hasEntry = entryRef.KeyId != 0 || !string.IsNullOrEmpty(entryRef.Key);
+            return hasTable && hasEntry;
         }
     }
 }

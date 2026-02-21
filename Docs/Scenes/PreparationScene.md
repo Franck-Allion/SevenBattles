@@ -21,6 +21,7 @@
       - Completed battles hide their enemy prefab and remain visible as completed ellipses.
       - Only the next unlocked battle is clickable/hoverable.
     - `TournamentBattleStartController` handles click -> confirmation -> battle start.
+      - Blocks battle start when the active squad is empty and shows an OK-only localized popup.
     - `TournamentBattleEllipseGizmo` draws ellipse layout gizmos for authoring.
   - `ConfirmationHUD`
     - `ConfirmationMessageBoxHUD` (copied from BattleScene).
@@ -65,6 +66,9 @@
   - `_sceneFadeOutDuration` -> `0.5` (seconds).
   - `_sceneFadeInDuration` -> `0.5` (seconds).
   - `_sceneFadeColor` -> `#000000` (black).
+  - `_emptySquadTitle` -> table `UI.Common`, key `Confirm.StartBattleRequiresUnitTitle`.
+  - `_emptySquadMessage` -> table `UI.Common`, key `Confirm.StartBattleRequiresUnitMessage`.
+  - `_emptySquadOkLabel` -> table `UI.Common`, key `Common.OK`.
   - Transition order (`SceneTransitionFader`) -> fade-out, preload manifest, load scene, fade-in.
 - `TournamentPathPreview` (`TournamentBattleEllipseGizmo`)
   - `_tournament` -> `Assets/Data/Tournaments/Tournament-Castle.asset`.
