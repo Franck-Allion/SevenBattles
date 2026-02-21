@@ -102,6 +102,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\BattleXpCalculatorTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleVisualFeedbackServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsDeckCapacityTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\SquadSetupControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsChangedTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitAttackTests.cs" />

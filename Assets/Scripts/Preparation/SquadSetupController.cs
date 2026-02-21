@@ -5,6 +5,7 @@ using SevenBattles.Core.Battle;
 using SevenBattles.Core.Diagnostics;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
+using TMPro;
 using UnityEngine;
 
 namespace SevenBattles.Preparation
@@ -16,6 +17,15 @@ namespace SevenBattles.Preparation
         [SerializeField] private AllUnitsGridView _allUnitsView;
         [SerializeField] private ActiveSquadGridView _activeSquadView;
         [SerializeField] private UnitInfoPanelView _unitInfoView;
+        [Header("Squad Value")]
+        [SerializeField, Tooltip("Optional explicit reference to the SquadValue TMP label. Auto-found by name when null.")]
+        private TMP_Text _squadValueLabel;
+        [SerializeField, Tooltip("Object name used to auto-find the squad value label when _squadValueLabel is not assigned.")]
+        private string _squadValueObjectName = "SquadValue";
+        [SerializeField, Tooltip("Text color used when the active squad is empty (0/x).")]
+        private Color _emptySquadValueColor = new Color32(214, 77, 77, 255);
+        [SerializeField, Tooltip("Text color used when the active squad has at least one unit.")]
+        private Color _nonEmptySquadValueColor = Color.white;
 
         private PlayerContext _resolvedPlayerContext;
         private IUnitCatalog _unitCatalog;
@@ -48,6 +58,7 @@ namespace SevenBattles.Preparation
             _resolvedPlayerContext = PlayerContext.RuntimeInstance ?? _playerContext;
             if (_resolvedPlayerContext == null)
             {
+                RefreshSquadValueDisplay();
                 SBLog.Warn("SquadSetupController: No PlayerContext resolved. Squad UI cannot be populated.", this);
                 return;
             }
@@ -65,6 +76,7 @@ namespace SevenBattles.Preparation
             WireEvents();
             RebuildViewData();
             RefreshViews();
+            RefreshSquadValueDisplay();
             SBLog.Info($"SquadSetupController: View data built. active={_activeSquadLoadouts.Count}, available={_allAvailableLoadouts.Count}.", this);
             LogContextDetails();
             if (_unitInfoView != null)
@@ -220,6 +232,7 @@ namespace SevenBattles.Preparation
         {
             RebuildViewData();
             RefreshViews();
+            RefreshSquadValueDisplay();
             SquadChanged?.Invoke();
         }
 
@@ -376,6 +389,70 @@ namespace SevenBattles.Preparation
                 _activeSquadView.SetIsFull(IsSquadFull);
                 _activeSquadView.Refresh(_activeSquadLoadouts);
             }
+        }
+
+        private void RefreshSquadValueDisplay()
+        {
+            ResolveSquadValueLabel();
+            if (_squadValueLabel == null)
+            {
+                return;
+            }
+
+            int activeCount = Mathf.Max(0, ActiveSquadCount);
+            int maxSquadSize = Mathf.Max(1, MaxSquadSize);
+            _squadValueLabel.SetText("{0}/{1}", activeCount, maxSquadSize);
+            _squadValueLabel.color = activeCount == 0 ? _emptySquadValueColor : _nonEmptySquadValueColor;
+        }
+
+        private void ResolveSquadValueLabel()
+        {
+            if (_squadValueLabel != null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_squadValueObjectName))
+            {
+                return;
+            }
+
+            _squadValueLabel = FindLabelByName(transform, _squadValueObjectName);
+            if (_squadValueLabel != null)
+            {
+                return;
+            }
+
+            Transform root = transform.root;
+            if (root != null && root != transform)
+            {
+                _squadValueLabel = FindLabelByName(root, _squadValueObjectName);
+            }
+        }
+
+        private static TMP_Text FindLabelByName(Transform root, string objectName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            TMP_Text[] labels = root.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < labels.Length; i++)
+            {
+                TMP_Text label = labels[i];
+                if (label == null)
+                {
+                    continue;
+                }
+
+                if (string.Equals(label.name, objectName, StringComparison.Ordinal))
+                {
+                    return label;
+                }
+            }
+
+            return null;
         }
     }
 }
