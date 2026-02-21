@@ -95,6 +95,13 @@
   - `_squadPanelObjectName` -> name used for auto-discovery when `_squadPanel` is empty (default: `SquadPanel`).
   - `_squadPanelCanvasGroup` -> optional `CanvasGroup` on `SquadPanel` for fade/input state (auto-added when missing).
   - `_squadPanelFadeDuration` / `_squadPanelStartScale` / `_squadPanelRevealCurve` -> controls the unscaled-time show/hide transition when opening from `SquadButtonMenu` and closing from `Button_Back`.
+- `SquadPanel` (`SquadSetupController`, `ActiveSquadGridView`, `AllUnitsGridView`)
+  - `SquadSetupController` (`SquadSetupView`)
+    - `_allUnitsView` -> `Top_AllSquad` (`AllUnitsGridView`).
+    - `_activeSquadView` -> `Bottom_ActiveSquad` (`ActiveSquadGridView`).
+  - `Bottom_ActiveSquad` (`ActiveSquadGridView` + `UnitDropZone`)
+    - Empty-state text is driven by `_emptyLabel` and is only visible when the active squad list is empty.
+    - Squad-complete feedback is driven by `UnitDropZone` completion visuals (`_completionColor`, `_completionAlpha`, `_completionScale`) rather than a dedicated full text label.
 - `ResourcesPanel` (`PreparationResourcesPanelPresenter`)
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
   - `_goldValueTMP` -> `Canvas/ResourcesPanel/Coin/CoinValue` (`TMP_Text`).

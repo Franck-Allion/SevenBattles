@@ -56,6 +56,7 @@ namespace SevenBattles.Preparation
             EnsureViewportMaskIsUsable();
             EnsureContentRectIsUsable();
             CaptureGridLayoutBaselineIfNeeded();
+            ApplyStatusVisuals(0);
         }
 
         private void OnDestroy()
@@ -68,11 +69,14 @@ namespace SevenBattles.Preparation
 
         public void Refresh(IReadOnlyList<UnitSpellLoadout> units)
         {
+            int count = units != null ? units.Count : 0;
+            _lastCount = count;
+
             EnsureViewportRectIsUsable();
             EnsureViewportMaskIsUsable();
             EnsureContentRectIsUsable();
             RectTransform content = ResolveContentRoot();
-            EnsurePool(units != null ? units.Count : 0, content);
+            EnsurePool(count, content);
             if (_pool == null)
             {
                 if (!_missingPoolLogged)
@@ -81,12 +85,12 @@ namespace SevenBattles.Preparation
                     _missingPoolLogged = true;
                 }
                 LogMissingPoolDetails(content);
+                ApplyStatusVisuals(count);
                 return;
             }
 
             _pool.ReturnAll();
 
-            int count = units != null ? units.Count : 0;
             for (int i = 0; i < count; i++)
             {
                 UnitSpellLoadout loadout = units[i];
@@ -114,16 +118,7 @@ namespace SevenBattles.Preparation
                 dragHandler.SetDragGhostRoot(_dragGhostRoot);
             }
 
-            _lastCount = count;
-            if (_emptyLabel != null)
-            {
-                _emptyLabel.gameObject.SetActive(count == 0);
-            }
-
-            if (_fullLabel != null)
-            {
-                _fullLabel.gameObject.SetActive(_isFull);
-            }
+            ApplyStatusVisuals(count);
 
             RebuildGridLayout();
             LogRefreshDiagnosticsOnce(count, content);
@@ -256,9 +251,27 @@ namespace SevenBattles.Preparation
         public void SetIsFull(bool isFull)
         {
             _isFull = isFull;
+            ApplyStatusVisuals(_lastCount);
+        }
+
+        private void ApplyStatusVisuals(int count)
+        {
+            bool isEmpty = count <= 0;
+
+            if (_emptyLabel != null)
+            {
+                _emptyLabel.gameObject.SetActive(isEmpty);
+            }
+
+            // Legacy label kept for backwards compatibility; completion is now conveyed by drop-zone visuals.
             if (_fullLabel != null)
             {
-                _fullLabel.gameObject.SetActive(_isFull);
+                _fullLabel.gameObject.SetActive(false);
+            }
+
+            if (_dropZone != null)
+            {
+                _dropZone.SetCompletionVisual(_isFull && !isEmpty);
             }
         }
 

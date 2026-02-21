@@ -30,12 +30,18 @@ namespace SevenBattles.Preparation
         [SerializeField, Min(0.1f)] private float _pulseSpeed = 2.6f;
         [SerializeField, Min(0.1f)] private float _fadeSpeed = 8f;
         [SerializeField, Range(1f, 1.2f)] private float _hoverScale = 1.035f;
+        [Header("Completion State")]
+        [SerializeField] private Color _completionColor = new Color(0.31f, 0.86f, 0.56f, 1f);
+        [SerializeField, Range(0f, 1f)] private float _completionAlpha = 0.28f;
+        [SerializeField, Range(1f, 1.2f)] private float _completionScale = 1.02f;
 
         public ZoneType Type => _zoneType;
+        public bool IsCompletionVisualActive => _isCompletionVisualActive;
 
         public event Action<UnitSpellLoadout, ZoneType> DropReceived;
 
         private bool _isPointerInside;
+        private bool _isCompletionVisualActive;
         private float _pulseTime;
         private Vector3 _baseHighlightScale = Vector3.one;
         private bool _highlightReady;
@@ -53,10 +59,22 @@ namespace SevenBattles.Preparation
                 return;
             }
 
-            if (!_enableHighlightEffect || !UnitDragHandler.IsDragging)
+            if (!_enableHighlightEffect)
+            {
+                return;
+            }
+
+            if (!UnitDragHandler.IsDragging)
             {
                 _pulseTime = 0f;
-                AnimateHighlight(0f, _availableColor, 1f);
+                if (_isCompletionVisualActive)
+                {
+                    AnimateHighlight(_completionAlpha, _completionColor, _completionScale);
+                }
+                else
+                {
+                    AnimateHighlight(0f, _availableColor, 1f);
+                }
                 return;
             }
 
@@ -82,6 +100,24 @@ namespace SevenBattles.Preparation
         public void SetZoneType(ZoneType zoneType)
         {
             _zoneType = zoneType;
+        }
+
+        public void SetCompletionVisual(bool isCompletionVisualActive)
+        {
+            _isCompletionVisualActive = isCompletionVisualActive;
+            if (!_highlightReady || UnitDragHandler.IsDragging)
+            {
+                return;
+            }
+
+            if (_isCompletionVisualActive)
+            {
+                ApplyHighlightImmediate(_completionAlpha, _completionColor, _completionScale);
+            }
+            else
+            {
+                ApplyHighlightImmediate(0f, _availableColor, 1f);
+            }
         }
 
         public void OnDrop(PointerEventData eventData)
