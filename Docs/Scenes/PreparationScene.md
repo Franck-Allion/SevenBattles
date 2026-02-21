@@ -53,6 +53,7 @@
     - `_rootCanvasGroup` -> `OpponentHoverPanel` (`CanvasGroup`).
     - `_squadNameText` -> `OpponentHoverPanel/SquadNameText` (`TMP_Text`).
     - `_rows` -> child row GameObjects (portrait `Image`, level `TMP_Text` or `Text`).
+    - Keep the root GameObject active in scene (`SetActive(true)`); runtime visibility is controlled by `CanvasGroup.alpha` in the presenter.
   - Enemy squad data (`Assets/Data/*Squad.asset` / `PlayerSquad`)
     - `LocalizedSquadName` -> assign table + entry key to display translated names in `OpponentHoverPanel`.
 - `TournamentPathPreview` (`TournamentBattleStartController`)

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Diagnostics;
 using SevenBattles.Core.Players;
 
 namespace SevenBattles.Preparation
@@ -38,6 +38,9 @@ namespace SevenBattles.Preparation
         private Texture2D _nextBattleCursorTexture;
         [SerializeField, Tooltip("Hotspot for the next battle cursor texture.")]
         private Vector2 _nextBattleCursorHotspot = new Vector2(16f, 16f);
+        [Header("Diagnostics")]
+        [SerializeField, Tooltip("Logs hover event emissions and map interaction state transitions in the editor.")]
+        private bool _enableDiagnostics = false;
 
         private readonly List<BattleView> _views = new List<BattleView>();
         private Material _runtimeLineMaterial;
@@ -45,6 +48,9 @@ namespace SevenBattles.Preparation
         private bool _cursorActive;
         private bool _defaultCursorApplied;
         private bool _progressSubscribed;
+        private string _lastInactiveReason;
+        private bool _cursorSuppressedBySquadPanel;
+        private PreparationPopupMenuLocalizationController _popupMenuController;
         private int _lastHoveredIndex = -1;
         private TournamentBattleDefinition _lastHoveredDefinition;
 
@@ -66,6 +72,13 @@ namespace SevenBattles.Preparation
             BuildViews();
             ApplyDefaultCursor();
             ClearHoverState();
+            if (_enableDiagnostics)
+            {
+                int listenerCount = BattleHoverChanged != null ? BattleHoverChanged.GetInvocationList().Length : 0;
+                SBLog.Info(
+                    $"TournamentBattleMapPresenter: Enabled. interactions={_interactionsEnabled}, views={_views.Count}, currentRound={ResolveCurrentRoundIndex()}, listeners={listenerCount}.",
+                    this);
+            }
         }
 
         private void OnDisable()
@@ -89,22 +102,35 @@ namespace SevenBattles.Preparation
 
         private void Update()
         {
-            EventSystem eventSystem = EventSystem.current;
-            if (eventSystem != null && eventSystem.IsPointerOverGameObject())
+            if (IsSquadPanelVisible())
             {
-                // UI (menu buttons, panels) owns cursor feedback while hovered.
-                UpdateHoverCursor(false);
-                ClearHoverState();
+                if (!_cursorSuppressedBySquadPanel)
+                {
+                    // The tournament path is hidden behind SquadPanel; map cursor/hover state must stop owning the cursor.
+                    UpdateHoverCursor(false);
+                    ClearHoverState();
+                    _cursorSuppressedBySquadPanel = true;
+                }
+
                 return;
             }
 
-            if (!_interactionsEnabled || _camera == null || _battleRoot == null || _views.Count == 0)
+            _cursorSuppressedBySquadPanel = false;
+            string inactiveReason = GetInactiveReason();
+            if (!string.IsNullOrEmpty(inactiveReason))
             {
+                if (_enableDiagnostics && !string.Equals(_lastInactiveReason, inactiveReason, StringComparison.Ordinal))
+                {
+                    SBLog.Warn($"TournamentBattleMapPresenter: Hover update inactive ({inactiveReason}).", this);
+                    _lastInactiveReason = inactiveReason;
+                }
+
                 ApplyDefaultCursor();
                 ClearHoverState();
                 return;
             }
 
+            _lastInactiveReason = null;
             int currentRoundIndex = ResolveCurrentRoundIndex();
             var screen = Input.mousePosition;
             var toPlane = _battleRoot.position - _camera.transform.position;
@@ -136,8 +162,8 @@ namespace SevenBattles.Preparation
                 }
             }
 
-            bool isNextBattleHovered = hoveredSelectableView != null && hoveredSelectableView.Index == currentRoundIndex;
-            UpdateHoverCursor(isNextBattleHovered);
+            bool isBattleNodeHovered = hoveredInfoView != null;
+            UpdateHoverCursor(isBattleNodeHovered);
             UpdateHoverState(hoveredInfoView);
 
             if (hoveredSelectableView != null && Input.GetMouseButtonDown(0))
@@ -230,6 +256,16 @@ namespace SevenBattles.Preparation
 
             _lastHoveredIndex = hoveredIndex;
             _lastHoveredDefinition = hoveredDefinition;
+            if (_enableDiagnostics)
+            {
+                int listenerCount = BattleHoverChanged != null ? BattleHoverChanged.GetInvocationList().Length : 0;
+                string battleId = hoveredDefinition == null
+                    ? "<none>"
+                    : (hoveredDefinition.EnemySquad != null ? hoveredDefinition.EnemySquad.name : "<enemy-squad-null>");
+                SBLog.Info(
+                    $"TournamentBattleMapPresenter: Emit BattleHoverChanged(index={hoveredIndex}, battle='{battleId}', listeners={listenerCount}).",
+                    this);
+            }
             BattleHoverChanged?.Invoke(hoveredDefinition, hoveredIndex);
         }
 
@@ -242,7 +278,37 @@ namespace SevenBattles.Preparation
 
             _lastHoveredIndex = -1;
             _lastHoveredDefinition = null;
+            if (_enableDiagnostics)
+            {
+                int listenerCount = BattleHoverChanged != null ? BattleHoverChanged.GetInvocationList().Length : 0;
+                SBLog.Info($"TournamentBattleMapPresenter: Emit BattleHoverChanged(clear, listeners={listenerCount}).", this);
+            }
             BattleHoverChanged?.Invoke(null, -1);
+        }
+
+        private string GetInactiveReason()
+        {
+            if (!_interactionsEnabled)
+            {
+                return "interactions disabled";
+            }
+
+            if (_camera == null)
+            {
+                return "camera missing";
+            }
+
+            if (_battleRoot == null)
+            {
+                return "battle root missing";
+            }
+
+            if (_views.Count == 0)
+            {
+                return "no battle views";
+            }
+
+            return null;
         }
 
         private void EnsureReferences()
@@ -460,6 +526,16 @@ namespace SevenBattles.Preparation
                     return;
                 }
             }
+        }
+
+        private bool IsSquadPanelVisible()
+        {
+            if (_popupMenuController == null)
+            {
+                _popupMenuController = UnityEngine.Object.FindFirstObjectByType<PreparationPopupMenuLocalizationController>();
+            }
+
+            return _popupMenuController != null && _popupMenuController.IsSquadPanelVisible();
         }
 
         private void SubscribeProgress()

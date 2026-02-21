@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Localization;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Diagnostics;
 using SevenBattles.Core.Players;
 
 namespace SevenBattles.Preparation
@@ -23,6 +24,9 @@ namespace SevenBattles.Preparation
         [Header("Behavior")]
         [SerializeField, Tooltip("Hide the panel when the hovered battle has no enemy squad configured.")]
         private bool _hideWhenNoEnemy = true;
+        [Header("Diagnostics")]
+        [SerializeField, Tooltip("Logs hover-panel subscription and show/hide reasons in the editor.")]
+        private bool _enableDiagnostics = false;
 
         private LocalizedString _activeSquadNameLocalized;
         private string _activeSquadNameFallback = string.Empty;
@@ -36,9 +40,24 @@ namespace SevenBattles.Preparation
         private void OnEnable()
         {
             ResolveMapPresenter();
+            if (_enableDiagnostics)
+            {
+                SBLog.Info(
+                    $"TournamentOpponentHoverPanelPresenter: Enabled. mapPresenter='{(_mapPresenter != null ? _mapPresenter.name : "<null>")}', rows={(_rows != null ? _rows.Length : 0)}, squadNameText={(_squadNameText != null ? "set" : "null")}.",
+                    this);
+            }
+
             if (_mapPresenter != null)
             {
                 _mapPresenter.BattleHoverChanged += HandleBattleHoverChanged;
+                if (_enableDiagnostics)
+                {
+                    SBLog.Info("TournamentOpponentHoverPanelPresenter: Subscribed to BattleHoverChanged.", this);
+                }
+            }
+            else if (_enableDiagnostics)
+            {
+                SBLog.Warn("TournamentOpponentHoverPanelPresenter: Map presenter not found; panel cannot react to hover events.", this);
             }
         }
 
@@ -75,6 +94,16 @@ namespace SevenBattles.Preparation
 
         private void HandleBattleHoverChanged(TournamentBattleDefinition battle, int index)
         {
+            if (_enableDiagnostics)
+            {
+                string battleId = battle == null
+                    ? "<null>"
+                    : (battle.EnemySquad != null ? battle.EnemySquad.name : "<enemy-squad-null>");
+                SBLog.Info(
+                    $"TournamentOpponentHoverPanelPresenter: Received BattleHoverChanged(index={index}, battle='{battleId}').",
+                    this);
+            }
+
             if (battle == null)
             {
                 ClearSquadNameBinding();
@@ -88,6 +117,12 @@ namespace SevenBattles.Preparation
             {
                 ClearSquadNameBinding();
                 SetSquadNameText(string.Empty);
+                if (_enableDiagnostics)
+                {
+                    SBLog.Warn(
+                        $"TournamentOpponentHoverPanelPresenter: Hovered battle index={index} has no EnemySquad assigned.",
+                        this);
+                }
                 if (_hideWhenNoEnemy)
                 {
                     HideImmediate();
@@ -105,6 +140,12 @@ namespace SevenBattles.Preparation
             var loadouts = enemySquad.GetLoadouts();
             if (loadouts == null || loadouts.Length == 0)
             {
+                if (_enableDiagnostics)
+                {
+                    SBLog.Warn(
+                        $"TournamentOpponentHoverPanelPresenter: EnemySquad '{enemySquad.name}' has no loadouts.",
+                        this);
+                }
                 if (_hideWhenNoEnemy)
                 {
                     ClearSquadNameBinding();
@@ -120,6 +161,12 @@ namespace SevenBattles.Preparation
             }
 
             PopulateRows(loadouts);
+            if (_enableDiagnostics)
+            {
+                SBLog.Info(
+                    $"TournamentOpponentHoverPanelPresenter: Showing panel for squad '{enemySquad.name}' with {loadouts.Length} loadouts.",
+                    this);
+            }
             ShowImmediate();
         }
 
@@ -270,6 +317,10 @@ namespace SevenBattles.Preparation
             // Keep interactable true so Selectable children do not switch to DisabledColor visuals.
             _rootCanvasGroup.interactable = true;
             _rootCanvasGroup.blocksRaycasts = false;
+            if (_enableDiagnostics)
+            {
+                SBLog.Info("TournamentOpponentHoverPanelPresenter: Panel visible (alpha=1).", this);
+            }
         }
 
         private void HideImmediate()
@@ -278,6 +329,10 @@ namespace SevenBattles.Preparation
             _rootCanvasGroup.alpha = 0f;
             _rootCanvasGroup.interactable = true;
             _rootCanvasGroup.blocksRaycasts = false;
+            if (_enableDiagnostics)
+            {
+                SBLog.Info("TournamentOpponentHoverPanelPresenter: Panel hidden (alpha=0).", this);
+            }
         }
 
         [Serializable]

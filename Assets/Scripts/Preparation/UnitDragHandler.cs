@@ -25,11 +25,9 @@ namespace SevenBattles.Preparation
         private Image _ghostImage;
         private bool _isDraggingThis;
         private bool _isPointerPressedThis;
-        private bool _cursorProfileResolved;
         private bool _previousBlocksRaycasts;
         private float _previousAlpha;
         private static readonly List<RaycastResult> RaycastBuffer = new List<RaycastResult>(16);
-        private static bool PopupCursorProfileResolved;
         private static PreparationPopupMenuLocalizationController PopupCursorController;
         private static Texture2D PopupDefaultCursorTexture;
         private static Vector2 PopupDefaultCursorHotspot = new Vector2(4f, 4f);
@@ -283,11 +281,6 @@ namespace SevenBattles.Preparation
 
         private void ResolveCursorProfileIfNeeded()
         {
-            if (_cursorProfileResolved)
-            {
-                return;
-            }
-
             ResolvePopupCursorProfileIfNeeded();
 
             if (_defaultCursorTexture == null)
@@ -307,50 +300,59 @@ namespace SevenBattles.Preparation
                 _portraitDragCursorTexture = PopupDragCursorTexture;
                 _portraitDragCursorHotspot = PopupDragCursorHotspot;
             }
-
-            _cursorProfileResolved = true;
         }
 
         private static void ResolvePopupCursorProfileIfNeeded()
         {
-            if (PopupCursorProfileResolved)
+            bool controllerInvalid =
+                PopupCursorController == null ||
+                !PopupCursorController.gameObject.scene.IsValid();
+
+            if (controllerInvalid)
+            {
+                PopupCursorController = UnityEngine.Object.FindFirstObjectByType<PreparationPopupMenuLocalizationController>();
+            }
+
+            if (PopupCursorController == null)
+            {
+                PreparationPopupMenuLocalizationController[] popupControllers =
+                    Resources.FindObjectsOfTypeAll<PreparationPopupMenuLocalizationController>();
+
+                for (int i = 0; i < popupControllers.Length; i++)
+                {
+                    PreparationPopupMenuLocalizationController popup = popupControllers[i];
+                    if (popup == null || !popup.gameObject.scene.IsValid())
+                    {
+                        continue;
+                    }
+
+                    PopupCursorController = popup;
+                    break;
+                }
+            }
+
+            if (PopupCursorController == null)
             {
                 return;
             }
 
-            PreparationPopupMenuLocalizationController[] popupControllers =
-                Resources.FindObjectsOfTypeAll<PreparationPopupMenuLocalizationController>();
-
-            for (int i = 0; i < popupControllers.Length; i++)
+            if (!PopupCursorController.TryGetSquadPortraitCursorProfile(
+                    out Texture2D defaultTexture,
+                    out Vector2 defaultHotspot,
+                    out Texture2D hoverTexture,
+                    out Vector2 hoverHotspot,
+                    out Texture2D dragTexture,
+                    out Vector2 dragHotspot))
             {
-                PreparationPopupMenuLocalizationController popup = popupControllers[i];
-                if (popup == null || !popup.gameObject.scene.IsValid())
-                {
-                    continue;
-                }
-
-                if (!popup.TryGetSquadPortraitCursorProfile(
-                        out Texture2D defaultTexture,
-                        out Vector2 defaultHotspot,
-                        out Texture2D hoverTexture,
-                        out Vector2 hoverHotspot,
-                        out Texture2D dragTexture,
-                        out Vector2 dragHotspot))
-                {
-                    continue;
-                }
-
-                PopupCursorController = popup;
-                PopupDefaultCursorTexture = defaultTexture;
-                PopupDefaultCursorHotspot = defaultHotspot;
-                PopupHoverCursorTexture = hoverTexture;
-                PopupHoverCursorHotspot = hoverHotspot;
-                PopupDragCursorTexture = dragTexture;
-                PopupDragCursorHotspot = dragHotspot;
-                break;
+                return;
             }
 
-            PopupCursorProfileResolved = true;
+            PopupDefaultCursorTexture = defaultTexture;
+            PopupDefaultCursorHotspot = defaultHotspot;
+            PopupHoverCursorTexture = hoverTexture;
+            PopupHoverCursorHotspot = hoverHotspot;
+            PopupDragCursorTexture = dragTexture;
+            PopupDragCursorHotspot = dragHotspot;
         }
 
         private bool ShouldApplyPortraitCursorFeedback()
