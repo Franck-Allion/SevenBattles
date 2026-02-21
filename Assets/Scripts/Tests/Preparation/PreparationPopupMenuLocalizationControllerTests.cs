@@ -170,5 +170,37 @@ namespace SevenBattles.Tests.Preparation
 
             Object.DestroyImmediate(root);
         }
+
+        [Test]
+        public void BackButtonClick_HidesSquadPanel_AndDisablesPanelInteraction()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+            var squadButtonGo = CreateButton(root.transform, "SquadButtonMenu");
+            var squadPanel = new GameObject("SquadPanel", typeof(RectTransform));
+            squadPanel.transform.SetParent(root.transform, false);
+            squadPanel.SetActive(true);
+            var backButtonGo = CreateButton(squadPanel.transform, "Button_Back");
+
+            SetPrivate(controller, "_squadPanelFadeDuration", 0f);
+
+            CallPrivate(controller, "ResolveButtonTargets");
+            CallPrivate(controller, "ResolveSquadPanel");
+            CallPrivate(controller, "WireSquadPanelButton");
+
+            squadButtonGo.GetComponent<Button>().onClick.Invoke();
+            Assert.IsTrue(squadPanel.activeSelf);
+
+            backButtonGo.GetComponent<Button>().onClick.Invoke();
+
+            var canvasGroup = squadPanel.GetComponent<CanvasGroup>();
+            Assert.IsNotNull(canvasGroup);
+            Assert.IsFalse(squadPanel.activeSelf);
+            Assert.AreEqual(0f, canvasGroup.alpha, 0.001f);
+            Assert.IsFalse(canvasGroup.interactable);
+            Assert.IsFalse(canvasGroup.blocksRaycasts);
+
+            Object.DestroyImmediate(root);
+        }
     }
 }

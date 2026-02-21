@@ -31,6 +31,10 @@ namespace SevenBattles.Preparation
         private Button _shopButton;
         [SerializeField, Tooltip("Optional explicit reference to the Squad menu button. Auto-found when null.")]
         private Button _squadButton;
+        [SerializeField, Tooltip("Optional explicit reference to the Back button inside SquadPanel. Auto-found when null.")]
+        private Button _squadBackButton;
+        [SerializeField, Tooltip("Object name used to auto-find the SquadPanel Back button when _squadBackButton is not assigned.")]
+        private string _squadBackButtonObjectName = "Button_Back";
 
         [Header("Squad Panel Transition")]
         [SerializeField, Tooltip("Optional explicit reference to the Squad panel root. Auto-found by name when null.")]
@@ -174,6 +178,11 @@ namespace SevenBattles.Preparation
             {
                 _squadButton = FindButton(_squadButtonObjectName);
             }
+
+            if (_squadBackButton == null)
+            {
+                _squadBackButton = FindSceneButton(_squadBackButtonObjectName);
+            }
         }
 
         private void ResolveSquadPanel()
@@ -305,6 +314,28 @@ namespace SevenBattles.Preparation
             return buttonTransform.GetComponentInChildren<Button>(true);
         }
 
+        private Button FindSceneButton(string buttonObjectName)
+        {
+            if (string.IsNullOrWhiteSpace(buttonObjectName))
+            {
+                return null;
+            }
+
+            GameObject buttonObject = FindObjectByNameInSceneRoot(buttonObjectName);
+            if (buttonObject == null)
+            {
+                return null;
+            }
+
+            var button = buttonObject.GetComponent<Button>();
+            if (button != null)
+            {
+                return button;
+            }
+
+            return buttonObject.GetComponentInChildren<Button>(true);
+        }
+
         private void BindLabels()
         {
             if (_shopLabel != null)
@@ -347,14 +378,24 @@ namespace SevenBattles.Preparation
         private void WireSquadPanelButton()
         {
             UnwireSquadPanelButton();
-            if (_squadButton == null)
+            if (_squadButton != null)
+            {
+                UnityAction openAction = HandleSquadButtonClicked;
+                _squadButton.onClick.AddListener(openAction);
+                _panelClickSubscriptions.Add(new ButtonClickSubscription(_squadButton, openAction));
+            }
+
+            if (_squadBackButton != null)
+            {
+                UnityAction closeAction = HandleSquadBackButtonClicked;
+                _squadBackButton.onClick.AddListener(closeAction);
+                _panelClickSubscriptions.Add(new ButtonClickSubscription(_squadBackButton, closeAction));
+            }
+
+            if (_panelClickSubscriptions.Count == 0)
             {
                 return;
             }
-
-            UnityAction clickAction = HandleSquadButtonClicked;
-            _squadButton.onClick.AddListener(clickAction);
-            _panelClickSubscriptions.Add(new ButtonClickSubscription(_squadButton, clickAction));
         }
 
         private void UnwireHoverFeedback()
@@ -530,6 +571,13 @@ namespace SevenBattles.Preparation
             ShowSquadPanel();
         }
 
+        private void HandleSquadBackButtonClicked()
+        {
+            ResolveSquadPanel();
+            PlayClickSfx();
+            HideSquadPanel();
+        }
+
         private void ShowSquadPanel()
         {
             if (_squadPanel == null || _squadPanelCanvasGroup == null)
@@ -552,6 +600,31 @@ namespace SevenBattles.Preparation
             }
 
             _squadPanelRoutine = StartCoroutine(ShowSquadPanelRoutine(duration));
+        }
+
+        private void HideSquadPanel()
+        {
+            if (_squadPanel == null || _squadPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            StopSquadPanelRoutine();
+
+            if (!_squadPanel.activeSelf || _squadPanelCanvasGroup.alpha <= 0.001f)
+            {
+                SetSquadPanelHiddenAndDisabledImmediate();
+                return;
+            }
+
+            float duration = Mathf.Max(0f, _squadPanelFadeDuration);
+            if (duration <= 0.0001f)
+            {
+                SetSquadPanelHiddenAndDisabledImmediate();
+                return;
+            }
+
+            _squadPanelRoutine = StartCoroutine(HideSquadPanelRoutine(duration));
         }
 
         private System.Collections.IEnumerator ShowSquadPanelRoutine(float duration)
@@ -586,6 +659,46 @@ namespace SevenBattles.Preparation
             }
 
             SetSquadPanelVisibleImmediate();
+            _squadPanelRoutine = null;
+        }
+
+        private System.Collections.IEnumerator HideSquadPanelRoutine(float duration)
+        {
+            if (_squadPanel == null || _squadPanelCanvasGroup == null)
+            {
+                yield break;
+            }
+
+            if (!_squadPanel.activeSelf)
+            {
+                _squadPanel.SetActive(true);
+            }
+
+            Transform animatedRoot = _squadPanelAnimatedRoot != null ? _squadPanelAnimatedRoot : _squadPanel.transform;
+            float fromAlpha = Mathf.Clamp01(_squadPanelCanvasGroup.alpha);
+            Vector3 fromScale = animatedRoot.localScale;
+            float startScaleFactor = Mathf.Clamp(_squadPanelStartScale, 0.8f, 1f);
+            Vector3 toScale = new Vector3(
+                _squadPanelBaseScale.x * startScaleFactor,
+                _squadPanelBaseScale.y * startScaleFactor,
+                _squadPanelBaseScale.z);
+
+            _squadPanelCanvasGroup.alpha = fromAlpha;
+            _squadPanelCanvasGroup.interactable = false;
+            _squadPanelCanvasGroup.blocksRaycasts = true;
+
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                float normalized = Mathf.Clamp01(t / duration);
+                float eased = EvaluateRevealCurve(normalized);
+                _squadPanelCanvasGroup.alpha = Mathf.LerpUnclamped(fromAlpha, 0f, eased);
+                animatedRoot.localScale = Vector3.LerpUnclamped(fromScale, toScale, eased);
+                yield return null;
+            }
+
+            SetSquadPanelHiddenAndDisabledImmediate();
             _squadPanelRoutine = null;
         }
 
@@ -639,6 +752,21 @@ namespace SevenBattles.Preparation
             _squadPanelCanvasGroup.alpha = 0f;
             _squadPanelCanvasGroup.interactable = false;
             _squadPanelCanvasGroup.blocksRaycasts = false;
+        }
+
+        private void SetSquadPanelHiddenAndDisabledImmediate()
+        {
+            SetSquadPanelHiddenImmediate();
+            if (_squadPanel != null && _squadPanel.activeSelf)
+            {
+                _squadPanel.SetActive(false);
+            }
+
+            Transform animatedRoot = _squadPanelAnimatedRoot != null ? _squadPanelAnimatedRoot : _squadPanel != null ? _squadPanel.transform : null;
+            if (animatedRoot != null)
+            {
+                animatedRoot.localScale = _squadPanelBaseScale;
+            }
         }
 
         private void EnsureSquadPanelStartupHidden()

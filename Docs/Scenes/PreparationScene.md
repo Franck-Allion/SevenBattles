@@ -73,6 +73,8 @@
   - `_squadLabelTMP` -> `PopupMenu/SquadButtonMenu/Text` (`TMP_Text`).
   - `_shopButton` -> `PopupMenu/ShopButtonMenu` (`Button`) (optional; auto-found by name when empty).
   - `_squadButton` -> `PopupMenu/SquadButtonMenu` (`Button`) (optional; auto-found by name when empty).
+  - `_squadBackButton` -> `SquadPanel/.../Button_Back` (`Button`) (optional; auto-found by name when empty).
+  - `_squadBackButtonObjectName` -> name used for auto-discovery when `_squadBackButton` is empty (default: `Button_Back`).
   - `_shopLabel` -> table `UI.Common`, key `Preparation.Popup.Shop`.
   - `_squadLabel` -> table `UI.Common`, key `Preparation.Popup.Squad`.
   - `_buttonHoverCursorTexture` -> cursor texture shown while hovering menu buttons (example: `Assets/Art/Cursors/hand002.png`).
@@ -88,7 +90,7 @@
   - `_squadPanel` -> optional explicit reference to `SquadPanel` root (`GameObject`).
   - `_squadPanelObjectName` -> name used for auto-discovery when `_squadPanel` is empty (default: `SquadPanel`).
   - `_squadPanelCanvasGroup` -> optional `CanvasGroup` on `SquadPanel` for fade/input state (auto-added when missing).
-  - `_squadPanelFadeDuration` / `_squadPanelStartScale` / `_squadPanelRevealCurve` -> controls the unscaled-time reveal animation when `SquadButtonMenu` is clicked.
+  - `_squadPanelFadeDuration` / `_squadPanelStartScale` / `_squadPanelRevealCurve` -> controls the unscaled-time show/hide transition when opening from `SquadButtonMenu` and closing from `Button_Back`.
 - `ResourcesPanel` (`PreparationResourcesPanelPresenter`)
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
   - `_goldValueTMP` -> `Canvas/ResourcesPanel/Coin/CoinValue` (`TMP_Text`).
