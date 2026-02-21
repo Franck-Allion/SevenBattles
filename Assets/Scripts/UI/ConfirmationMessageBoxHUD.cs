@@ -74,6 +74,11 @@ namespace SevenBattles.UI
         private LocalizedString _defaultCancelLabel;
         private bool _defaultShowCancelButton;
         private bool _showCancelButton = true;
+        private RectTransform _confirmButtonRect;
+        private RectTransform _cancelButtonRect;
+        private Vector2 _defaultConfirmButtonAnchoredPosition;
+        private Vector2 _defaultCancelButtonAnchoredPosition;
+        private bool _buttonLayoutCached;
 
         public bool IsVisible => _isVisible;
 
@@ -298,8 +303,40 @@ namespace SevenBattles.UI
             _buttonsWired = true;
         }
 
+        private void CacheButtonLayoutIfNeeded()
+        {
+            if (_buttonLayoutCached)
+            {
+                return;
+            }
+
+            if (_confirmButton != null)
+            {
+                _confirmButtonRect = _confirmButton.GetComponent<RectTransform>();
+            }
+
+            if (_cancelButton != null)
+            {
+                _cancelButtonRect = _cancelButton.GetComponent<RectTransform>();
+            }
+
+            if (_confirmButtonRect != null)
+            {
+                _defaultConfirmButtonAnchoredPosition = _confirmButtonRect.anchoredPosition;
+            }
+
+            if (_cancelButtonRect != null)
+            {
+                _defaultCancelButtonAnchoredPosition = _cancelButtonRect.anchoredPosition;
+            }
+
+            _buttonLayoutCached = true;
+        }
+
         private void ApplyButtonVisibility(bool showCancelButton)
         {
+            CacheButtonLayoutIfNeeded();
+
             if (_confirmButton != null && !_confirmButton.gameObject.activeSelf)
             {
                 _confirmButton.gameObject.SetActive(true);
@@ -309,6 +346,26 @@ namespace SevenBattles.UI
             {
                 _cancelButton.gameObject.SetActive(showCancelButton);
                 _cancelButton.interactable = showCancelButton;
+            }
+
+            if (_confirmButtonRect != null)
+            {
+                if (showCancelButton || _cancelButtonRect == null)
+                {
+                    _confirmButtonRect.anchoredPosition = _defaultConfirmButtonAnchoredPosition;
+                }
+                else
+                {
+                    Vector2 centered = _defaultConfirmButtonAnchoredPosition;
+                    centered.x = (_defaultConfirmButtonAnchoredPosition.x + _defaultCancelButtonAnchoredPosition.x) * 0.5f;
+                    centered.y = (_defaultConfirmButtonAnchoredPosition.y + _defaultCancelButtonAnchoredPosition.y) * 0.5f;
+                    _confirmButtonRect.anchoredPosition = centered;
+                }
+            }
+
+            if (showCancelButton && _cancelButtonRect != null)
+            {
+                _cancelButtonRect.anchoredPosition = _defaultCancelButtonAnchoredPosition;
             }
         }
 

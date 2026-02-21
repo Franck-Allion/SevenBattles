@@ -33,10 +33,14 @@ namespace SevenBattles.Tests.UI
             var confirmGo = new GameObject("ConfirmButton", typeof(RectTransform), typeof(Image), typeof(Button));
             confirmGo.transform.SetParent(dialog.transform, false);
             confirmButton = confirmGo.GetComponent<Button>();
+            var confirmRect = confirmGo.GetComponent<RectTransform>();
+            confirmRect.anchoredPosition = new Vector2(-100f, 20f);
 
             var cancelGo = new GameObject("CancelButton", typeof(RectTransform), typeof(Image), typeof(Button));
             cancelGo.transform.SetParent(dialog.transform, false);
             cancelButton = cancelGo.GetComponent<Button>();
+            var cancelRect = cancelGo.GetComponent<RectTransform>();
+            cancelRect.anchoredPosition = new Vector2(100f, 20f);
 
             var hud = root.AddComponent<ConfirmationMessageBoxHUD>();
             SetPrivate(hud, "_rootCanvasGroup", root.GetComponent<CanvasGroup>());
@@ -88,6 +92,8 @@ namespace SevenBattles.Tests.UI
 
             Assert.IsTrue(confirmButton.gameObject.activeSelf);
             Assert.IsFalse(cancelButton.gameObject.activeSelf);
+            Assert.AreEqual(0f, confirmButton.GetComponent<RectTransform>().anchoredPosition.x, 0.001f);
+            Assert.AreEqual(20f, confirmButton.GetComponent<RectTransform>().anchoredPosition.y, 0.001f);
 
             confirmButton.onClick.Invoke();
 
@@ -123,6 +129,8 @@ namespace SevenBattles.Tests.UI
                 () => cancelled = true);
 
             Assert.IsTrue(cancelButton.gameObject.activeSelf);
+            Assert.AreEqual(-100f, confirmButton.GetComponent<RectTransform>().anchoredPosition.x, 0.001f);
+            Assert.AreEqual(20f, confirmButton.GetComponent<RectTransform>().anchoredPosition.y, 0.001f);
 
             cancelButton.onClick.Invoke();
             Assert.IsTrue(cancelled);
