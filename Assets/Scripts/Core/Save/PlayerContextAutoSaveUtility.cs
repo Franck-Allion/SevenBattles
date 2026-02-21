@@ -34,6 +34,7 @@ namespace SevenBattles.Core.Save
         private sealed class OwnedUnitProgressData
         {
             public string OwnedUnitId;
+            public string CustomName;
             public string UnitId;
             public int Level;
             public int Xp;
@@ -205,6 +206,7 @@ namespace SevenBattles.Core.Save
                 results.Add(new OwnedUnitProgressData
                 {
                     OwnedUnitId = owned.OwnedUnitId,
+                    CustomName = OwnedUnitNamingPolicy.SanitizeCustomName(owned.CustomName),
                     UnitId = owned.Definition.Id,
                     Level = owned.EffectiveLevel,
                     Xp = owned.EffectiveXp,
@@ -375,6 +377,7 @@ namespace SevenBattles.Core.Save
                 ownedList.Add(new OwnedUnitData
                 {
                     OwnedUnitId = ownedId,
+                    CustomName = saved.CustomName,
                     Definition = definition,
                     Level = Mathf.Max(UnitSpellLoadout.DefaultLevel, saved.Level),
                     Xp = Mathf.Max(0, saved.Xp),
@@ -382,6 +385,7 @@ namespace SevenBattles.Core.Save
                 });
             }
 
+            OwnedUnitNamingPolicy.NormalizeAllInPlace(ownedList);
             context.SetOwnedUnits(ownedList);
 
             var activeIds = new List<string>();

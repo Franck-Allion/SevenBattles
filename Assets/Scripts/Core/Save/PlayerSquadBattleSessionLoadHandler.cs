@@ -114,6 +114,7 @@ namespace SevenBattles.Core.Save
                 var updated = new OwnedUnitData
                 {
                     OwnedUnitId = matched.OwnedUnitId,
+                    CustomName = matched.CustomName,
                     Definition = loadout.Definition,
                     Level = loadout.EffectiveLevel,
                     Xp = loadout.EffectiveXp,
@@ -135,6 +136,7 @@ namespace SevenBattles.Core.Save
                 var created = new OwnedUnitData
                 {
                     OwnedUnitId = Guid.NewGuid().ToString("N"),
+                    CustomName = null,
                     Definition = loadout.Definition,
                     Level = loadout.EffectiveLevel,
                     Xp = loadout.EffectiveXp,
@@ -153,6 +155,7 @@ namespace SevenBattles.Core.Save
                 return;
             }
 
+            OwnedUnitNamingPolicy.NormalizeAllInPlace(owned);
             _playerContext.SetOwnedUnits(owned);
             _playerContext.SetActiveSquadOwnedUnitIds(activeIds);
         }

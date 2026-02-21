@@ -79,6 +79,7 @@ namespace SevenBattles.Core.Save
                 units.Add(new OwnedUnitSaveData
                 {
                     OwnedUnitId = owned.OwnedUnitId,
+                    CustomName = OwnedUnitNamingPolicy.SanitizeCustomName(owned.CustomName),
                     UnitId = owned.Definition.Id,
                     Level = owned.EffectiveLevel,
                     Xp = owned.EffectiveXp,

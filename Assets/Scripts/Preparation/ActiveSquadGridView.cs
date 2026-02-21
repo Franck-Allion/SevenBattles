@@ -23,6 +23,9 @@ namespace SevenBattles.Preparation
 
         private UnitPortraitPool _pool;
         private UnitDropZone _dropZone;
+        private Func<UnitSpellLoadout, string> _displayNameProvider;
+        private readonly Dictionary<UnitSpellLoadout, UnitPortraitView> _viewByLoadout =
+            new Dictionary<UnitSpellLoadout, UnitPortraitView>();
         private int _lastCount;
         private bool _isFull;
         private bool _missingPoolLogged;
@@ -38,6 +41,11 @@ namespace SevenBattles.Preparation
         private RectOffset _basePadding;
 
         public event Action<UnitSpellLoadout> PortraitClicked;
+
+        public void SetDisplayNameProvider(Func<UnitSpellLoadout, string> provider)
+        {
+            _displayNameProvider = provider;
+        }
 
         private void Awake()
         {
@@ -85,11 +93,13 @@ namespace SevenBattles.Preparation
                     _missingPoolLogged = true;
                 }
                 LogMissingPoolDetails(content);
+                _viewByLoadout.Clear();
                 ApplyStatusVisuals(count);
                 return;
             }
 
             _pool.ReturnAll();
+            _viewByLoadout.Clear();
 
             for (int i = 0; i < count; i++)
             {
@@ -106,9 +116,10 @@ namespace SevenBattles.Preparation
                 }
 
                 view.ApplyGridCellLayout(_prefabScale);
-                view.Bind(loadout);
+                view.Bind(loadout, ResolveDisplayName(loadout));
                 view.Clicked -= HandlePortraitClicked;
                 view.Clicked += HandlePortraitClicked;
+                _viewByLoadout[loadout] = view;
 
                 UnitDragHandler dragHandler = view.GetComponent<UnitDragHandler>();
                 if (dragHandler == null)
@@ -122,6 +133,22 @@ namespace SevenBattles.Preparation
 
             RebuildGridLayout();
             LogRefreshDiagnosticsOnce(count, content);
+        }
+
+        public bool RefreshPortrait(UnitSpellLoadout loadout)
+        {
+            if (loadout == null)
+            {
+                return false;
+            }
+
+            if (!_viewByLoadout.TryGetValue(loadout, out UnitPortraitView view) || view == null)
+            {
+                return false;
+            }
+
+            view.Bind(loadout, ResolveDisplayName(loadout));
+            return true;
         }
 
         private void EnsureViewportMaskIsUsable()
@@ -525,6 +552,11 @@ namespace SevenBattles.Preparation
             }
 
             PortraitClicked?.Invoke(loadout);
+        }
+
+        private string ResolveDisplayName(UnitSpellLoadout loadout)
+        {
+            return _displayNameProvider != null ? _displayNameProvider(loadout) : null;
         }
     }
 }

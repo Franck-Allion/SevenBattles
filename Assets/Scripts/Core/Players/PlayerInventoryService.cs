@@ -26,6 +26,7 @@ namespace SevenBattles.Core.Players
 
         public event Action OwnedUnitsChanged;
         public event Action<OwnedUnitData> OwnedUnitAdded;
+        public event Action<OwnedUnitData> OwnedUnitChanged;
 
         public void InitializeFromContext()
         {
@@ -142,11 +143,49 @@ namespace SevenBattles.Core.Players
                 }
             }
             next.Add(addedUnit);
+            OwnedUnitNamingPolicy.NormalizeAllInPlace(next);
 
             _playerContext.SetOwnedUnits(next);
+            if (next.Count > 0)
+            {
+                addedUnit = next[next.Count - 1];
+            }
             OwnedUnitAdded?.Invoke(addedUnit);
             OwnedUnitsChanged?.Invoke();
             return true;
+        }
+
+        public bool TryRenameOwnedUnit(string ownedUnitId, string newName, out string appliedName)
+        {
+            appliedName = string.Empty;
+            if (_playerContext == null || string.IsNullOrWhiteSpace(ownedUnitId))
+            {
+                return false;
+            }
+
+            IReadOnlyList<OwnedUnitData> owned = _playerContext.OwnedUnits;
+            for (int i = 0; i < owned.Count; i++)
+            {
+                OwnedUnitData candidate = owned[i];
+                if (candidate == null || !string.Equals(candidate.OwnedUnitId, ownedUnitId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                string normalized = OwnedUnitNamingPolicy.NormalizeSingleName(newName, candidate, owned);
+                if (string.Equals(candidate.CustomName, normalized, StringComparison.Ordinal))
+                {
+                    appliedName = normalized;
+                    return true;
+                }
+
+                candidate.CustomName = normalized;
+                appliedName = normalized;
+                OwnedUnitChanged?.Invoke(candidate);
+                return true;
+            }
+
+            return false;
         }
     }
 }

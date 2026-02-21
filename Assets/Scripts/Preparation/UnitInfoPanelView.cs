@@ -1,15 +1,29 @@
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
 using UnityEngine.UI;
 
 namespace SevenBattles.Preparation
 {
     public sealed class UnitInfoPanelView : MonoBehaviour
     {
+        private const string DefaultLocalizationTable = "UI.Common";
+
         [SerializeField] private Image _portrait;
         [SerializeField] private TMP_Text _nameLabel;
+        [SerializeField] private TMP_InputField _nameInputField;
+        [SerializeField] private GameObject _nameDisplayRoot;
+        [SerializeField] private GameObject _nameEditRoot;
+        [SerializeField] private TMP_Text _nameValidationLabel;
+        [SerializeField, Tooltip("Localized placeholder shown while editing unit name.")]
+        private LocalizedString _editNamePlaceholder = new LocalizedString(DefaultLocalizationTable, "UI.Squad.EditName.Placeholder");
+        [SerializeField, Tooltip("Localized validation shown when the typed name exceeds max length.")]
+        private LocalizedString _nameTooLongValidation = new LocalizedString(DefaultLocalizationTable, "UI.Squad.EditName.Validation.TooLong");
         [SerializeField] private TMP_Text _levelLabel;
         [SerializeField] private TMP_Text _lifeValue;
         [SerializeField] private TMP_Text _attackValue;
@@ -24,7 +38,55 @@ namespace SevenBattles.Preparation
         [SerializeField] private GameObject _emptyState;
         [SerializeField] private GameObject _statsContainer;
 
-        public void ShowUnit(UnitSpellLoadout loadout)
+        private string _selectedOwnedUnitId;
+        private string _editingOwnedUnitId;
+        private string _displayName;
+        private bool _isEditingName;
+        private bool _nameEditFinalized;
+
+        public event System.Action<string, string> NameCommitRequested;
+
+        private void Awake()
+        {
+            EnsureNameDisplayRoot();
+            EnsureNameInputField();
+            WireNameEditEvents();
+            SetNameEditMode(false);
+        }
+
+        private void OnEnable()
+        {
+            WireNameEditEvents();
+            RefreshNamePlaceholder();
+            ClearNameValidation();
+        }
+
+        private void OnDisable()
+        {
+            CancelNameEditSilently();
+            UnwireNameEditEvents();
+        }
+
+        private void Update()
+        {
+            if (!_isEditingName)
+            {
+                return;
+            }
+
+            if (!Input.GetKeyDown(KeyCode.Escape))
+            {
+                return;
+            }
+
+            CancelNameEditSilently();
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+            }
+        }
+
+        public void ShowUnit(UnitSpellLoadout loadout, string ownedUnitId, string displayName)
         {
             if (loadout == null || loadout.Definition == null)
             {
@@ -32,10 +94,19 @@ namespace SevenBattles.Preparation
                 return;
             }
 
+            if (_isEditingName && !string.Equals(_selectedOwnedUnitId, ownedUnitId, System.StringComparison.Ordinal))
+            {
+                CommitNameEditFromSelectionSwitch();
+            }
+
             UnitDefinition def = loadout.Definition;
             int level = loadout.EffectiveLevel;
             UnitStatsData baseStats = def.BaseStats;
             UnitStatsData stats = def.LevelBonus.ApplyTo(baseStats, level);
+            _selectedOwnedUnitId = ownedUnitId;
+            _displayName = !string.IsNullOrWhiteSpace(displayName)
+                ? displayName
+                : ResolveDefinitionDisplayName(def);
 
             if (_portrait != null)
             {
@@ -43,7 +114,7 @@ namespace SevenBattles.Preparation
                 _portrait.enabled = _portrait.sprite != null;
             }
 
-            SetText(_nameLabel, ResolveDisplayName(def));
+            SetText(_nameLabel, _displayName);
             SetText(_levelLabel, level.ToString());
             SetText(_lifeValue, stats.Life.ToString());
             SetText(_attackValue, stats.Attack.ToString());
@@ -65,10 +136,33 @@ namespace SevenBattles.Preparation
             {
                 _statsContainer.SetActive(true);
             }
+
+            SetNameEditMode(false);
+            ClearNameValidation();
+        }
+
+        public void ShowUnit(UnitSpellLoadout loadout)
+        {
+            string fallbackName = loadout != null ? ResolveDefinitionDisplayName(loadout.Definition) : string.Empty;
+            ShowUnit(loadout, null, fallbackName);
+        }
+
+        public void SetDisplayedName(string name)
+        {
+            _displayName = name ?? string.Empty;
+            SetText(_nameLabel, _displayName);
+            if (_nameInputField != null && !_isEditingName)
+            {
+                _nameInputField.SetTextWithoutNotify(_displayName);
+            }
         }
 
         public void Clear()
         {
+            CancelNameEditSilently();
+            _selectedOwnedUnitId = null;
+            _displayName = string.Empty;
+
             if (_portrait != null)
             {
                 _portrait.sprite = null;
@@ -97,6 +191,9 @@ namespace SevenBattles.Preparation
             {
                 _statsContainer.SetActive(false);
             }
+
+            ClearNameValidation();
+            SetNameEditMode(false);
         }
 
         private static void SetText(TMP_Text target, string value)
@@ -107,7 +204,7 @@ namespace SevenBattles.Preparation
             }
         }
 
-        private static string ResolveDisplayName(UnitDefinition definition)
+        private static string ResolveDefinitionDisplayName(UnitDefinition definition)
         {
             if (definition == null)
             {
@@ -121,5 +218,351 @@ namespace SevenBattles.Preparation
 
             return definition.Id ?? string.Empty;
         }
+
+        private void EnsureNameDisplayRoot()
+        {
+            if (_nameDisplayRoot == null && _nameLabel != null)
+            {
+                _nameDisplayRoot = _nameLabel.gameObject;
+            }
+
+            if (_nameDisplayRoot == null)
+            {
+                return;
+            }
+
+            Button button = _nameDisplayRoot.GetComponent<Button>();
+            if (button == null)
+            {
+                button = _nameDisplayRoot.AddComponent<Button>();
+            }
+
+            button.transition = Selectable.Transition.None;
+            if (button.targetGraphic == null && _nameLabel != null)
+            {
+                button.targetGraphic = _nameLabel;
+            }
+
+            button.onClick.RemoveListener(TryBeginNameEdit);
+            button.onClick.AddListener(TryBeginNameEdit);
+        }
+
+        private void EnsureNameInputField()
+        {
+            if (_nameInputField != null)
+            {
+                if (_nameEditRoot == null)
+                {
+                    _nameEditRoot = _nameInputField.gameObject;
+                }
+                EnsureInputFieldViewport();
+                return;
+            }
+
+            if (_nameLabel == null)
+            {
+                return;
+            }
+
+            RectTransform sourceRect = _nameLabel.rectTransform;
+            Transform parent = sourceRect.parent;
+            if (parent == null)
+            {
+                return;
+            }
+
+            var rootObject = new GameObject("NameEdit", typeof(RectTransform), typeof(Image), typeof(TMP_InputField));
+            rootObject.transform.SetParent(parent, false);
+            RectTransform rootRect = rootObject.GetComponent<RectTransform>();
+            rootRect.anchorMin = sourceRect.anchorMin;
+            rootRect.anchorMax = sourceRect.anchorMax;
+            rootRect.pivot = sourceRect.pivot;
+            rootRect.anchoredPosition = sourceRect.anchoredPosition;
+            rootRect.sizeDelta = sourceRect.sizeDelta;
+            rootRect.localRotation = sourceRect.localRotation;
+            rootRect.localScale = sourceRect.localScale;
+
+            Image background = rootObject.GetComponent<Image>();
+            background.color = new Color(0f, 0f, 0f, 0.35f);
+
+            _nameInputField = rootObject.GetComponent<TMP_InputField>();
+            _nameInputField.characterLimit = OwnedUnitNamingPolicy.MaxCustomNameLength;
+            _nameInputField.lineType = TMP_InputField.LineType.SingleLine;
+            _nameInputField.richText = false;
+
+            RectTransform viewport = CreateInputViewport(rootObject.transform);
+            TMP_Text inputText = CreateInputTextChild("Text", viewport);
+            TMP_Text placeholder = CreateInputTextChild("Placeholder", viewport);
+            placeholder.fontStyle = FontStyles.Italic;
+            Color placeholderColor = placeholder.color;
+            placeholderColor.a = 0.45f;
+            placeholder.color = placeholderColor;
+            placeholder.text = "Name";
+
+            _nameInputField.textComponent = inputText;
+            _nameInputField.placeholder = placeholder;
+            _nameInputField.textViewport = viewport;
+            _nameEditRoot = rootObject;
+            EnsureInputFieldViewport();
+        }
+
+        private static RectTransform CreateInputViewport(Transform parent)
+        {
+            var viewportObject = new GameObject("Viewport", typeof(RectTransform), typeof(RectMask2D));
+            viewportObject.transform.SetParent(parent, false);
+            RectTransform viewportRect = viewportObject.GetComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.offsetMin = Vector2.zero;
+            viewportRect.offsetMax = Vector2.zero;
+            return viewportRect;
+        }
+
+        private static TMP_Text CreateInputTextChild(string objectName, Transform parent)
+        {
+            var textObject = new GameObject(objectName, typeof(RectTransform), typeof(TextMeshProUGUI));
+            textObject.transform.SetParent(parent, false);
+            RectTransform rect = textObject.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(8f, 4f);
+            rect.offsetMax = new Vector2(-8f, -4f);
+
+            TMP_Text text = textObject.GetComponent<TextMeshProUGUI>();
+            text.textWrappingMode = TextWrappingModes.NoWrap;
+            text.overflowMode = TextOverflowModes.Ellipsis;
+            text.fontSize = 36f;
+            text.alignment = TextAlignmentOptions.Center;
+            return text;
+        }
+
+        private void EnsureInputFieldViewport()
+        {
+            if (_nameInputField == null || _nameInputField.textViewport != null)
+            {
+                return;
+            }
+
+            RectTransform viewport = null;
+            if (_nameInputField.textComponent != null)
+            {
+                viewport = _nameInputField.textComponent.rectTransform.parent as RectTransform;
+            }
+
+            if (viewport == null && _nameInputField.placeholder is TMP_Text placeholderText)
+            {
+                viewport = placeholderText.rectTransform.parent as RectTransform;
+            }
+
+            if (viewport == null)
+            {
+                viewport = _nameInputField.GetComponent<RectTransform>();
+            }
+
+            _nameInputField.textViewport = viewport;
+        }
+
+        private void WireNameEditEvents()
+        {
+            if (_nameInputField == null)
+            {
+                return;
+            }
+
+            _nameInputField.onSubmit.RemoveListener(HandleNameSubmit);
+            _nameInputField.onSubmit.AddListener(HandleNameSubmit);
+            _nameInputField.onEndEdit.RemoveListener(HandleNameEndEdit);
+            _nameInputField.onEndEdit.AddListener(HandleNameEndEdit);
+            _nameInputField.onValueChanged.RemoveListener(HandleNameValueChanged);
+            _nameInputField.onValueChanged.AddListener(HandleNameValueChanged);
+        }
+
+        private void UnwireNameEditEvents()
+        {
+            if (_nameInputField == null)
+            {
+                return;
+            }
+
+            _nameInputField.onSubmit.RemoveListener(HandleNameSubmit);
+            _nameInputField.onEndEdit.RemoveListener(HandleNameEndEdit);
+            _nameInputField.onValueChanged.RemoveListener(HandleNameValueChanged);
+        }
+
+        private void TryBeginNameEdit()
+        {
+            if (_nameInputField == null || string.IsNullOrWhiteSpace(_selectedOwnedUnitId))
+            {
+                return;
+            }
+
+            _isEditingName = true;
+            _editingOwnedUnitId = _selectedOwnedUnitId;
+            _nameEditFinalized = false;
+            SetNameEditMode(true);
+            _nameInputField.SetTextWithoutNotify(_displayName ?? string.Empty);
+            _nameInputField.ActivateInputField();
+            _nameInputField.Select();
+            ClearNameValidation();
+        }
+
+        private void HandleNameSubmit(string value)
+        {
+            CommitNameEdit(value);
+        }
+
+        private void HandleNameEndEdit(string value)
+        {
+            CommitNameEdit(value);
+        }
+
+        private void HandleNameValueChanged(string value)
+        {
+            if (!_isEditingName)
+            {
+                return;
+            }
+
+            if (value != null && value.Length > OwnedUnitNamingPolicy.MaxCustomNameLength)
+            {
+                ShowNameValidation(
+                    _nameTooLongValidation,
+                    $"Name must be at most {OwnedUnitNamingPolicy.MaxCustomNameLength} characters.",
+                    OwnedUnitNamingPolicy.MaxCustomNameLength);
+            }
+            else
+            {
+                ClearNameValidation();
+            }
+        }
+
+        private void CommitNameEdit(string enteredValue)
+        {
+            if (!_isEditingName || _nameEditFinalized)
+            {
+                return;
+            }
+
+            string targetOwnedUnitId = !string.IsNullOrWhiteSpace(_editingOwnedUnitId)
+                ? _editingOwnedUnitId
+                : _selectedOwnedUnitId;
+
+            _nameEditFinalized = true;
+            _isEditingName = false;
+            _editingOwnedUnitId = null;
+            SetNameEditMode(false);
+            if (!string.IsNullOrWhiteSpace(targetOwnedUnitId))
+            {
+                NameCommitRequested?.Invoke(targetOwnedUnitId, enteredValue);
+            }
+            ClearNameValidation();
+        }
+
+        private void CancelNameEditSilently()
+        {
+            if (!_isEditingName && _nameInputField != null && _nameEditRoot != null && _nameEditRoot.activeSelf)
+            {
+                SetNameEditMode(false);
+                return;
+            }
+
+            _nameEditFinalized = true;
+            _isEditingName = false;
+            _editingOwnedUnitId = null;
+            if (_nameInputField != null)
+            {
+                _nameInputField.SetTextWithoutNotify(_displayName ?? string.Empty);
+            }
+            SetNameEditMode(false);
+            ClearNameValidation();
+        }
+
+        private void SetNameEditMode(bool editing)
+        {
+            if (_nameDisplayRoot != null)
+            {
+                _nameDisplayRoot.SetActive(!editing);
+            }
+
+            if (_nameEditRoot != null)
+            {
+                _nameEditRoot.SetActive(editing);
+            }
+        }
+
+        private void RefreshNamePlaceholder()
+        {
+            if (_nameInputField == null)
+            {
+                return;
+            }
+
+            TMP_Text placeholder = _nameInputField.placeholder as TMP_Text;
+            if (placeholder == null)
+            {
+                return;
+            }
+
+            string text = GetLocalizedString(_editNamePlaceholder, "Enter unit name");
+            placeholder.text = text;
+        }
+
+        private void ShowNameValidation(LocalizedString localized, string fallback, params object[] arguments)
+        {
+            if (_nameValidationLabel == null)
+            {
+                return;
+            }
+
+            _nameValidationLabel.gameObject.SetActive(true);
+            _nameValidationLabel.text = GetLocalizedString(localized, fallback, arguments);
+        }
+
+        private void ClearNameValidation()
+        {
+            if (_nameValidationLabel == null)
+            {
+                return;
+            }
+
+            _nameValidationLabel.text = string.Empty;
+            _nameValidationLabel.gameObject.SetActive(false);
+        }
+
+        private static string GetLocalizedString(LocalizedString localized, string fallback, params object[] arguments)
+        {
+            if (localized == null || localized.IsEmpty || LocalizationSettings.StringDatabase == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                localized.Arguments = arguments;
+                string resolved = localized.GetLocalizedString();
+                return !string.IsNullOrWhiteSpace(resolved) ? resolved : fallback;
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
+
+        private void CommitNameEditFromSelectionSwitch()
+        {
+            if (!_isEditingName)
+            {
+                return;
+            }
+
+            if (_nameInputField == null)
+            {
+                CancelNameEditSilently();
+                return;
+            }
+
+            CommitNameEdit(_nameInputField.text);
+        }
+
     }
 }

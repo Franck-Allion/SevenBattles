@@ -99,6 +99,10 @@
   - `SquadSetupController` (`SquadSetupView`)
     - `_allUnitsView` -> `Top_AllSquad` (`AllUnitsGridView`).
     - `_activeSquadView` -> `Bottom_ActiveSquad` (`ActiveSquadGridView`).
+    - `_unitInfoView` -> `Right_UnitInfo` (`UnitInfoPanelView`).
+    - `Right_UnitInfo/NameText` is clickable and enters inline name edit mode (runtime-created TMP input field).
+      - Enter or clicking outside commits rename.
+      - Escape or clicking a portrait in either grid cancels the current edit.
   - `Bottom_ActiveSquad` (`ActiveSquadGridView` + `UnitDropZone`)
     - Empty-state text is driven by `_emptyLabel` and is only visible when the active squad list is empty.
     - Squad-complete feedback is driven by `UnitDropZone` completion visuals (`_completionColor`, `_completionAlpha`, `_completionScale`) rather than a dedicated full text label.

@@ -30,6 +30,7 @@ namespace SevenBattles.Tests.Core
                 new OwnedUnitData
                 {
                     OwnedUnitId = "owned_a",
+                    CustomName = "Alpha",
                     Definition = unitA,
                     Level = 3,
                     Xp = 12,
@@ -38,6 +39,7 @@ namespace SevenBattles.Tests.Core
                 new OwnedUnitData
                 {
                     OwnedUnitId = "owned_b",
+                    CustomName = "Beta",
                     Definition = unitB,
                     Level = 2,
                     Xp = 5,
@@ -68,6 +70,8 @@ namespace SevenBattles.Tests.Core
             Assert.IsFalse(context.IsTournamentBattleCompleted(2));
             Assert.AreEqual(2, context.OwnedUnits.Count);
             Assert.AreEqual(2, context.ActiveSquadOwnedUnitIds.Count);
+            Assert.AreEqual("Alpha", context.OwnedUnits[0].CustomName);
+            Assert.AreEqual("Beta", context.OwnedUnits[1].CustomName);
 
             var activeLoadouts = context.GetActiveSquadLoadoutsNonAlloc();
             Assert.AreEqual(2, activeLoadouts.Count);
@@ -79,6 +83,7 @@ namespace SevenBattles.Tests.Core
             string loadedJson = File.ReadAllText(savePath);
             StringAssert.Contains("\"OwnedUnits\"", loadedJson);
             StringAssert.Contains("\"ActiveSquadOwnedUnitIds\"", loadedJson);
+            StringAssert.Contains("\"CustomName\"", loadedJson);
 
             UnityEngine.Object.DestroyImmediate(unitB);
             UnityEngine.Object.DestroyImmediate(unitA);
@@ -104,6 +109,7 @@ namespace SevenBattles.Tests.Core
                 new OwnedUnitData
                 {
                     OwnedUnitId = "owned_a",
+                    CustomName = "LegacyName",
                     Definition = unitA,
                     Level = 2,
                     Xp = 10,
@@ -122,6 +128,7 @@ namespace SevenBattles.Tests.Core
 
             Assert.AreEqual(1, context.OwnedUnits.Count);
             Assert.AreEqual("owned_a", context.OwnedUnits[0].OwnedUnitId);
+            Assert.AreEqual("LegacyName", context.OwnedUnits[0].CustomName);
             Assert.AreEqual(1, context.ActiveSquadOwnedUnitIds.Count);
             Assert.AreEqual("owned_a", context.ActiveSquadOwnedUnitIds[0]);
 

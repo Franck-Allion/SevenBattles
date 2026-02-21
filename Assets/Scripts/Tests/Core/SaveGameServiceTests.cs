@@ -362,6 +362,7 @@ namespace SevenBattles.Tests.Core
                     new OwnedUnitSaveData
                     {
                         OwnedUnitId = "owned_1",
+                        CustomName = "  Archmage  ",
                         UnitId = "WizA",
                         Level = 3,
                         Xp = 12,
@@ -382,10 +383,12 @@ namespace SevenBattles.Tests.Core
             Assert.IsNotNull(data.PlayerOwnedUnits.Units);
             Assert.AreEqual(1, data.PlayerOwnedUnits.Units.Length);
             Assert.AreEqual("owned_1", data.PlayerOwnedUnits.Units[0].OwnedUnitId);
+            Assert.AreEqual("Archmage", data.PlayerOwnedUnits.Units[0].CustomName);
             Assert.AreEqual("WizA", data.PlayerOwnedUnits.Units[0].UnitId);
             Assert.IsNotNull(data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds);
             Assert.AreEqual("owned_1", data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds[0]);
             StringAssert.Contains("\"PlayerOwnedUnits\"", json);
+            StringAssert.Contains("\"CustomName\": \"Archmage\"", json);
         }
 
         [Test]
@@ -599,7 +602,7 @@ namespace SevenBattles.Tests.Core
             string path = Path.Combine(saveDir, "save_slot_01.json");
             File.WriteAllText(
                 path,
-                "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1, \"PlayerOwnedUnits\": { \"Units\": [ { \"OwnedUnitId\": \"\", \"UnitId\": \"WizA\", \"Level\": -1, \"Xp\": -3, \"SpellIds\": [\"SpellA\"] }, { \"OwnedUnitId\": \"owned_ok\", \"UnitId\": \"WizB\", \"Level\": 0, \"Xp\": -7, \"SpellIds\": [null, \"SpellB\", \"\"] } ], \"ActiveSquadOwnedUnitIds\": [null, \"\", \"owned_ok\"] } }");
+                "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1, \"PlayerOwnedUnits\": { \"Units\": [ { \"OwnedUnitId\": \"\", \"UnitId\": \"WizA\", \"CustomName\": \"\", \"Level\": -1, \"Xp\": -3, \"SpellIds\": [\"SpellA\"] }, { \"OwnedUnitId\": \"owned_ok\", \"UnitId\": \"WizB\", \"CustomName\": \"  NameTooLong_12345678901234567890  \", \"Level\": 0, \"Xp\": -7, \"SpellIds\": [null, \"SpellB\", \"\"] } ], \"ActiveSquadOwnedUnitIds\": [null, \"\", \"owned_ok\"] } }");
 
             var provider = new FakeGameStateProvider
             {
@@ -615,6 +618,7 @@ namespace SevenBattles.Tests.Core
             Assert.AreEqual(1, data.PlayerOwnedUnits.Units.Length);
             Assert.AreEqual("owned_ok", data.PlayerOwnedUnits.Units[0].OwnedUnitId);
             Assert.AreEqual("WizB", data.PlayerOwnedUnits.Units[0].UnitId);
+            Assert.AreEqual("NameTooLong_12345678", data.PlayerOwnedUnits.Units[0].CustomName);
             Assert.AreEqual(1, data.PlayerOwnedUnits.Units[0].Level);
             Assert.AreEqual(0, data.PlayerOwnedUnits.Units[0].Xp);
             Assert.IsNotNull(data.PlayerOwnedUnits.Units[0].SpellIds);

@@ -16,6 +16,7 @@ namespace SevenBattles.Preparation
 
         [SerializeField] private Image _portraitImage;
         [SerializeField] private TMP_Text _levelLabel;
+        [SerializeField] private TMP_Text _nameLabel;
 
         private readonly LocalizedString _levelLocalized = new LocalizedString(LevelTable, LevelKey);
         private bool _gridCellLayoutApplied;
@@ -85,7 +86,7 @@ namespace SevenBattles.Preparation
             }
         }
 
-        public void Bind(UnitSpellLoadout loadout)
+        public void Bind(UnitSpellLoadout loadout, string displayName = null)
         {
             Loadout = loadout;
 
@@ -108,6 +109,18 @@ namespace SevenBattles.Preparation
                     _levelLabel.text = TryGetLocalizedLevelText(loadout.EffectiveLevel);
                 }
             }
+
+            if (_nameLabel != null)
+            {
+                if (loadout == null)
+                {
+                    _nameLabel.text = string.Empty;
+                }
+                else
+                {
+                    _nameLabel.text = ResolveDisplayName(loadout, displayName);
+                }
+            }
         }
 
         public void Clear()
@@ -123,6 +136,11 @@ namespace SevenBattles.Preparation
             if (_levelLabel != null)
             {
                 _levelLabel.text = string.Empty;
+            }
+
+            if (_nameLabel != null)
+            {
+                _nameLabel.text = string.Empty;
             }
         }
 
@@ -147,6 +165,26 @@ namespace SevenBattles.Preparation
             }
 
             return level.ToString();
+        }
+
+        private static string ResolveDisplayName(UnitSpellLoadout loadout, string explicitDisplayName)
+        {
+            if (!string.IsNullOrWhiteSpace(explicitDisplayName))
+            {
+                return explicitDisplayName;
+            }
+
+            if (loadout == null || loadout.Definition == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(loadout.Definition.name))
+            {
+                return loadout.Definition.name;
+            }
+
+            return loadout.Definition.Id ?? string.Empty;
         }
     }
 }

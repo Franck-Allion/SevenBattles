@@ -13,10 +13,12 @@ namespace SevenBattles.Core
 
         event Action OwnedUnitsChanged;
         event Action<OwnedUnitData> OwnedUnitAdded;
+        event Action<OwnedUnitData> OwnedUnitChanged;
 
         void InitializeFromContext();
         bool ContainsOwnedUnit(string ownedUnitId);
         bool TryGetOwnedUnit(string ownedUnitId, out OwnedUnitData ownedUnit);
         bool TryAddOwnedUnit(string unitDefinitionId, int level, int xp, out OwnedUnitData addedUnit);
+        bool TryRenameOwnedUnit(string ownedUnitId, string newName, out string appliedName);
     }
 }

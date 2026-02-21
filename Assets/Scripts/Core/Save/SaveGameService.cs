@@ -68,6 +68,7 @@ namespace SevenBattles.Core.Save
     public sealed class OwnedUnitSaveData
     {
         public string OwnedUnitId;
+        public string CustomName;
         public string UnitId;
         public int Level;
         public int Xp;
@@ -674,6 +675,7 @@ namespace SevenBattles.Core.Save
                     units.Add(new OwnedUnitSaveData
                     {
                         OwnedUnitId = unit.OwnedUnitId,
+                        CustomName = OwnedUnitNamingPolicy.SanitizeCustomName(unit.CustomName),
                         UnitId = unit.UnitId,
                         Level = unit.Level > 0 ? unit.Level : UnitSpellLoadout.DefaultLevel,
                         Xp = unit.Xp > 0 ? unit.Xp : 0,

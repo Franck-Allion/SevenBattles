@@ -4,6 +4,7 @@ using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Diagnostics;
 using SevenBattles.Core.Players;
+using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
 using TMPro;
 using UnityEngine;
@@ -34,6 +35,8 @@ namespace SevenBattles.Preparation
         private UnitDropZone _allUnitsDropZone;
         private UnitDropZone _activeSquadDropZone;
         private bool _eventsWired;
+        private string _selectedOwnedUnitId;
+        private UnitSpellLoadout _selectedLoadout;
 
         private readonly List<UnitSpellLoadout> _allAvailableLoadouts = new List<UnitSpellLoadout>();
         private readonly List<UnitSpellLoadout> _activeSquadLoadouts = new List<UnitSpellLoadout>();
@@ -70,6 +73,15 @@ namespace SevenBattles.Preparation
             _unitCatalog = new UnitCatalogService(_unitRegistry);
             _inventoryService = new PlayerInventoryService(_resolvedPlayerContext, _unitCatalog);
             _squadService = new SquadService(_resolvedPlayerContext, _inventoryService);
+            if (_allUnitsView != null)
+            {
+                _allUnitsView.SetDisplayNameProvider(ResolveDisplayNameForLoadout);
+            }
+
+            if (_activeSquadView != null)
+            {
+                _activeSquadView.SetDisplayNameProvider(ResolveDisplayNameForLoadout);
+            }
             // Preparation UX: do not auto-seed the active squad when no selection exists yet.
             // Owned units should appear in "All Units" until the player explicitly adds them to the squad.
 
@@ -122,6 +134,40 @@ namespace SevenBattles.Preparation
             UnwireEvents();
         }
 
+        private void OnEnable()
+        {
+            if (_squadService == null)
+            {
+                return;
+            }
+
+            WireEvents();
+            RebuildViewData();
+            RefreshViews();
+            RefreshSquadValueDisplay();
+
+            if (_unitInfoView == null)
+            {
+                return;
+            }
+
+            if (TryResolveSelectedOwnedUnit(out OwnedUnitData selectedOwnedUnit))
+            {
+                UnitSpellLoadout selectedLoadout = GetOrCreateViewLoadout(selectedOwnedUnit);
+                _selectedLoadout = selectedLoadout;
+                _unitInfoView.ShowUnit(
+                    selectedLoadout,
+                    selectedOwnedUnit.OwnedUnitId,
+                    OwnedUnitNamingPolicy.ResolveDisplayName(selectedOwnedUnit));
+            }
+            else
+            {
+                _selectedOwnedUnitId = null;
+                _selectedLoadout = null;
+                _unitInfoView.Clear();
+            }
+        }
+
         public bool TryAddToSquad(UnitSpellLoadout loadout)
         {
             if (loadout == null || _squadService == null || !_ownedIdByLoadout.TryGetValue(loadout, out string ownedId))
@@ -150,6 +196,8 @@ namespace SevenBattles.Preparation
                 return;
             }
 
+            _selectedOwnedUnitId = null;
+            _selectedLoadout = null;
             if (_unitInfoView != null)
             {
                 _unitInfoView.Clear();
@@ -169,6 +217,10 @@ namespace SevenBattles.Preparation
             _squadService.UnitAddedToSquad += HandleUnitAddedToSquad;
             _squadService.UnitRemovedFromSquad += HandleUnitRemovedFromSquad;
             _squadService.UnitSelected += HandleUnitSelected;
+            if (_inventoryService != null)
+            {
+                _inventoryService.OwnedUnitChanged += HandleOwnedUnitChanged;
+            }
 
             if (_allUnitsView != null)
             {
@@ -190,6 +242,11 @@ namespace SevenBattles.Preparation
                 }
             }
 
+            if (_unitInfoView != null)
+            {
+                _unitInfoView.NameCommitRequested += HandleNameCommitRequested;
+            }
+
             _eventsWired = true;
         }
 
@@ -204,6 +261,10 @@ namespace SevenBattles.Preparation
             _squadService.UnitAddedToSquad -= HandleUnitAddedToSquad;
             _squadService.UnitRemovedFromSquad -= HandleUnitRemovedFromSquad;
             _squadService.UnitSelected -= HandleUnitSelected;
+            if (_inventoryService != null)
+            {
+                _inventoryService.OwnedUnitChanged -= HandleOwnedUnitChanged;
+            }
 
             if (_allUnitsView != null)
             {
@@ -225,6 +286,11 @@ namespace SevenBattles.Preparation
                 _activeSquadDropZone.DropReceived -= HandleDropReceived;
             }
 
+            if (_unitInfoView != null)
+            {
+                _unitInfoView.NameCommitRequested -= HandleNameCommitRequested;
+            }
+
             _eventsWired = false;
         }
 
@@ -234,6 +300,7 @@ namespace SevenBattles.Preparation
             RefreshViews();
             RefreshSquadValueDisplay();
             SquadChanged?.Invoke();
+            TryAutoSavePlayerContext();
         }
 
         private void HandleUnitAddedToSquad(OwnedUnitData ownedUnit)
@@ -249,6 +316,8 @@ namespace SevenBattles.Preparation
         private void HandleUnitSelected(OwnedUnitData ownedUnit)
         {
             UnitSpellLoadout loadout = GetOrCreateViewLoadout(ownedUnit);
+            _selectedLoadout = loadout;
+            _selectedOwnedUnitId = ownedUnit != null ? ownedUnit.OwnedUnitId : null;
             if (_unitInfoView != null)
             {
                 if (loadout == null)
@@ -257,7 +326,7 @@ namespace SevenBattles.Preparation
                 }
                 else
                 {
-                    _unitInfoView.ShowUnit(loadout);
+                    _unitInfoView.ShowUnit(loadout, _selectedOwnedUnitId, OwnedUnitNamingPolicy.ResolveDisplayName(ownedUnit));
                 }
             }
 
@@ -284,6 +353,41 @@ namespace SevenBattles.Preparation
             {
                 TryRemoveFromSquad(loadout);
             }
+        }
+
+        private void HandleNameCommitRequested(string ownedUnitId, string enteredName)
+        {
+            if (_inventoryService == null || string.IsNullOrWhiteSpace(ownedUnitId))
+            {
+                return;
+            }
+
+            if (!_inventoryService.TryRenameOwnedUnit(ownedUnitId, enteredName, out string appliedName))
+            {
+                return;
+            }
+
+            RefreshUnitVisualsByOwnedId(ownedUnitId);
+            if (string.Equals(_selectedOwnedUnitId, ownedUnitId, StringComparison.Ordinal) && _unitInfoView != null)
+            {
+                _unitInfoView.SetDisplayedName(appliedName);
+            }
+        }
+
+        private void HandleOwnedUnitChanged(OwnedUnitData ownedUnit)
+        {
+            if (ownedUnit == null || string.IsNullOrWhiteSpace(ownedUnit.OwnedUnitId))
+            {
+                return;
+            }
+
+            RefreshUnitVisualsByOwnedId(ownedUnit.OwnedUnitId);
+            if (string.Equals(_selectedOwnedUnitId, ownedUnit.OwnedUnitId, StringComparison.Ordinal) && _unitInfoView != null)
+            {
+                _unitInfoView.SetDisplayedName(OwnedUnitNamingPolicy.ResolveDisplayName(ownedUnit));
+            }
+
+            TryAutoSavePlayerContext();
         }
 
         private void RebuildViewData()
@@ -391,6 +495,29 @@ namespace SevenBattles.Preparation
             }
         }
 
+        private void RefreshUnitVisualsByOwnedId(string ownedUnitId)
+        {
+            if (string.IsNullOrWhiteSpace(ownedUnitId))
+            {
+                return;
+            }
+
+            if (!_loadoutByOwnedId.TryGetValue(ownedUnitId, out UnitSpellLoadout loadout) || loadout == null)
+            {
+                return;
+            }
+
+            if (_allUnitsView != null)
+            {
+                _allUnitsView.RefreshPortrait(loadout);
+            }
+
+            if (_activeSquadView != null)
+            {
+                _activeSquadView.RefreshPortrait(loadout);
+            }
+        }
+
         private void RefreshSquadValueDisplay()
         {
             ResolveSquadValueLabel();
@@ -453,6 +580,59 @@ namespace SevenBattles.Preparation
             }
 
             return null;
+        }
+
+        private string ResolveDisplayNameForLoadout(UnitSpellLoadout loadout)
+        {
+            if (loadout == null)
+            {
+                return string.Empty;
+            }
+
+            if (_inventoryService != null &&
+                _ownedIdByLoadout.TryGetValue(loadout, out string ownedId) &&
+                _inventoryService.TryGetOwnedUnit(ownedId, out OwnedUnitData owned))
+            {
+                return OwnedUnitNamingPolicy.ResolveDisplayName(owned);
+            }
+
+            if (loadout.Definition == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(loadout.Definition.name))
+            {
+                return loadout.Definition.name;
+            }
+
+            return loadout.Definition.Id ?? string.Empty;
+        }
+
+        private bool TryResolveSelectedOwnedUnit(out OwnedUnitData ownedUnit)
+        {
+            ownedUnit = null;
+            if (_inventoryService == null || string.IsNullOrWhiteSpace(_selectedOwnedUnitId))
+            {
+                return false;
+            }
+
+            return _inventoryService.TryGetOwnedUnit(_selectedOwnedUnitId, out ownedUnit);
+        }
+
+        private void TryAutoSavePlayerContext()
+        {
+            PlayerContext context = _resolvedPlayerContext ?? PlayerContext.RuntimeInstance ?? _playerContext;
+            if (context == null)
+            {
+                SBLog.Warn("SquadSetupController: Autosave skipped because no PlayerContext is available.", this);
+                return;
+            }
+
+            if (!PlayerContextAutoSaveUtility.TrySaveFromPlayerContext(context, out string path))
+            {
+                SBLog.Warn($"SquadSetupController: Failed to autosave player context to '{path}'.", this);
+            }
         }
     }
 }

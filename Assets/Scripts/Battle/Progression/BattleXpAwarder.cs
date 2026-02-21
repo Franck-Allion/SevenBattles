@@ -524,6 +524,7 @@ namespace SevenBattles.Battle.Progression
                 var updated = new OwnedUnitData
                 {
                     OwnedUnitId = ownedId,
+                    CustomName = null,
                     Definition = sessionLoadout.Definition,
                     Level = sessionLoadout.EffectiveLevel,
                     Xp = sessionLoadout.EffectiveXp,
@@ -534,6 +535,7 @@ namespace SevenBattles.Battle.Progression
 
                 if (ownedIndexById.TryGetValue(ownedId, out int existingIndex))
                 {
+                    updated.CustomName = nextOwned[existingIndex] != null ? nextOwned[existingIndex].CustomName : null;
                     nextOwned[existingIndex] = updated;
                 }
                 else
@@ -548,6 +550,7 @@ namespace SevenBattles.Battle.Progression
                 }
             }
 
+            OwnedUnitNamingPolicy.NormalizeAllInPlace(nextOwned);
             _playerContext.SetOwnedUnits(nextOwned);
             _playerContext.SetActiveSquadOwnedUnitIds(nextActiveIds);
             SBLog.Info($"BattleXpAwarder: Synced {nextActiveIds.Count} active owned unit(s) Level/Xp from session to PlayerContext.", this);

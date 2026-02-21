@@ -95,7 +95,7 @@ For each `SaveSlotAsync(int slotIndex)` call:
   - Serializes/deserializes player runtime progression:
     - Gold/Gems
     - Tournament progress (CurrentRoundIndex, CompletedBattles)
-    - Owned units (OwnedUnitId, UnitId, Level, Xp, SpellIds)
+    - Owned units (OwnedUnitId, CustomName, UnitId, Level, Xp, SpellIds)
     - Active squad owned-unit ids
     - Player inventory entries
   - Autosave path: `<Application.persistentDataPath>/Saves/autosave_player_context.json`
@@ -107,6 +107,12 @@ For each `SaveSlotAsync(int slotIndex)` call:
   - Triggers autosave once per battle result popup (Victory or Defeat) after progression/reward application.
   - Calls `PlayerContextAutoSaveUtility.TrySaveFromPlayerContext` directly (no reflection).
   - Resolves `PlayerContext.RuntimeInstance` first so autosave writes the runtime clone.
+
+- `Assets/Scripts/Preparation/SquadSetupController.cs`
+  - Triggers autosave when squad state changes in Squad Setup:
+    - after `ISquadService.SquadChanged` (active squad order/composition changes, owned collection changes propagated by squad service),
+    - after `IPlayerInventoryService.OwnedUnitChanged` (for example unit rename).
+  - Uses `PlayerContextAutoSaveUtility.TrySaveFromPlayerContext` so `ActiveSquadOwnedUnitIds` and `OwnedUnits` (including `CustomName`) are persisted immediately.
 
 - `Assets/Scripts/Preparation/PreparationAutoSaveLoader.cs`
   - MonoBehaviour placed on the PreparationScene's _System GameObject.
@@ -177,6 +183,7 @@ File: `Assets/Scripts/Core/Save/PlayerSquadGameStateSaveProvider.cs`
   ```csharp
   public sealed class OwnedUnitSaveData {
       public string OwnedUnitId; // stable player-owned identity
+      public string CustomName;  // player-edited persisted unit name
       public string UnitId;      // UnitDefinition.Id
       public int Level;
       public int Xp;
@@ -408,6 +415,8 @@ File: `Assets/Scripts/Core/Save/PlayerResourcesLoadHandler.cs`
 - Applies `SaveGameData.TournamentProgress` back to `PlayerContext` via `SetTournamentProgress(...)`.
 - Applies `SaveGameData.PlayerOwnedUnits` back to `PlayerContext`:
   - Restores `OwnedUnits`.
+  - Restores `OwnedUnitData.CustomName` for each unit.
+  - Missing/empty names are normalized to a safe generated default (`<UnitType>-N`).
   - Restores `ActiveSquadOwnedUnitIds`.
 - Wire this handler into `CompositeGameStateLoadHandler` for scenes that can execute load flows.
 
@@ -427,6 +436,7 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
     "Units": [
       {
         "OwnedUnitId": "owned_a1",
+        "CustomName": "Aegis",
         "UnitId": "WizardA",
         "Level": 3,
         "Xp": 12,
@@ -434,6 +444,7 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
       },
       {
         "OwnedUnitId": "owned_b1",
+        "CustomName": "WizardB-1",
         "UnitId": "WizardB",
         "Level": 2,
         "Xp": 5,

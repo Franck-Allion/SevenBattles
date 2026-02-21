@@ -39,6 +39,7 @@ namespace SevenBattles.Core.Players
         private List<OwnedUnitData> _ownedUnits = new List<OwnedUnitData>();
         [SerializeField, Tooltip("Ordered active squad references by OwnedUnitId.")]
         private List<string> _activeSquadOwnedUnitIds = new List<string>();
+        private bool _ownedUnitNamesNormalized;
         // Reused buffers to expose active squad loadouts without per-call allocations.
         private readonly List<UnitSpellLoadout> _activeLoadoutsCache = new List<UnitSpellLoadout>();
         private readonly Dictionary<string, OwnedUnitData> _ownedLookupCache = new Dictionary<string, OwnedUnitData>(StringComparer.Ordinal);
@@ -158,6 +159,8 @@ namespace SevenBattles.Core.Players
                 }
             }
 
+            OwnedUnitNamingPolicy.NormalizeAllInPlace(target);
+            _ownedUnitNamesNormalized = true;
             OwnedUnitsChanged?.Invoke();
         }
 
@@ -248,6 +251,12 @@ namespace SevenBattles.Core.Players
             if (_ownedUnits == null)
             {
                 _ownedUnits = new List<OwnedUnitData>();
+            }
+
+            if (!_ownedUnitNamesNormalized)
+            {
+                OwnedUnitNamingPolicy.NormalizeAllInPlace(_ownedUnits);
+                _ownedUnitNamesNormalized = true;
             }
 
             return _ownedUnits;

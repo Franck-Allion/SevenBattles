@@ -98,6 +98,7 @@ namespace SevenBattles.Core.Save
                 var ownedUnit = new OwnedUnitData
                 {
                     OwnedUnitId = ownedId,
+                    CustomName = entry.CustomName,
                     Definition = definition,
                     Level = entry.Level > 0 ? entry.Level : UnitSpellLoadout.DefaultLevel,
                     Xp = entry.Xp > 0 ? entry.Xp : 0,
@@ -107,6 +108,8 @@ namespace SevenBattles.Core.Save
                 ownedUnits.Add(ownedUnit);
                 ownedById.Add(ownedId, ownedUnit);
             }
+
+            OwnedUnitNamingPolicy.NormalizeAllInPlace(ownedUnits);
 
             var activeIds = new List<string>();
             if (save.ActiveSquadOwnedUnitIds != null)
