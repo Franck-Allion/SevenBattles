@@ -154,7 +154,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 30.214691, y: 463.06213}
+  m_AnchoredPosition: {x: 30.21457, y: 463.0628}
   m_SizeDelta: {x: 100, y: -0.98098755}
   m_Pivot: {x: 1, y: 1}
 --- !u!114 &33227804
@@ -924,7 +924,7 @@ MonoBehaviour:
   _emptyLabel: {fileID: 0}
   _fullLabel: {fileID: 42648253}
   _dragGhostRoot: {fileID: 802828512}
-  _prefabScale: 1.2
+  _prefabScale: 1.25
 --- !u!1 &370114314
 GameObject:
   m_ObjectHideFlags: 0
@@ -6783,7 +6783,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.000061035156}
+  m_AnchoredPosition: {x: 0, y: -0.000061035156}
   m_SizeDelta: {x: -0.00012207, y: 0}
   m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &1945906372
@@ -7027,7 +7027,7 @@ MonoBehaviour:
   _portraitPrefab: {fileID: 1837840414857542876, guid: bc4834297c681f045baa1baaa7b836af, type: 3}
   _emptyLabel: {fileID: 1852014803}
   _dragGhostRoot: {fileID: 802828512}
-  _prefabScale: 1.2
+  _prefabScale: 1.25
 --- !u!1 &2047507597
 GameObject:
   m_ObjectHideFlags: 0
@@ -17862,6 +17862,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _portraitImage: {fileID: 2908477456754916971}
   _levelLabel: {fileID: 4596877119829484384}
+  _nameLabel: {fileID: 0}
 --- !u!224 &7371597800306117027
 RectTransform:
   m_ObjectHideFlags: 0
@@ -19278,6 +19279,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _portrait: {fileID: 3508141035983353425}
   _nameLabel: {fileID: 4896908822716757967}
+  _nameInputField: {fileID: 0}
+  _nameDisplayRoot: {fileID: 0}
+  _nameEditRoot: {fileID: 0}
+  _nameValidationLabel: {fileID: 0}
+  _editNamePlaceholder:
+    m_TableReference:
+      m_TableCollectionName: UI.Common
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Squad.EditName.Placeholder
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  _nameTooLongValidation:
+    m_TableReference:
+      m_TableCollectionName: UI.Common
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: UI.Squad.EditName.Validation.TooLong
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   _levelLabel: {fileID: 2826277166119332698}
   _lifeValue: {fileID: 7921687215683253170}
   _attackValue: {fileID: 2534012199050865310}
@@ -19291,6 +19314,9 @@ MonoBehaviour:
   _moraleValue: {fileID: 7795858920201137470}
   _emptyState: {fileID: 0}
   _statsContainer: {fileID: 3758727547503643729}
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &8146925183062836741
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -10,79 +10,36 @@ namespace SevenBattles.Preparation
 {
     public sealed class UnitPortraitView : MonoBehaviour, IPointerClickHandler
     {
+        private const float MinGridScale = 0.1f;
         private const string LevelTable = "UI.Common";
         private const string LevelKey = "UI.Squad.Level";
-        private const float LevelBadgeBaseCenterY = 12f;
 
         [SerializeField] private Image _portraitImage;
         [SerializeField] private TMP_Text _levelLabel;
         [SerializeField] private TMP_Text _nameLabel;
 
         private readonly LocalizedString _levelLocalized = new LocalizedString(LevelTable, LevelKey);
-        private bool _gridCellLayoutApplied;
 
         public UnitSpellLoadout Loadout { get; private set; }
 
         public event Action<UnitPortraitView> Clicked;
 
         /// <summary>
-        /// Normalizes authoring-time prefab transforms for runtime GridLayout cells.
-        /// Some legacy prefab values use large offsets/scales that can place the level banner outside the visible cell.
+        /// Applies a uniform scale for mini-portrait usage while preserving authored child layout.
         /// </summary>
         public void ApplyGridCellLayout(float overallScale = 1f)
         {
-            overallScale = Mathf.Clamp(overallScale, 0.7f, 2f);
+            overallScale = Mathf.Clamp(overallScale, MinGridScale, 2f);
 
             RectTransform root = transform as RectTransform;
-            if (!_gridCellLayoutApplied)
-            {
-                if (_portraitImage != null)
-                {
-                    RectTransform portraitRect = _portraitImage.rectTransform;
-                    portraitRect.anchorMin = Vector2.zero;
-                    portraitRect.anchorMax = Vector2.one;
-                    portraitRect.pivot = new Vector2(0.5f, 0.5f);
-                    portraitRect.anchoredPosition = Vector2.zero;
-                    portraitRect.sizeDelta = new Vector2(-16f, -36f);
-                }
-
-                if (_levelLabel != null)
-                {
-                    RectTransform levelRoot = _levelLabel.rectTransform.parent as RectTransform;
-                    if (levelRoot != null)
-                    {
-                        levelRoot.anchorMin = new Vector2(0.5f, 0f);
-                        levelRoot.anchorMax = new Vector2(0.5f, 0f);
-                        levelRoot.pivot = new Vector2(0.5f, 0.5f);
-                        levelRoot.anchoredPosition = new Vector2(0f, LevelBadgeBaseCenterY);
-                        levelRoot.sizeDelta = new Vector2(88f, 20f);
-                    }
-
-                    RectTransform levelTextRect = _levelLabel.rectTransform;
-                    levelTextRect.anchorMin = Vector2.zero;
-                    levelTextRect.anchorMax = Vector2.one;
-                    levelTextRect.pivot = new Vector2(0.5f, 0.5f);
-                    levelTextRect.anchoredPosition = Vector2.zero;
-                    levelTextRect.sizeDelta = new Vector2(-6f, -4f);
-                }
-
-                _gridCellLayoutApplied = true;
-            }
-
             if (root != null)
             {
+                // Keep the root centered in the grid host without touching child sizes/offsets.
+                root.anchorMin = new Vector2(0.5f, 0.5f);
+                root.anchorMax = new Vector2(0.5f, 0.5f);
+                root.pivot = new Vector2(0.5f, 0.5f);
+                root.anchoredPosition = Vector2.zero;
                 root.localScale = new Vector3(overallScale, overallScale, 1f);
-            }
-
-            if (_levelLabel != null)
-            {
-                RectTransform levelRoot = _levelLabel.rectTransform.parent as RectTransform;
-                if (levelRoot != null)
-                {
-                    // Keep the badge visually aligned when the whole prefab is scaled from its center.
-                    float compensatedY = LevelBadgeBaseCenterY / overallScale;
-                    levelRoot.anchoredPosition = new Vector2(0f, compensatedY);
-                }
             }
         }
 

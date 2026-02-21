@@ -52,6 +52,11 @@ namespace SevenBattles.Preparation
                 return;
             }
 
+            if (_parent != null)
+            {
+                view.transform.SetParent(_parent, false);
+            }
+
             view.Clear();
             view.gameObject.SetActive(false);
             _pool.Push(view);

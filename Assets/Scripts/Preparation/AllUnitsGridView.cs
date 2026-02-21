@@ -36,6 +36,9 @@ namespace SevenBattles.Preparation
         private Vector2 _baseCellSize;
         private Vector2 _baseSpacing;
         private RectOffset _basePadding;
+        private Vector2 _portraitPrefabSize;
+        private bool _portraitPrefabSizeCaptured;
+        private readonly List<RectTransform> _cellHosts = new List<RectTransform>();
 
         public event Action<UnitSpellLoadout> PortraitClicked;
 
@@ -61,6 +64,7 @@ namespace SevenBattles.Preparation
             EnsureViewportMaskIsUsable();
             EnsureContentRectIsUsable();
             CaptureGridLayoutBaselineIfNeeded();
+            CapturePortraitPrefabSizeIfNeeded();
         }
 
         private void OnDestroy()
@@ -69,6 +73,8 @@ namespace SevenBattles.Preparation
             {
                 _pool.ReturnAll();
             }
+
+            ReleaseCellHosts();
         }
 
         public void Refresh(IReadOnlyList<UnitSpellLoadout> units)
@@ -86,14 +92,16 @@ namespace SevenBattles.Preparation
                     _missingPoolLogged = true;
                 }
                 LogMissingPoolDetails(content);
+                ReleaseCellHosts();
                 _viewByLoadout.Clear();
                 return;
             }
 
-            _pool.ReturnAll();
+            ReleaseCellsAndViews();
             _viewByLoadout.Clear();
 
             int count = units != null ? units.Count : 0;
+            float portraitScale = ResolveMiniPortraitScale();
             for (int i = 0; i < count; i++)
             {
                 UnitSpellLoadout loadout = units[i];
@@ -103,12 +111,18 @@ namespace SevenBattles.Preparation
                 }
 
                 UnitPortraitView view = _pool.Get();
-                if (content != null)
+                RectTransform cellHost = CreateCellHost(content, i);
+                if (cellHost != null)
+                {
+                    view.transform.SetParent(cellHost, false);
+                    _cellHosts.Add(cellHost);
+                }
+                else if (content != null)
                 {
                     view.transform.SetParent(content, false);
                 }
 
-                view.ApplyGridCellLayout(_prefabScale);
+                view.ApplyGridCellLayout(portraitScale);
                 view.Bind(loadout, ResolveDisplayName(loadout));
                 view.Clicked -= HandlePortraitClicked;
                 view.Clicked += HandlePortraitClicked;
@@ -419,18 +433,104 @@ namespace SevenBattles.Preparation
                 return;
             }
 
-            float scale = Mathf.Clamp(_prefabScale, 0.8f, 2f);
-            float spacingX = _baseSpacing.x + (_baseCellSize.x * (scale - 1f));
-            float spacingY = _baseSpacing.y + (_baseCellSize.y * (scale - 1f));
-            int extraPadX = Mathf.CeilToInt((_baseCellSize.x * (scale - 1f)) * 0.5f);
-            int extraPadY = Mathf.CeilToInt((_baseCellSize.y * (scale - 1f)) * 0.5f);
-
             _gridLayout.cellSize = _baseCellSize;
-            _gridLayout.spacing = new Vector2(Mathf.Max(0f, spacingX), Mathf.Max(0f, spacingY));
-            _gridLayout.padding.left = _basePadding.left + extraPadX;
-            _gridLayout.padding.right = _basePadding.right + extraPadX;
-            _gridLayout.padding.top = _basePadding.top + extraPadY;
-            _gridLayout.padding.bottom = _basePadding.bottom + extraPadY;
+            _gridLayout.spacing = _baseSpacing;
+            _gridLayout.padding.left = _basePadding.left;
+            _gridLayout.padding.right = _basePadding.right;
+            _gridLayout.padding.top = _basePadding.top;
+            _gridLayout.padding.bottom = _basePadding.bottom;
+        }
+
+        private void ReleaseCellsAndViews()
+        {
+            if (_pool != null)
+            {
+                _pool.ReturnAll();
+            }
+
+            ReleaseCellHosts();
+        }
+
+        private void ReleaseCellHosts()
+        {
+            for (int i = 0; i < _cellHosts.Count; i++)
+            {
+                RectTransform host = _cellHosts[i];
+                if (host != null)
+                {
+                    if (host.parent != null)
+                    {
+                        host.SetParent(null, false);
+                    }
+
+                    Destroy(host.gameObject);
+                }
+            }
+
+            _cellHosts.Clear();
+        }
+
+        private RectTransform CreateCellHost(RectTransform content, int index)
+        {
+            if (content == null)
+            {
+                return null;
+            }
+
+            var hostObject = new GameObject($"PortraitCell_{index}", typeof(RectTransform));
+            RectTransform host = hostObject.GetComponent<RectTransform>();
+            host.SetParent(content, false);
+            host.anchorMin = new Vector2(0.5f, 0.5f);
+            host.anchorMax = new Vector2(0.5f, 0.5f);
+            host.pivot = new Vector2(0.5f, 0.5f);
+            host.anchoredPosition = Vector2.zero;
+            host.sizeDelta = Vector2.zero;
+            host.localScale = Vector3.one;
+            return host;
+        }
+
+        private void CapturePortraitPrefabSizeIfNeeded()
+        {
+            if (_portraitPrefabSizeCaptured || _portraitPrefab == null)
+            {
+                return;
+            }
+
+            RectTransform portraitRect = _portraitPrefab.transform as RectTransform;
+            if (portraitRect == null)
+            {
+                return;
+            }
+
+            Vector2 size = portraitRect.rect.size;
+            if (size.x <= 0.01f || size.y <= 0.01f)
+            {
+                return;
+            }
+
+            _portraitPrefabSize = size;
+            _portraitPrefabSizeCaptured = true;
+        }
+
+        private float ResolveMiniPortraitScale()
+        {
+            float configuredScale = Mathf.Clamp(_prefabScale, 0.1f, 2f);
+            CaptureGridLayoutBaselineIfNeeded();
+            CapturePortraitPrefabSizeIfNeeded();
+            if (!_layoutBaselineCaptured || !_portraitPrefabSizeCaptured)
+            {
+                return configuredScale;
+            }
+
+            float fitX = _baseCellSize.x / Mathf.Max(1f, _portraitPrefabSize.x);
+            float fitY = _baseCellSize.y / Mathf.Max(1f, _portraitPrefabSize.y);
+            float fitScale = Mathf.Min(fitX, fitY);
+            if (float.IsNaN(fitScale) || float.IsInfinity(fitScale) || fitScale <= 0f)
+            {
+                return configuredScale;
+            }
+
+            return Mathf.Clamp(configuredScale * fitScale, 0.1f, 2f);
         }
 
         private void ClampContentOffsetIfFullyVisible(RectTransform content, RectTransform viewport)

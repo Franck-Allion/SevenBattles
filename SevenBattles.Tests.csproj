@@ -108,6 +108,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\SquadPlacementModelTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitAttackTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattlefieldServiceTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\UnitPortraitViewTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\SaveGameServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Preparation\PreparationPopupMenuLocalizationControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattleResultHUDRewardTests.cs" />
