@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Units;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -120,6 +121,14 @@ namespace SevenBattles.Preparation
         private string _inventorySelectedUnitNameObjectName = "UnitName";
         [SerializeField, Tooltip("Fallback object name used when the primary selected unit name label cannot be found.")]
         private string _inventorySelectedUnitNameFallbackObjectName = "NameText";
+        [SerializeField, Tooltip("Optional root Transform containing Inventory selected-unit stat rows (Life/Attack/...).")]
+        private Transform _inventorySelectedUnitStatsRoot;
+        [SerializeField, Tooltip("Object name used to auto-find the Inventory selected-unit stats root under InventoryPanel.")]
+        private string _inventorySelectedUnitStatsRootObjectName = "Stats";
+        [SerializeField, Tooltip("Fallback object name used when the primary Inventory stats root cannot be found.")]
+        private string _inventorySelectedUnitStatsRootFallbackObjectName = "Stats2";
+        [SerializeField, Tooltip("Child object name under each stat row used to resolve the numeric TMP label.")]
+        private string _inventorySelectedUnitStatValueObjectName = "Value";
         [SerializeField, Tooltip("Local position offset applied to the spawned selected unit preview prefab.")]
         private Vector3 _inventoryUnitPreviewLocalPosition = Vector3.zero;
         [SerializeField, Tooltip("Local scale applied to the spawned selected unit preview prefab.")]
@@ -443,6 +452,7 @@ namespace SevenBattles.Preparation
             }
 
             ResolveInventorySelectedUnitNameLabel();
+            ResolveInventorySelectedUnitStatsRoot();
             ResolveInventoryUnitPreviewAnchor();
         }
 
@@ -518,6 +528,42 @@ namespace SevenBattles.Preparation
                 !string.Equals(_inventorySelectedUnitNameObjectName, _inventorySelectedUnitNameFallbackObjectName, System.StringComparison.Ordinal))
             {
                 _inventorySelectedUnitNameTMP = FindTextByNameInSceneRoot(_inventorySelectedUnitNameFallbackObjectName);
+            }
+        }
+
+        private void ResolveInventorySelectedUnitStatsRoot()
+        {
+            if (_inventorySelectedUnitStatsRoot != null)
+            {
+                return;
+            }
+
+            if (_inventoryPanel != null)
+            {
+                _inventorySelectedUnitStatsRoot = FindTransformInRoot(_inventoryPanel, _inventorySelectedUnitStatsRootObjectName);
+                if (_inventorySelectedUnitStatsRoot == null &&
+                    !string.IsNullOrWhiteSpace(_inventorySelectedUnitStatsRootFallbackObjectName) &&
+                    !string.Equals(_inventorySelectedUnitStatsRootObjectName, _inventorySelectedUnitStatsRootFallbackObjectName, System.StringComparison.Ordinal))
+                {
+                    _inventorySelectedUnitStatsRoot = FindTransformInRoot(_inventoryPanel, _inventorySelectedUnitStatsRootFallbackObjectName);
+                }
+            }
+
+            if (_inventorySelectedUnitStatsRoot != null)
+            {
+                return;
+            }
+
+            _inventorySelectedUnitStatsRoot = FindTransformByNameInSceneRoot(_inventorySelectedUnitStatsRootObjectName);
+            if (_inventorySelectedUnitStatsRoot != null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_inventorySelectedUnitStatsRootFallbackObjectName) &&
+                !string.Equals(_inventorySelectedUnitStatsRootObjectName, _inventorySelectedUnitStatsRootFallbackObjectName, System.StringComparison.Ordinal))
+            {
+                _inventorySelectedUnitStatsRoot = FindTransformByNameInSceneRoot(_inventorySelectedUnitStatsRootFallbackObjectName);
             }
         }
 
@@ -1081,6 +1127,37 @@ namespace SevenBattles.Preparation
             return textObject.GetComponentInChildren<TMP_Text>(true);
         }
 
+        private Transform FindTransformInRoot(GameObject root, string objectName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            var transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node != null && string.Equals(node.name, objectName, System.StringComparison.Ordinal))
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
+        private Transform FindTransformByNameInSceneRoot(string objectName)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            GameObject target = FindObjectByNameInSceneRoot(objectName);
+            return target != null ? target.transform : null;
+        }
+
         private RectTransform FindRectTransformInRoot(GameObject root, string objectName)
         {
             if (root == null || string.IsNullOrWhiteSpace(objectName))
@@ -1428,6 +1505,7 @@ namespace SevenBattles.Preparation
 
             UnitSpellLoadout selected = ResolveInventorySelectedLoadout();
             RefreshInventorySelectedUnitName(selected);
+            RefreshInventorySelectedUnitStats(selected);
 
             if (_inventoryUnitPreviewAnchor == null)
             {
@@ -1477,6 +1555,32 @@ namespace SevenBattles.Preparation
             _inventorySelectedUnitNameTMP.text = ResolveInventorySelectedUnitName(selectedLoadout);
         }
 
+        private void RefreshInventorySelectedUnitStats(UnitSpellLoadout selectedLoadout)
+        {
+            ResolveInventorySelectedUnitStatsRoot();
+            if (_inventorySelectedUnitStatsRoot == null)
+            {
+                return;
+            }
+
+            if (!TryResolveSelectedUnitStats(selectedLoadout, out UnitStatsData stats))
+            {
+                ClearInventorySelectedUnitStats();
+                return;
+            }
+
+            SetInventorySelectedUnitStat("Life", stats.Life);
+            SetInventorySelectedUnitStat("Attack", stats.Attack);
+            SetInventorySelectedUnitStat("Shoot", stats.Shoot);
+            SetInventorySelectedUnitStat("Spell", stats.Spell);
+            SetInventorySelectedUnitStat("Speed", stats.Speed);
+            SetInventorySelectedUnitStat("Luck", stats.Luck);
+            SetInventorySelectedUnitStat("Defense", stats.Defense);
+            SetInventorySelectedUnitStat("Protection", stats.Protection);
+            SetInventorySelectedUnitStat("Initiative", stats.Initiative);
+            SetInventorySelectedUnitStat("Morale", stats.Morale);
+        }
+
         private UnitSpellLoadout ResolveInventorySelectedLoadout()
         {
             ResolveSquadSetupController();
@@ -1510,6 +1614,111 @@ namespace SevenBattles.Preparation
             }
 
             return selectedLoadout.Definition.Id ?? string.Empty;
+        }
+
+        private static bool TryResolveSelectedUnitStats(UnitSpellLoadout selectedLoadout, out UnitStatsData stats)
+        {
+            stats = default;
+            if (selectedLoadout == null || selectedLoadout.Definition == null)
+            {
+                return false;
+            }
+
+            UnitDefinition definition = selectedLoadout.Definition;
+            int level = selectedLoadout.EffectiveLevel;
+            stats = definition.LevelBonus.ApplyTo(definition.BaseStats, level);
+            return true;
+        }
+
+        private void ClearInventorySelectedUnitStats()
+        {
+            SetInventorySelectedUnitStatText("Life", string.Empty);
+            SetInventorySelectedUnitStatText("Attack", string.Empty);
+            SetInventorySelectedUnitStatText("Shoot", string.Empty);
+            SetInventorySelectedUnitStatText("Spell", string.Empty);
+            SetInventorySelectedUnitStatText("Speed", string.Empty);
+            SetInventorySelectedUnitStatText("Luck", string.Empty);
+            SetInventorySelectedUnitStatText("Defense", string.Empty);
+            SetInventorySelectedUnitStatText("Protection", string.Empty);
+            SetInventorySelectedUnitStatText("Initiative", string.Empty);
+            SetInventorySelectedUnitStatText("Morale", string.Empty);
+        }
+
+        private void SetInventorySelectedUnitStat(string rowObjectName, int value)
+        {
+            SetInventorySelectedUnitStatText(rowObjectName, value.ToString());
+        }
+
+        private void SetInventorySelectedUnitStatText(string rowObjectName, string value)
+        {
+            TMP_Text target = FindInventorySelectedUnitStatValueText(rowObjectName);
+            if (target != null)
+            {
+                target.text = value ?? string.Empty;
+            }
+        }
+
+        private TMP_Text FindInventorySelectedUnitStatValueText(string rowObjectName)
+        {
+            if (_inventorySelectedUnitStatsRoot == null || string.IsNullOrWhiteSpace(rowObjectName))
+            {
+                return null;
+            }
+
+            Transform row = FindTransformInRoot(_inventorySelectedUnitStatsRoot.gameObject, rowObjectName);
+            if (row == null)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_inventorySelectedUnitStatValueObjectName))
+            {
+                Transform valueNode = FindTransformInRoot(row.gameObject, _inventorySelectedUnitStatValueObjectName);
+                if (valueNode != null)
+                {
+                    TMP_Text valueText = valueNode.GetComponent<TMP_Text>();
+                    if (valueText != null)
+                    {
+                        return valueText;
+                    }
+
+                    valueText = valueNode.GetComponentInChildren<TMP_Text>(true);
+                    if (valueText != null)
+                    {
+                        return valueText;
+                    }
+                }
+            }
+
+            TMP_Text[] texts = row.GetComponentsInChildren<TMP_Text>(true);
+            if (texts.Length == 0)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < texts.Length; i++)
+            {
+                TMP_Text candidate = texts[i];
+                if (candidate == null || candidate.gameObject == null)
+                {
+                    continue;
+                }
+
+                string name = candidate.gameObject.name;
+                if (!string.IsNullOrWhiteSpace(name) &&
+                    name.IndexOf("value", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return candidate;
+                }
+            }
+
+            TMP_Text rowText = row.GetComponent<TMP_Text>();
+            if (rowText != null)
+            {
+                return rowText;
+            }
+
+            return texts[texts.Length - 1];
         }
 
         private void SpawnInventoryUnitPreview(GameObject previewPrefab)

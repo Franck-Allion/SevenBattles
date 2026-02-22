@@ -122,6 +122,10 @@
   - `_inventoryTitleTMP` -> `InventoryPanel/Canvas/InventoryView/TopBar/Button_Back/Text_Title` (`TMP_Text`) (auto-found under `InventoryPanel` when empty).
   - `_inventorySelectedUnitNameTMP` -> `InventoryPanel/Canvas/InventoryView/Character/UnitName` (`TMP_Text`) (auto-found under `InventoryPanel`; falls back to `NameText` when `UnitName` is not present).
   - `_inventorySelectedUnitNameObjectName` / `_inventorySelectedUnitNameFallbackObjectName` -> selected unit-name label auto-discovery names (defaults: `UnitName` and `NameText`).
+  - `_inventorySelectedUnitStatsRoot` -> `InventoryPanel/.../Stats` (`Transform`) containing stat rows (`Life`, `Attack`, `Shoot`, `Spell`, `Speed`, `Luck`, `Defense`, `Protection`, `Initiative`, `Morale`).
+  - `_inventorySelectedUnitStatsRootObjectName` / `_inventorySelectedUnitStatsRootFallbackObjectName` -> selected unit-stats root auto-discovery names (defaults: `Stats` and `Stats2`).
+  - `_inventorySelectedUnitStatValueObjectName` -> child name used to resolve numeric TMPs inside each stat row (default: `Value`).
+  - Inventory stats values use the same formula as squad details (`UnitInfoPanelView`): `UnitDefinition.LevelBonus.ApplyTo(UnitDefinition.BaseStats, loadout.EffectiveLevel)`.
   - `_inventoryTitleLabel` -> table `UI.Common`, key `Preparation.Inventory.Title`.
 - `SquadPanel` (`SquadSetupController`, `ActiveSquadGridView`, `AllUnitsGridView`)
   - `SquadSetupController` (`SquadSetupView`)

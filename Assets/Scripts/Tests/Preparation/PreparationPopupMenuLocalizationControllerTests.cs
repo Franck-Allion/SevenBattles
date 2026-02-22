@@ -66,6 +66,19 @@ namespace SevenBattles.Tests.Preparation
             return go;
         }
 
+        private static TMP_Text CreateStatValueRow(Transform parent, string rowName)
+        {
+            var row = new GameObject(rowName, typeof(RectTransform));
+            row.transform.SetParent(parent, false);
+
+            var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            label.transform.SetParent(row.transform, false);
+
+            var value = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
+            value.transform.SetParent(row.transform, false);
+            return value.GetComponent<TextMeshProUGUI>();
+        }
+
         private static bool HasHoverForwarder(GameObject go)
         {
             var components = go.GetComponents<MonoBehaviour>();
@@ -302,6 +315,128 @@ namespace SevenBattles.Tests.Preparation
             CallPrivate(controller, "RefreshInventorySelectedUnitPreview");
 
             Assert.AreEqual("Sir Nova", unitNameLabel.text);
+
+            Object.DestroyImmediate(unitDefinition);
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void RefreshInventorySelectedUnitPreview_UpdatesInventoryStatsWithSquadFormula()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+
+            var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
+            inventoryPanel.transform.SetParent(root.transform, false);
+
+            var statsRoot = new GameObject("Stats", typeof(RectTransform));
+            statsRoot.transform.SetParent(inventoryPanel.transform, false);
+
+            TMP_Text lifeValue = CreateStatValueRow(statsRoot.transform, "Life");
+            TMP_Text attackValue = CreateStatValueRow(statsRoot.transform, "Attack");
+            TMP_Text shootValue = CreateStatValueRow(statsRoot.transform, "Shoot");
+            TMP_Text spellValue = CreateStatValueRow(statsRoot.transform, "Spell");
+            TMP_Text speedValue = CreateStatValueRow(statsRoot.transform, "Speed");
+            TMP_Text luckValue = CreateStatValueRow(statsRoot.transform, "Luck");
+            TMP_Text defenseValue = CreateStatValueRow(statsRoot.transform, "Defense");
+            TMP_Text protectionValue = CreateStatValueRow(statsRoot.transform, "Protection");
+            TMP_Text initiativeValue = CreateStatValueRow(statsRoot.transform, "Initiative");
+            TMP_Text moraleValue = CreateStatValueRow(statsRoot.transform, "Morale");
+
+            var unitDefinition = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitDefinition.BaseStats = new UnitStatsData
+            {
+                Life = 10,
+                Attack = 20,
+                Shoot = 30,
+                Spell = 40,
+                Speed = 50,
+                Luck = 60,
+                Defense = 70,
+                Protection = 80,
+                Initiative = 90,
+                Morale = 100
+            };
+            unitDefinition.LevelBonus = new UnitLevelBonusData
+            {
+                Life = 1,
+                Attack = 2,
+                Shoot = 3,
+                Spell = 4,
+                Speed = 5,
+                Luck = 6,
+                Defense = 7,
+                Protection = 8,
+                Initiative = 9,
+                Morale = 10
+            };
+
+            var selectedLoadout = new UnitSpellLoadout
+            {
+                Definition = unitDefinition,
+                Level = 2
+            };
+
+            SetPrivate(controller, "_inventorySelectedLoadout", selectedLoadout);
+            CallPrivate(controller, "RefreshInventorySelectedUnitPreview");
+
+            Assert.AreEqual("12", lifeValue.text);
+            Assert.AreEqual("24", attackValue.text);
+            Assert.AreEqual("36", shootValue.text);
+            Assert.AreEqual("48", spellValue.text);
+            Assert.AreEqual("60", speedValue.text);
+            Assert.AreEqual("72", luckValue.text);
+            Assert.AreEqual("84", defenseValue.text);
+            Assert.AreEqual("96", protectionValue.text);
+            Assert.AreEqual("108", initiativeValue.text);
+            Assert.AreEqual("120", moraleValue.text);
+
+            Object.DestroyImmediate(unitDefinition);
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void RefreshInventorySelectedUnitPreview_UsesNestedValueText_AndDoesNotOverwriteLabel()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+
+            var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
+            inventoryPanel.transform.SetParent(root.transform, false);
+
+            var statsRoot = new GameObject("Stats", typeof(RectTransform));
+            statsRoot.transform.SetParent(inventoryPanel.transform, false);
+
+            var lifeRow = new GameObject("Life", typeof(RectTransform));
+            lifeRow.transform.SetParent(statsRoot.transform, false);
+
+            var lifeLabelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lifeLabelObject.transform.SetParent(lifeRow.transform, false);
+            var lifeLabel = lifeLabelObject.GetComponent<TextMeshProUGUI>();
+            lifeLabel.text = "Life";
+
+            var valueContainer = new GameObject("Content", typeof(RectTransform));
+            valueContainer.transform.SetParent(lifeRow.transform, false);
+            var lifeValueObject = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lifeValueObject.transform.SetParent(valueContainer.transform, false);
+            var lifeValue = lifeValueObject.GetComponent<TextMeshProUGUI>();
+            lifeValue.text = string.Empty;
+
+            var unitDefinition = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitDefinition.BaseStats = new UnitStatsData { Life = 10 };
+            unitDefinition.LevelBonus = new UnitLevelBonusData { Life = 1 };
+
+            var selectedLoadout = new UnitSpellLoadout
+            {
+                Definition = unitDefinition,
+                Level = 2
+            };
+
+            SetPrivate(controller, "_inventorySelectedLoadout", selectedLoadout);
+            CallPrivate(controller, "RefreshInventorySelectedUnitPreview");
+
+            Assert.AreEqual("Life", lifeLabel.text);
+            Assert.AreEqual("12", lifeValue.text);
 
             Object.DestroyImmediate(unitDefinition);
             Object.DestroyImmediate(root);
