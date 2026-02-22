@@ -122,6 +122,9 @@
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
   - `_goldValueTMP` -> `Canvas/ResourcesPanel/Coin/CoinValue` (`TMP_Text`).
   - `_gemsValueTMP` -> `Canvas/ResourcesPanel/Gem/GemValue` (`TMP_Text`).
+  - `_inventoryGoldValueTMP` -> optional `InventoryPanel/.../CoinValue` (`TMP_Text`) mirror label (auto-found under `InventoryPanel` when empty).
+  - `_inventoryGemsValueTMP` -> optional `InventoryPanel/.../GemValue` (`TMP_Text`) mirror label (auto-found under `InventoryPanel` when empty).
+  - `_inventoryPanelObjectName` / `_inventoryGoldValueObjectName` / `_inventoryGemsValueObjectName` -> inventory mirror auto-discovery names (defaults: `InventoryPanel`, `CoinValue`, `GemValue`).
   - `_goldNumberPrefab` -> `Assets/Prefabs/DamageNumber/GoldNumber.prefab`.
   - `_gemNumberPrefab` -> `Assets/Prefabs/DamageNumber/GemNumber.prefab`.
   - `_goldCollectionSfxClip` -> fallback coin cascade clip used when variants are not assigned.

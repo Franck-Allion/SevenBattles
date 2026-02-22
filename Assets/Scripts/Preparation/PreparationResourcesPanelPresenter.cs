@@ -21,6 +21,16 @@ namespace SevenBattles.Preparation
         private TMP_Text _goldValueTMP;
         [SerializeField, Tooltip("TMP label showing the current gems amount.")]
         private TMP_Text _gemsValueTMP;
+        [SerializeField, Tooltip("Optional TMP label showing the mirrored gold amount inside InventoryPanel. Auto-resolved when null.")]
+        private TMP_Text _inventoryGoldValueTMP;
+        [SerializeField, Tooltip("Optional TMP label showing the mirrored gems amount inside InventoryPanel. Auto-resolved when null.")]
+        private TMP_Text _inventoryGemsValueTMP;
+        [SerializeField, Tooltip("Scene object name used to auto-find the inventory panel root when inventory amount labels are not assigned.")]
+        private string _inventoryPanelObjectName = "InventoryPanel";
+        [SerializeField, Tooltip("Object name used to auto-find the inventory gold amount label under InventoryPanel.")]
+        private string _inventoryGoldValueObjectName = "CoinValue";
+        [SerializeField, Tooltip("Object name used to auto-find the inventory gems amount label under InventoryPanel.")]
+        private string _inventoryGemsValueObjectName = "GemValue";
         [SerializeField, Tooltip("If enabled, logs the save slots directory path once when this panel is enabled.")]
         private bool _logSaveDirectoryOnEnable = true;
         [Header("Victory Reward Animation")]
@@ -98,6 +108,7 @@ namespace SevenBattles.Preparation
         private void Awake()
         {
             AutoResolveTextReferences();
+            AutoResolveInventoryTextReferences();
             EnsureGoldCollectionAudioSource();
             if (_currencyNumberCamera == null)
             {
@@ -108,6 +119,7 @@ namespace SevenBattles.Preparation
         private void OnEnable()
         {
             AutoResolveTextReferences();
+            AutoResolveInventoryTextReferences();
             EnsureGoldCollectionAudioSource();
             TryLogSaveDirectoryHint();
             Subscribe();
@@ -202,6 +214,78 @@ namespace SevenBattles.Preparation
             }
         }
 
+        private void AutoResolveInventoryTextReferences()
+        {
+            if (_inventoryGoldValueTMP != null && _inventoryGemsValueTMP != null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(_inventoryPanelObjectName))
+            {
+                return;
+            }
+
+            GameObject inventoryPanel = FindObjectByNameInSceneRoot(_inventoryPanelObjectName);
+            if (inventoryPanel == null)
+            {
+                return;
+            }
+
+            var texts = inventoryPanel.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < texts.Length; i++)
+            {
+                TMP_Text tmp = texts[i];
+                if (tmp == null)
+                {
+                    continue;
+                }
+
+                string objectName = tmp.gameObject.name;
+                if (_inventoryGoldValueTMP == null && NameMatches(objectName, _inventoryGoldValueObjectName))
+                {
+                    _inventoryGoldValueTMP = tmp;
+                    continue;
+                }
+
+                if (_inventoryGemsValueTMP == null && NameMatches(objectName, _inventoryGemsValueObjectName))
+                {
+                    _inventoryGemsValueTMP = tmp;
+                }
+            }
+        }
+
+        private GameObject FindObjectByNameInSceneRoot(string objectName)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            Transform searchRoot = transform.root != null ? transform.root : transform;
+            var transforms = searchRoot.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node != null && string.Equals(node.name, objectName, StringComparison.Ordinal))
+                {
+                    return node.gameObject;
+                }
+            }
+
+            return GameObject.Find(objectName);
+        }
+
+        private static bool NameMatches(string actualName, string expectedName)
+        {
+            if (string.IsNullOrWhiteSpace(actualName) || string.IsNullOrWhiteSpace(expectedName))
+            {
+                return false;
+            }
+
+            return string.Equals(actualName, expectedName, StringComparison.Ordinal);
+        }
+
         private void TryLogSaveDirectoryHint()
         {
             if (!_logSaveDirectoryOnEnable || _saveDirectoryLogged)
@@ -217,11 +301,12 @@ namespace SevenBattles.Preparation
 
         public void Refresh()
         {
+            AutoResolveInventoryTextReferences();
             int gold = _playerContext != null ? _playerContext.Gold : 0;
             int gems = _playerContext != null ? _playerContext.Gems : 0;
 
-            SetTextValue(_goldValueTMP, gold);
-            SetTextValue(_gemsValueTMP, gems);
+            SetGoldDisplayValue(gold);
+            SetGemsDisplayValue(gems);
         }
 
         private bool TryStartPendingVictoryRewardAnimation()
@@ -260,7 +345,7 @@ namespace SevenBattles.Preparation
                 }
                 else
                 {
-                    SetTextValue(_goldValueTMP, pending.ToGold);
+                    SetGoldDisplayValue(pending.ToGold);
                 }
             }
 
@@ -278,7 +363,7 @@ namespace SevenBattles.Preparation
                 }
                 else
                 {
-                    SetTextValue(_gemsValueTMP, pending.ToGems);
+                    SetGemsDisplayValue(pending.ToGems);
                 }
             }
 
@@ -293,7 +378,7 @@ namespace SevenBattles.Preparation
             int safeGained = Mathf.Max(1, gained);
             float duration = ComputeAnimationDuration(safeGained);
 
-            SetTextValue(label, safeFrom);
+            SetDisplayValueForLabel(label, safeFrom);
             return new CounterAnimationState
             {
                 Label = label,
@@ -354,7 +439,7 @@ namespace SevenBattles.Preparation
 
             if (steps > 0)
             {
-                SetTextValue(state.Label, state.CurrentValue);
+                SetDisplayValueForLabel(state.Label, state.CurrentValue);
                 state.PunchTimerSeconds = Mathf.Max(0f, _counterPunchDuration);
                 state.LastStepCount = steps;
             }
@@ -362,7 +447,7 @@ namespace SevenBattles.Preparation
             if (state.CurrentValue >= state.TargetValue)
             {
                 state.CurrentValue = state.TargetValue;
-                SetTextValue(state.Label, state.TargetValue);
+                SetDisplayValueForLabel(state.Label, state.TargetValue);
             }
 
             ApplyCounterPunch(state, deltaTime);
@@ -637,14 +722,14 @@ namespace SevenBattles.Preparation
             _goldCascadeSfx = null;
         }
 
-        private static void FinalizeCounterAnimation(CounterAnimationState state)
+        private void FinalizeCounterAnimation(CounterAnimationState state)
         {
             if (state == null)
             {
                 return;
             }
 
-            SetTextValue(state.Label, state.TargetValue);
+            SetDisplayValueForLabel(state.Label, state.TargetValue);
             ResetCounterScale(state);
             state.IsActive = false;
         }
@@ -908,6 +993,31 @@ namespace SevenBattles.Preparation
                     {
                     }
                 }
+            }
+        }
+
+        private void SetGoldDisplayValue(int value)
+        {
+            SetTextValue(_goldValueTMP, value);
+            SetTextValue(_inventoryGoldValueTMP, value);
+        }
+
+        private void SetGemsDisplayValue(int value)
+        {
+            SetTextValue(_gemsValueTMP, value);
+            SetTextValue(_inventoryGemsValueTMP, value);
+        }
+
+        private void SetDisplayValueForLabel(TMP_Text label, int value)
+        {
+            SetTextValue(label, value);
+            if (label == _goldValueTMP)
+            {
+                SetTextValue(_inventoryGoldValueTMP, value);
+            }
+            else if (label == _gemsValueTMP)
+            {
+                SetTextValue(_inventoryGemsValueTMP, value);
             }
         }
 

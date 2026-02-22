@@ -90,6 +90,42 @@ namespace SevenBattles.Tests.Preparation
         }
 
         [Test]
+        public void Refresh_UpdatesInventoryMirrorLabels_WhenInventoryPanelExists()
+        {
+            var root = new GameObject("ResourcesPanel");
+            var presenter = root.AddComponent<PreparationResourcesPanelPresenter>();
+
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            context.SetResources(321, 9);
+
+            var goldTmp = new GameObject("CoinValue").AddComponent<TextMeshProUGUI>();
+            goldTmp.transform.SetParent(root.transform);
+            var gemsTmp = new GameObject("GemValue").AddComponent<TextMeshProUGUI>();
+            gemsTmp.transform.SetParent(root.transform);
+
+            var inventoryPanel = new GameObject("InventoryPanel");
+            var inventoryGoldTmp = new GameObject("CoinValue").AddComponent<TextMeshProUGUI>();
+            inventoryGoldTmp.transform.SetParent(inventoryPanel.transform);
+            var inventoryGemsTmp = new GameObject("GemValue").AddComponent<TextMeshProUGUI>();
+            inventoryGemsTmp.transform.SetParent(inventoryPanel.transform);
+
+            SetPrivate(presenter, "_playerContext", context);
+            SetPrivate(presenter, "_goldValueTMP", goldTmp);
+            SetPrivate(presenter, "_gemsValueTMP", gemsTmp);
+
+            presenter.Refresh();
+
+            Assert.AreEqual("321", goldTmp.text);
+            Assert.AreEqual("9", gemsTmp.text);
+            Assert.AreEqual("321", inventoryGoldTmp.text);
+            Assert.AreEqual("9", inventoryGemsTmp.text);
+
+            Object.DestroyImmediate(inventoryPanel);
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(context);
+        }
+
+        [Test]
         public void OnEnable_SubscribesToContextChanges_AndRefreshes()
         {
             var root = new GameObject("ResourcesPanel");
