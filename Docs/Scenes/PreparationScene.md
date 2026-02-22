@@ -95,6 +95,13 @@
   - `_squadPanelObjectName` -> name used for auto-discovery when `_squadPanel` is empty (default: `SquadPanel`).
   - `_squadPanelCanvasGroup` -> optional `CanvasGroup` on `SquadPanel` for fade/input state (auto-added when missing).
   - `_squadPanelFadeDuration` / `_squadPanelStartScale` / `_squadPanelRevealCurve` -> controls the unscaled-time show/hide transition when opening from `SquadButtonMenu` and closing from `Button_Back`.
+  - `_inventoryButton` -> optional explicit reference to `SquadSetupPanel/.../InventoryButton` (`Button`) (auto-found when empty).
+  - `_inventoryBackButton` -> optional explicit reference to `InventoryPanel/.../Button_Back` (`Button`) (auto-found under `InventoryPanel` when empty).
+  - `_inventoryPanel` -> optional explicit reference to `InventoryPanel` root (`GameObject`) (auto-found when empty).
+  - `_inventoryPanelCanvasGroup` -> optional `CanvasGroup` on `InventoryPanel/Canvas` for fade/input state (auto-added when missing).
+  - `_inventoryPanelFadeDuration` / `_inventoryPanelStartScale` / `_inventoryPanelRevealCurve` -> controls unscaled-time show/hide transition when opening from `InventoryButton` and returning via Inventory `Button_Back`.
+  - `_inventoryTitleTMP` -> `InventoryPanel/Canvas/InventoryView/TopBar/Button_Back/Text_Title` (`TMP_Text`) (auto-found under `InventoryPanel` when empty).
+  - `_inventoryTitleLabel` -> table `UI.Common`, key `Preparation.Inventory.Title`.
 - `SquadPanel` (`SquadSetupController`, `ActiveSquadGridView`, `AllUnitsGridView`)
   - `SquadSetupController` (`SquadSetupView`)
     - `_allUnitsView` -> `Top_AllSquad` (`AllUnitsGridView`).

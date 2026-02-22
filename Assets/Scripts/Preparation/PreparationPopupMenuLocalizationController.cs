@@ -15,26 +15,39 @@ namespace SevenBattles.Preparation
         private const string UI_COMMON_TABLE = "UI.Common";
         private const string SHOP_DEFAULT_KEY = "Preparation.Popup.Shop";
         private const string SQUAD_DEFAULT_KEY = "Preparation.Popup.Squad";
+        private const string INVENTORY_TITLE_DEFAULT_KEY = "Preparation.Inventory.Title";
 
         [Header("Label Targets")]
         [SerializeField, Tooltip("TMP label shown in the Shop menu button.")]
         private TMP_Text _shopLabelTMP;
         [SerializeField, Tooltip("TMP label shown in the Squad menu button.")]
         private TMP_Text _squadLabelTMP;
+        [SerializeField, Tooltip("TMP label shown in the Inventory panel title.")]
+        private TMP_Text _inventoryTitleTMP;
         [SerializeField, Tooltip("Child object name used to auto-find the Shop button when _shopLabelTMP is not assigned.")]
         private string _shopButtonObjectName = "ShopButtonMenu";
         [SerializeField, Tooltip("Child object name used to auto-find the Squad button when _squadLabelTMP is not assigned.")]
         private string _squadButtonObjectName = "SquadButtonMenu";
+        [SerializeField, Tooltip("Object name used to auto-find the Inventory panel title when _inventoryTitleTMP is not assigned.")]
+        private string _inventoryTitleObjectName = "Text_Title";
 
         [Header("Button Targets")]
         [SerializeField, Tooltip("Optional explicit reference to the Shop menu button. Auto-found when null.")]
         private Button _shopButton;
         [SerializeField, Tooltip("Optional explicit reference to the Squad menu button. Auto-found when null.")]
         private Button _squadButton;
+        [SerializeField, Tooltip("Optional explicit reference to the Inventory button inside Squad setup. Auto-found when null.")]
+        private Button _inventoryButton;
         [SerializeField, Tooltip("Optional explicit reference to the Back button inside SquadPanel. Auto-found when null.")]
         private Button _squadBackButton;
         [SerializeField, Tooltip("Object name used to auto-find the SquadPanel Back button when _squadBackButton is not assigned.")]
         private string _squadBackButtonObjectName = "Button_Back";
+        [SerializeField, Tooltip("Object name used to auto-find the Inventory button when _inventoryButton is not assigned.")]
+        private string _inventoryButtonObjectName = "InventoryButton";
+        [SerializeField, Tooltip("Optional explicit reference to the Back button inside InventoryView. Auto-found when null.")]
+        private Button _inventoryBackButton;
+        [SerializeField, Tooltip("Object name used to auto-find the InventoryView Back button when _inventoryBackButton is not assigned.")]
+        private string _inventoryBackButtonObjectName = "Button_Back";
 
         [Header("Squad Panel Transition")]
         [SerializeField, Tooltip("Optional explicit reference to the Squad panel root. Auto-found by name when null.")]
@@ -50,11 +63,27 @@ namespace SevenBattles.Preparation
         [SerializeField, Tooltip("Easing curve used for Squad panel reveal.")]
         private AnimationCurve _squadPanelRevealCurve = null;
 
+        [Header("Inventory Panel Transition")]
+        [SerializeField, Tooltip("Optional explicit reference to the Inventory panel root. Auto-found by name when null.")]
+        private GameObject _inventoryPanel;
+        [SerializeField, Tooltip("Object name used to auto-find the Inventory panel when _inventoryPanel is not assigned.")]
+        private string _inventoryPanelObjectName = "InventoryPanel";
+        [SerializeField, Tooltip("CanvasGroup used to animate the Inventory panel. Auto-added when missing.")]
+        private CanvasGroup _inventoryPanelCanvasGroup;
+        [SerializeField, Min(0f), Tooltip("Reveal duration in seconds for the Inventory panel. Uses unscaled time.")]
+        private float _inventoryPanelFadeDuration = 0.24f;
+        [SerializeField, Range(0.8f, 1f), Tooltip("Starting scale multiplier used during Inventory panel reveal.")]
+        private float _inventoryPanelStartScale = 0.95f;
+        [SerializeField, Tooltip("Easing curve used for Inventory panel reveal.")]
+        private AnimationCurve _inventoryPanelRevealCurve = null;
+
         [Header("Localization")]
         [SerializeField, Tooltip("Localized label for the Shop button.")]
         private LocalizedString _shopLabel;
         [SerializeField, Tooltip("Localized label for the Squad button.")]
         private LocalizedString _squadLabel;
+        [SerializeField, Tooltip("Localized title for the Inventory panel.")]
+        private LocalizedString _inventoryTitleLabel;
 
         [Header("Hover Feedback")]
         [SerializeField, FormerlySerializedAs("_hoverCursorTexture"), Tooltip("Cursor texture used while hovering menu buttons.")]
@@ -88,15 +117,20 @@ namespace SevenBattles.Preparation
 
         private readonly List<MenuButtonHoverForwarder> _hoverForwarders = new List<MenuButtonHoverForwarder>(2);
         private readonly List<ButtonClickSubscription> _clickSubscriptions = new List<ButtonClickSubscription>(2);
-        private readonly List<ButtonClickSubscription> _panelClickSubscriptions = new List<ButtonClickSubscription>(1);
+        private readonly List<ButtonClickSubscription> _panelClickSubscriptions = new List<ButtonClickSubscription>(4);
         private readonly List<RaycastResult> _raycastBuffer = new List<RaycastResult>(16);
         private int _hoveredButtonCount;
         private float _lastClickSfxTime = -999f;
         private Coroutine _squadPanelRoutine;
+        private Coroutine _inventoryPanelRoutine;
         private Vector3 _squadPanelBaseScale = Vector3.one;
+        private Vector3 _inventoryPanelBaseScale = Vector3.one;
         private bool _squadPanelScaleCaptured;
+        private bool _inventoryPanelScaleCaptured;
         private bool _squadPanelStartupHiddenApplied;
+        private bool _inventoryPanelStartupHiddenApplied;
         private Transform _squadPanelAnimatedRoot;
+        private Transform _inventoryPanelAnimatedRoot;
 
         private void Awake()
         {
@@ -104,6 +138,7 @@ namespace SevenBattles.Preparation
             ResolveLabelTargets();
             ResolveButtonTargets();
             ResolveSquadPanel();
+            ResolveInventoryTargets();
         }
 
         private void OnEnable()
@@ -112,6 +147,7 @@ namespace SevenBattles.Preparation
             ResolveLabelTargets();
             ResolveButtonTargets();
             ResolveSquadPanel();
+            ResolveInventoryTargets();
             BindLabels();
             WireHoverFeedback();
             WireSquadPanelButton();
@@ -124,6 +160,7 @@ namespace SevenBattles.Preparation
             UnwireHoverFeedback();
             UnwireSquadPanelButton();
             StopSquadPanelRoutine();
+            StopInventoryPanelRoutine();
             RestoreDefaultCursor();
         }
 
@@ -152,6 +189,11 @@ namespace SevenBattles.Preparation
             {
                 _squadLabel = new LocalizedString(UI_COMMON_TABLE, SQUAD_DEFAULT_KEY);
             }
+
+            if (!HasLocalizedValue(_inventoryTitleLabel))
+            {
+                _inventoryTitleLabel = new LocalizedString(UI_COMMON_TABLE, INVENTORY_TITLE_DEFAULT_KEY);
+            }
         }
 
         private void ResolveLabelTargets()
@@ -179,14 +221,20 @@ namespace SevenBattles.Preparation
                 _squadButton = FindButton(_squadButtonObjectName);
             }
 
-            if (_squadBackButton == null)
+            if (_inventoryButton == null)
             {
-                _squadBackButton = FindSceneButton(_squadBackButtonObjectName);
+                _inventoryButton = FindSceneButton(_inventoryButtonObjectName);
             }
+
         }
 
         private void ResolveSquadPanel()
         {
+            if (_squadPanel == null && _squadPanelCanvasGroup != null)
+            {
+                _squadPanel = ResolvePanelRootFromCanvasGroup(_squadPanelCanvasGroup);
+            }
+
             if (_squadPanel == null)
             {
                 _squadPanel = FindObjectByNameInSceneRoot(_squadPanelObjectName);
@@ -228,7 +276,91 @@ namespace SevenBattles.Preparation
                 _squadPanelScaleCaptured = true;
             }
 
+            if (_squadBackButton == null)
+            {
+                _squadBackButton = FindButtonInRoot(_squadPanel, _squadBackButtonObjectName);
+                if (_squadBackButton == null)
+                {
+                    _squadBackButton = FindSceneButton(_squadBackButtonObjectName);
+                }
+            }
+
             EnsureSquadPanelStartupHidden();
+        }
+
+        private void ResolveInventoryTargets()
+        {
+            if (_inventoryButton == null)
+            {
+                _inventoryButton = FindSceneButton(_inventoryButtonObjectName);
+            }
+
+            ResolveInventoryPanel();
+            if (_inventoryPanel == null)
+            {
+                return;
+            }
+
+            if (_inventoryBackButton == null)
+            {
+                _inventoryBackButton = FindButtonInRoot(_inventoryPanel, _inventoryBackButtonObjectName);
+            }
+
+            if (_inventoryTitleTMP == null)
+            {
+                _inventoryTitleTMP = FindTextInRoot(_inventoryPanel, _inventoryTitleObjectName);
+            }
+        }
+
+        private void ResolveInventoryPanel()
+        {
+            if (_inventoryPanel == null && _inventoryPanelCanvasGroup != null)
+            {
+                _inventoryPanel = ResolvePanelRootFromCanvasGroup(_inventoryPanelCanvasGroup);
+            }
+
+            if (_inventoryPanel == null)
+            {
+                _inventoryPanel = FindObjectByNameInSceneRoot(_inventoryPanelObjectName);
+            }
+
+            if (_inventoryPanel == null)
+            {
+                return;
+            }
+
+            if (_inventoryPanelCanvasGroup != null)
+            {
+                _inventoryPanelAnimatedRoot = _inventoryPanelCanvasGroup.transform;
+            }
+            else
+            {
+                _inventoryPanelAnimatedRoot = ResolveInventoryPanelAnimatedRoot();
+                if (_inventoryPanelAnimatedRoot == null)
+                {
+                    _inventoryPanelAnimatedRoot = _inventoryPanel.transform;
+                }
+
+                _inventoryPanelCanvasGroup = _inventoryPanelAnimatedRoot.GetComponent<CanvasGroup>();
+                if (_inventoryPanelCanvasGroup == null)
+                {
+                    _inventoryPanelCanvasGroup = _inventoryPanelAnimatedRoot.gameObject.AddComponent<CanvasGroup>();
+                }
+            }
+
+            if (!_inventoryPanelScaleCaptured)
+            {
+                Transform animatedRoot = _inventoryPanelAnimatedRoot != null ? _inventoryPanelAnimatedRoot : _inventoryPanel.transform;
+                _inventoryPanelBaseScale = animatedRoot.localScale;
+                if (_inventoryPanelBaseScale.sqrMagnitude < 0.000001f)
+                {
+                    _inventoryPanelBaseScale = Vector3.one;
+                }
+
+                _inventoryPanelScaleCaptured = true;
+            }
+
+            EnsureInventoryPanelStartupHidden();
         }
 
         private Transform ResolveSquadPanelAnimatedRoot()
@@ -252,6 +384,44 @@ namespace SevenBattles.Preparation
             }
 
             return _squadPanel.transform;
+        }
+
+        private Transform ResolveInventoryPanelAnimatedRoot()
+        {
+            if (_inventoryPanel == null)
+            {
+                return null;
+            }
+
+            Transform directCanvas = _inventoryPanel.transform.Find("Canvas");
+            if (directCanvas != null && directCanvas.GetComponent<Canvas>() != null)
+            {
+                return directCanvas;
+            }
+
+            Canvas anyCanvas = _inventoryPanel.GetComponentInChildren<Canvas>(true);
+            if (anyCanvas != null)
+            {
+                return anyCanvas.transform;
+            }
+
+            return _inventoryPanel.transform;
+        }
+
+        private static GameObject ResolvePanelRootFromCanvasGroup(CanvasGroup canvasGroup)
+        {
+            if (canvasGroup == null)
+            {
+                return null;
+            }
+
+            Transform groupTransform = canvasGroup.transform;
+            if (groupTransform == null)
+            {
+                return null;
+            }
+
+            return groupTransform.parent != null ? groupTransform.parent.gameObject : groupTransform.gameObject;
         }
 
         private GameObject FindObjectByNameInSceneRoot(string objectName)
@@ -336,6 +506,70 @@ namespace SevenBattles.Preparation
             return buttonObject.GetComponentInChildren<Button>(true);
         }
 
+        private Button FindButtonInRoot(GameObject root, string buttonObjectName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(buttonObjectName))
+            {
+                return null;
+            }
+
+            var transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node == null || !string.Equals(node.name, buttonObjectName, System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Button button = node.GetComponent<Button>();
+                if (button != null)
+                {
+                    return button;
+                }
+
+                button = node.GetComponentInChildren<Button>(true);
+                if (button != null)
+                {
+                    return button;
+                }
+            }
+
+            return null;
+        }
+
+        private TMP_Text FindTextInRoot(GameObject root, string textObjectName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(textObjectName))
+            {
+                return null;
+            }
+
+            var transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node == null || !string.Equals(node.name, textObjectName, System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                TMP_Text text = node.GetComponent<TMP_Text>();
+                if (text != null)
+                {
+                    return text;
+                }
+
+                text = node.GetComponentInChildren<TMP_Text>(true);
+                if (text != null)
+                {
+                    return text;
+                }
+            }
+
+            return null;
+        }
+
         private void BindLabels()
         {
             if (_shopLabel != null)
@@ -346,6 +580,11 @@ namespace SevenBattles.Preparation
             if (_squadLabel != null)
             {
                 _squadLabel.StringChanged += HandleSquadLabelChanged;
+            }
+
+            if (_inventoryTitleLabel != null)
+            {
+                _inventoryTitleLabel.StringChanged += HandleInventoryTitleChanged;
             }
         }
 
@@ -360,12 +599,18 @@ namespace SevenBattles.Preparation
             {
                 _squadLabel.StringChanged -= HandleSquadLabelChanged;
             }
+
+            if (_inventoryTitleLabel != null)
+            {
+                _inventoryTitleLabel.StringChanged -= HandleInventoryTitleChanged;
+            }
         }
 
         private void RefreshLabels()
         {
             _shopLabel?.RefreshString();
             _squadLabel?.RefreshString();
+            _inventoryTitleLabel?.RefreshString();
         }
 
         private void WireHoverFeedback()
@@ -390,6 +635,20 @@ namespace SevenBattles.Preparation
                 UnityAction closeAction = HandleSquadBackButtonClicked;
                 _squadBackButton.onClick.AddListener(closeAction);
                 _panelClickSubscriptions.Add(new ButtonClickSubscription(_squadBackButton, closeAction));
+            }
+
+            if (_inventoryButton != null)
+            {
+                UnityAction inventoryOpenAction = HandleInventoryButtonClicked;
+                _inventoryButton.onClick.AddListener(inventoryOpenAction);
+                _panelClickSubscriptions.Add(new ButtonClickSubscription(_inventoryButton, inventoryOpenAction));
+            }
+
+            if (_inventoryBackButton != null)
+            {
+                UnityAction inventoryCloseAction = HandleInventoryBackButtonClicked;
+                _inventoryBackButton.onClick.AddListener(inventoryCloseAction);
+                _panelClickSubscriptions.Add(new ButtonClickSubscription(_inventoryBackButton, inventoryCloseAction));
             }
 
             if (_panelClickSubscriptions.Count == 0)
@@ -578,6 +837,24 @@ namespace SevenBattles.Preparation
             HideSquadPanel();
         }
 
+        private void HandleInventoryButtonClicked()
+        {
+            ResolveSquadPanel();
+            ResolveInventoryTargets();
+            PlayClickSfx();
+            HideSquadPanel();
+            ShowInventoryPanel();
+        }
+
+        private void HandleInventoryBackButtonClicked()
+        {
+            ResolveSquadPanel();
+            ResolveInventoryTargets();
+            PlayClickSfx();
+            HideInventoryPanel();
+            ShowSquadPanel();
+        }
+
         private void ShowSquadPanel()
         {
             if (_squadPanel == null || _squadPanelCanvasGroup == null)
@@ -652,7 +929,7 @@ namespace SevenBattles.Preparation
             {
                 t += Time.unscaledDeltaTime;
                 float normalized = Mathf.Clamp01(t / duration);
-                float eased = EvaluateRevealCurve(normalized);
+                float eased = EvaluateRevealCurve(_squadPanelRevealCurve, normalized);
                 _squadPanelCanvasGroup.alpha = Mathf.LerpUnclamped(fromAlpha, 1f, eased);
                 animatedRoot.localScale = Vector3.LerpUnclamped(fromScale, toScale, eased);
                 yield return null;
@@ -692,7 +969,7 @@ namespace SevenBattles.Preparation
             {
                 t += Time.unscaledDeltaTime;
                 float normalized = Mathf.Clamp01(t / duration);
-                float eased = EvaluateRevealCurve(normalized);
+                float eased = EvaluateRevealCurve(_squadPanelRevealCurve, normalized);
                 _squadPanelCanvasGroup.alpha = Mathf.LerpUnclamped(fromAlpha, 0f, eased);
                 animatedRoot.localScale = Vector3.LerpUnclamped(fromScale, toScale, eased);
                 yield return null;
@@ -702,16 +979,16 @@ namespace SevenBattles.Preparation
             _squadPanelRoutine = null;
         }
 
-        private float EvaluateRevealCurve(float value)
+        private float EvaluateRevealCurve(AnimationCurve curve, float value)
         {
             float clamped = Mathf.Clamp01(value);
-            if (_squadPanelRevealCurve == null || _squadPanelRevealCurve.length == 0)
+            if (curve == null || curve.length == 0)
             {
                 // SmoothStep fallback keeps the reveal polished even when no custom curve is assigned.
                 return clamped * clamped * (3f - (2f * clamped));
             }
 
-            return _squadPanelRevealCurve.Evaluate(clamped);
+            return curve.Evaluate(clamped);
         }
 
         private void StopSquadPanelRoutine()
@@ -786,6 +1063,202 @@ namespace SevenBattles.Preparation
             _squadPanelStartupHiddenApplied = true;
         }
 
+        private void ShowInventoryPanel()
+        {
+            if (_inventoryPanel == null || _inventoryPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            StopInventoryPanelRoutine();
+
+            if (!_inventoryPanel.activeSelf)
+            {
+                _inventoryPanel.SetActive(true);
+            }
+
+            float duration = Mathf.Max(0f, _inventoryPanelFadeDuration);
+            if (duration <= 0.0001f)
+            {
+                SetInventoryPanelVisibleImmediate();
+                return;
+            }
+
+            _inventoryPanelRoutine = StartCoroutine(ShowInventoryPanelRoutine(duration));
+        }
+
+        private void HideInventoryPanel()
+        {
+            if (_inventoryPanel == null || _inventoryPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            StopInventoryPanelRoutine();
+
+            if (!_inventoryPanel.activeSelf || _inventoryPanelCanvasGroup.alpha <= 0.001f)
+            {
+                SetInventoryPanelHiddenAndDisabledImmediate();
+                return;
+            }
+
+            float duration = Mathf.Max(0f, _inventoryPanelFadeDuration);
+            if (duration <= 0.0001f)
+            {
+                SetInventoryPanelHiddenAndDisabledImmediate();
+                return;
+            }
+
+            _inventoryPanelRoutine = StartCoroutine(HideInventoryPanelRoutine(duration));
+        }
+
+        private System.Collections.IEnumerator ShowInventoryPanelRoutine(float duration)
+        {
+            if (_inventoryPanel == null || _inventoryPanelCanvasGroup == null)
+            {
+                yield break;
+            }
+
+            Transform animatedRoot = _inventoryPanelAnimatedRoot != null ? _inventoryPanelAnimatedRoot : _inventoryPanel.transform;
+            float fromAlpha = Mathf.Clamp01(_inventoryPanelCanvasGroup.alpha);
+            Vector3 toScale = _inventoryPanelBaseScale;
+            float startScaleFactor = Mathf.Clamp(_inventoryPanelStartScale, 0.8f, 1f);
+            Vector3 fromScale = fromAlpha > 0.001f
+                ? animatedRoot.localScale
+                : new Vector3(toScale.x * startScaleFactor, toScale.y * startScaleFactor, toScale.z);
+
+            _inventoryPanelCanvasGroup.alpha = fromAlpha;
+            _inventoryPanelCanvasGroup.interactable = false;
+            _inventoryPanelCanvasGroup.blocksRaycasts = true;
+            animatedRoot.localScale = fromScale;
+
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                float normalized = Mathf.Clamp01(t / duration);
+                float eased = EvaluateRevealCurve(_inventoryPanelRevealCurve, normalized);
+                _inventoryPanelCanvasGroup.alpha = Mathf.LerpUnclamped(fromAlpha, 1f, eased);
+                animatedRoot.localScale = Vector3.LerpUnclamped(fromScale, toScale, eased);
+                yield return null;
+            }
+
+            SetInventoryPanelVisibleImmediate();
+            _inventoryPanelRoutine = null;
+        }
+
+        private System.Collections.IEnumerator HideInventoryPanelRoutine(float duration)
+        {
+            if (_inventoryPanel == null || _inventoryPanelCanvasGroup == null)
+            {
+                yield break;
+            }
+
+            if (!_inventoryPanel.activeSelf)
+            {
+                _inventoryPanel.SetActive(true);
+            }
+
+            Transform animatedRoot = _inventoryPanelAnimatedRoot != null ? _inventoryPanelAnimatedRoot : _inventoryPanel.transform;
+            float fromAlpha = Mathf.Clamp01(_inventoryPanelCanvasGroup.alpha);
+            Vector3 fromScale = animatedRoot.localScale;
+            float startScaleFactor = Mathf.Clamp(_inventoryPanelStartScale, 0.8f, 1f);
+            Vector3 toScale = new Vector3(
+                _inventoryPanelBaseScale.x * startScaleFactor,
+                _inventoryPanelBaseScale.y * startScaleFactor,
+                _inventoryPanelBaseScale.z);
+
+            _inventoryPanelCanvasGroup.alpha = fromAlpha;
+            _inventoryPanelCanvasGroup.interactable = false;
+            _inventoryPanelCanvasGroup.blocksRaycasts = true;
+
+            float t = 0f;
+            while (t < duration)
+            {
+                t += Time.unscaledDeltaTime;
+                float normalized = Mathf.Clamp01(t / duration);
+                float eased = EvaluateRevealCurve(_inventoryPanelRevealCurve, normalized);
+                _inventoryPanelCanvasGroup.alpha = Mathf.LerpUnclamped(fromAlpha, 0f, eased);
+                animatedRoot.localScale = Vector3.LerpUnclamped(fromScale, toScale, eased);
+                yield return null;
+            }
+
+            SetInventoryPanelHiddenAndDisabledImmediate();
+            _inventoryPanelRoutine = null;
+        }
+
+        private void StopInventoryPanelRoutine()
+        {
+            if (_inventoryPanelRoutine != null)
+            {
+                StopCoroutine(_inventoryPanelRoutine);
+                _inventoryPanelRoutine = null;
+            }
+        }
+
+        private void SetInventoryPanelVisibleImmediate()
+        {
+            if (_inventoryPanel == null || _inventoryPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            if (!_inventoryPanel.activeSelf)
+            {
+                _inventoryPanel.SetActive(true);
+            }
+
+            _inventoryPanelCanvasGroup.alpha = 1f;
+            _inventoryPanelCanvasGroup.interactable = true;
+            _inventoryPanelCanvasGroup.blocksRaycasts = true;
+            Transform animatedRoot = _inventoryPanelAnimatedRoot != null ? _inventoryPanelAnimatedRoot : _inventoryPanel.transform;
+            animatedRoot.localScale = _inventoryPanelBaseScale;
+        }
+
+        private void SetInventoryPanelHiddenImmediate()
+        {
+            if (_inventoryPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            _inventoryPanelCanvasGroup.alpha = 0f;
+            _inventoryPanelCanvasGroup.interactable = false;
+            _inventoryPanelCanvasGroup.blocksRaycasts = false;
+        }
+
+        private void SetInventoryPanelHiddenAndDisabledImmediate()
+        {
+            SetInventoryPanelHiddenImmediate();
+            if (_inventoryPanel != null && _inventoryPanel.activeSelf)
+            {
+                _inventoryPanel.SetActive(false);
+            }
+
+            Transform animatedRoot = _inventoryPanelAnimatedRoot != null ? _inventoryPanelAnimatedRoot : _inventoryPanel != null ? _inventoryPanel.transform : null;
+            if (animatedRoot != null)
+            {
+                animatedRoot.localScale = _inventoryPanelBaseScale;
+            }
+        }
+
+        private void EnsureInventoryPanelStartupHidden()
+        {
+            if (_inventoryPanelStartupHiddenApplied)
+            {
+                return;
+            }
+
+            StopInventoryPanelRoutine();
+            SetInventoryPanelHiddenImmediate();
+            if (_inventoryPanel != null && _inventoryPanel.activeSelf)
+            {
+                _inventoryPanel.SetActive(false);
+            }
+
+            _inventoryPanelStartupHiddenApplied = true;
+        }
+
         private void PlayClickSfx()
         {
             if (_clickSfxClip == null)
@@ -839,6 +1312,15 @@ namespace SevenBattles.Preparation
             if (_squadLabelTMP != null && !string.IsNullOrWhiteSpace(localizedValue))
             {
                 _squadLabelTMP.text = localizedValue;
+            }
+        }
+
+        private void HandleInventoryTitleChanged(string localizedValue)
+        {
+            LocalizationCacheDiagnostics.LogDisplay(_inventoryTitleLabel, "PreparationPopupMenu.InventoryTitle", this);
+            if (_inventoryTitleTMP != null && !string.IsNullOrWhiteSpace(localizedValue))
+            {
+                _inventoryTitleTMP.text = localizedValue;
             }
         }
 
