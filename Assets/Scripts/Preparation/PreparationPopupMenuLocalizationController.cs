@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using SevenBattles.Core;
+using SevenBattles.Core.Battle;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -17,6 +19,7 @@ namespace SevenBattles.Preparation
         private const string SQUAD_DEFAULT_KEY = "Preparation.Popup.Squad";
         private const string INVENTORY_TITLE_DEFAULT_KEY = "Preparation.Inventory.Title";
         private const string PANEL_SWITCH_OVERLAY_RUNTIME_NAME = "PreparationPanelSwitchOverlay_Runtime";
+        private const string TOURNAMENT_PATH_PREVIEW_OBJECT_NAME = "TournamentPathPreview";
 
         [Header("Label Targets")]
         [SerializeField, Tooltip("TMP label shown in the Shop menu button.")]
@@ -71,6 +74,12 @@ namespace SevenBattles.Preparation
         private string _inventoryPanelObjectName = "InventoryPanel";
         [SerializeField, Tooltip("CanvasGroup used to animate the Inventory panel. Auto-added when missing.")]
         private CanvasGroup _inventoryPanelCanvasGroup;
+        [SerializeField, Tooltip("If enabled, forces InventoryPanel canvas to Screen Space - Camera for world sprite preview support.")]
+        private bool _inventoryPanelForceCameraRenderMode = true;
+        [SerializeField, Min(0.31f), Tooltip("Plane distance used when InventoryPanel canvas is in Screen Space - Camera.")]
+        private float _inventoryPanelCameraPlaneDistance = 1f;
+        [SerializeField, Tooltip("Optional explicit camera for InventoryPanel canvas. Falls back to Main Camera when empty.")]
+        private Camera _inventoryPanelRenderCamera;
         [SerializeField, Min(0f), Tooltip("Reveal duration in seconds for the Inventory panel. Uses unscaled time.")]
         private float _inventoryPanelFadeDuration = 0.24f;
         [SerializeField, Range(0.8f, 1f), Tooltip("Starting scale multiplier used during Inventory panel reveal.")]
@@ -97,6 +106,62 @@ namespace SevenBattles.Preparation
         private float _panelSwitchSlideDistanceMultiplier = 1.05f;
         [SerializeField, Range(0f, 1f), Tooltip("How far the outgoing panel drifts to the left relative to full slide distance.")]
         private float _panelSwitchOutgoingSlideRatio = 0.2f;
+
+        [Header("Inventory Unit Preview")]
+        [SerializeField, Tooltip("Optional explicit reference to the squad setup controller used to track the currently selected unit.")]
+        private SquadSetupController _squadSetupController;
+        [SerializeField, Tooltip("Optional explicit transform where the selected unit prefab is instantiated in InventoryView.")]
+        private RectTransform _inventoryUnitPreviewAnchor;
+        [SerializeField, Tooltip("Object name used to auto-find the selected unit preview anchor under InventoryPanel.")]
+        private string _inventoryUnitPreviewAnchorObjectName = "CharacterBgBottom";
+        [SerializeField, Tooltip("Local position offset applied to the spawned selected unit preview prefab.")]
+        private Vector3 _inventoryUnitPreviewLocalPosition = Vector3.zero;
+        [SerializeField, Tooltip("Local scale applied to the spawned selected unit preview prefab.")]
+        private Vector3 _inventoryUnitPreviewLocalScale = Vector3.one;
+        [SerializeField, Tooltip("If enabled, auto-fits preview scale to occupy a readable portion of CharacterBgBottom on screen.")]
+        private bool _inventoryUnitPreviewAutoFitScale = true;
+        [SerializeField, Range(0.2f, 1.2f), Tooltip("Target vertical occupancy of CharacterBgBottom used by auto-fit scale.")]
+        private float _inventoryUnitPreviewAutoFitFill = 0.78f;
+        [SerializeField, Min(0.01f), Tooltip("Minimum multiplier allowed when auto-fitting preview scale.")]
+        private float _inventoryUnitPreviewAutoFitMinScaleMultiplier = 0.1f;
+        [SerializeField, Min(0.1f), Tooltip("Maximum multiplier allowed when auto-fitting preview scale.")]
+        private float _inventoryUnitPreviewAutoFitMaxScaleMultiplier = 500f;
+        [SerializeField, Tooltip("If enabled, places the unit preview as the first child under CharacterBgBottom.")]
+        private bool _inventoryUnitPreviewAsFirstSibling = false;
+        [SerializeField, Tooltip("Sorting layer applied to the inventory unit preview sprites.")]
+        private string _inventoryUnitPreviewSortingLayer = "Default";
+        [SerializeField, Tooltip("Sorting order applied to the inventory unit preview sprites.")]
+        private int _inventoryUnitPreviewSortingOrder = 2000;
+        [SerializeField, Tooltip("Optional explicit world transform parent used to host the inventory unit preview instance.")]
+        private Transform _inventoryUnitPreviewWorldRoot;
+        [SerializeField, Tooltip("Additional world-space offset applied after anchoring the unit preview to CharacterBgBottom.")]
+        private Vector3 _inventoryUnitPreviewWorldOffset = Vector3.zero;
+        [SerializeField, Tooltip("Depth offset applied from the inventory canvas plane when converting the anchor to world-space. Negative values bring the unit closer to camera.")]
+        private float _inventoryUnitPreviewPlaneDepthOffset = -0.06f;
+        [SerializeField, Tooltip("If enabled, logs detailed diagnostics for inventory preview spawn and placement.")]
+        private bool _inventoryUnitPreviewDiagnostics = false;
+
+        [Header("Inventory Backdrop")]
+        [SerializeField, Tooltip("If enabled, hides TournamentPathPreview while Inventory panel is visible to avoid map bleed-through.")]
+        private bool _hideTournamentPathWhileInventoryVisible = true;
+        [SerializeField, Tooltip("Optional explicit reference to TournamentPathPreview root. Auto-found when empty.")]
+        private GameObject _tournamentPathPreviewRoot;
+
+        [Header("Menu HUD Visibility")]
+        [SerializeField, Tooltip("If enabled, hides the Shop/Squad popup HUD while Inventory is visible.")]
+        private bool _hidePopupMenuWhileInventoryVisible = true;
+        [SerializeField, Tooltip("Optional CanvasGroup controlling the popup HUD visibility. Auto-added on PopupMenu root when empty.")]
+        private CanvasGroup _popupMenuCanvasGroup;
+
+        [Header("Preparation Resources Visibility")]
+        [SerializeField, Tooltip("If enabled, hides the default preparation ResourcesPanel while Inventory is visible.")]
+        private bool _hidePreparationResourcesWhileInventoryVisible = true;
+        [SerializeField, Tooltip("Optional explicit reference to the default preparation ResourcesPanel root (not the one inside InventoryPanel).")]
+        private GameObject _preparationResourcesPanelRoot;
+        [SerializeField, Tooltip("Object name used to auto-find the default preparation ResourcesPanel root when _preparationResourcesPanelRoot is not assigned.")]
+        private string _preparationResourcesPanelObjectName = "ResourcesPanel";
+        [SerializeField, Tooltip("CanvasGroup controlling the default preparation ResourcesPanel visibility. Auto-added when missing.")]
+        private CanvasGroup _preparationResourcesPanelCanvasGroup;
 
         [Header("Localization")]
         [SerializeField, Tooltip("Localized label for the Shop button.")]
@@ -154,6 +219,28 @@ namespace SevenBattles.Preparation
         private Transform _squadPanelAnimatedRoot;
         private Transform _inventoryPanelAnimatedRoot;
         private Canvas _panelSwitchOverlayRuntimeCanvas;
+        private ISquadSetupController _resolvedSquadSetupController;
+        private bool _inventoryUnitPreviewEventsWired;
+        private UnitSpellLoadout _inventorySelectedLoadout;
+        private Coroutine _inventoryUnitPreviewRoutine;
+        private GameObject _inventoryUnitPreviewInstance;
+        private GameObject _inventoryUnitPreviewPrefab;
+        private bool _tournamentPathPreviewInitialVisibility = true;
+        private bool _tournamentPathPreviewVisibilityCaptured;
+        private bool _tournamentPathPreviewMissingLogged;
+        private bool _popupMenuVisibilityCaptured;
+        private float _popupMenuInitialAlpha = 1f;
+        private bool _popupMenuInitialInteractable = true;
+        private bool _popupMenuInitialBlocksRaycasts = true;
+        private bool _preparationResourcesVisibilityCaptured;
+        private float _preparationResourcesInitialAlpha = 1f;
+        private bool _preparationResourcesInitialInteractable = true;
+        private bool _preparationResourcesInitialBlocksRaycasts = true;
+        private float _lastInventoryPreviewPlacementInfoTime = -999f;
+        private float _lastInventoryPreviewPlacementWarnTime = -999f;
+
+        private const float INVENTORY_PREVIEW_WARN_LOG_COOLDOWN_SECONDS = 0.75f;
+        private const float INVENTORY_PREVIEW_INFO_LOG_COOLDOWN_SECONDS = 0.75f;
 
         private void Awake()
         {
@@ -171,9 +258,15 @@ namespace SevenBattles.Preparation
             ResolveButtonTargets();
             ResolveSquadPanel();
             ResolveInventoryTargets();
+            ResolveSquadSetupController();
+            ResolveTournamentPathPreviewRoot();
+            ResolvePopupMenuCanvasGroup();
+            ResolvePreparationResourcesPanelCanvasGroup();
             BindLabels();
             WireHoverFeedback();
             WireSquadPanelButton();
+            WireInventoryUnitPreviewSelection();
+            RefreshInventorySelectedUnitPreview();
             RefreshLabels();
         }
 
@@ -182,10 +275,15 @@ namespace SevenBattles.Preparation
             UnbindLabels();
             UnwireHoverFeedback();
             UnwireSquadPanelButton();
+            UnwireInventoryUnitPreviewSelection();
             StopSquadPanelRoutine();
             StopInventoryPanelRoutine();
             StopPanelSwitchRoutine();
             HidePanelSwitchOverlayImmediate();
+            ClearInventoryUnitPreview();
+            RestoreTournamentPathPreviewVisibility();
+            RestorePopupMenuVisibility();
+            RestorePreparationResourcesPanelVisibility();
             RestoreDefaultCursor();
         }
 
@@ -201,6 +299,8 @@ namespace SevenBattles.Preparation
             {
                 ApplyHoverCursor();
             }
+
+            UpdateInventoryPreviewWorldPlacement();
         }
 
         private void SetupLocalizationDefaults()
@@ -335,6 +435,239 @@ namespace SevenBattles.Preparation
             {
                 _inventoryTitleTMP = FindTextInRoot(_inventoryPanel, _inventoryTitleObjectName);
             }
+
+            ResolveInventoryUnitPreviewAnchor();
+        }
+
+        private void ResolveSquadSetupController()
+        {
+            if (_resolvedSquadSetupController != null)
+            {
+                return;
+            }
+
+            if (_squadSetupController == null)
+            {
+                _squadSetupController = UnityEngine.Object.FindFirstObjectByType<SquadSetupController>();
+            }
+
+            _resolvedSquadSetupController = _squadSetupController;
+        }
+
+        private void ResolveInventoryUnitPreviewAnchor()
+        {
+            if (_inventoryUnitPreviewAnchor != null)
+            {
+                return;
+            }
+
+            if (_inventoryPanel != null)
+            {
+                _inventoryUnitPreviewAnchor = FindRectTransformInRoot(_inventoryPanel, _inventoryUnitPreviewAnchorObjectName);
+            }
+
+            if (_inventoryUnitPreviewAnchor != null)
+            {
+                return;
+            }
+
+            GameObject anchorObject = FindObjectByNameInSceneRoot(_inventoryUnitPreviewAnchorObjectName);
+            if (anchorObject != null)
+            {
+                _inventoryUnitPreviewAnchor = anchorObject.GetComponent<RectTransform>();
+            }
+        }
+
+        private void ResolveTournamentPathPreviewRoot()
+        {
+            if (_tournamentPathPreviewRoot == null)
+            {
+                _tournamentPathPreviewRoot = FindObjectByNameInSceneRoot(TOURNAMENT_PATH_PREVIEW_OBJECT_NAME);
+            }
+
+            if (_tournamentPathPreviewRoot == null)
+            {
+                if (_inventoryUnitPreviewDiagnostics && !_tournamentPathPreviewMissingLogged)
+                {
+                    SBLog.Warn(
+                        $"PreparationPopupMenu: '{TOURNAMENT_PATH_PREVIEW_OBJECT_NAME}' was not found. Tournament path visibility cannot be toggled for Inventory view.",
+                        this);
+                    _tournamentPathPreviewMissingLogged = true;
+                }
+
+                return;
+            }
+
+            if (_tournamentPathPreviewRoot != null && !_tournamentPathPreviewVisibilityCaptured)
+            {
+                _tournamentPathPreviewInitialVisibility = _tournamentPathPreviewRoot.activeSelf;
+                _tournamentPathPreviewVisibilityCaptured = true;
+            }
+        }
+
+        private void SetTournamentPathPreviewVisible(bool visible)
+        {
+            if (!_hideTournamentPathWhileInventoryVisible)
+            {
+                return;
+            }
+
+            ResolveTournamentPathPreviewRoot();
+            if (_tournamentPathPreviewRoot == null || _tournamentPathPreviewRoot.activeSelf == visible)
+            {
+                return;
+            }
+
+            _tournamentPathPreviewRoot.SetActive(visible);
+            if (_inventoryUnitPreviewDiagnostics)
+            {
+                SBLog.Info($"PreparationPopupMenu: TournamentPathPreview visibility -> {visible}.", this);
+            }
+        }
+
+        private void RestoreTournamentPathPreviewVisibility()
+        {
+            if (!_hideTournamentPathWhileInventoryVisible)
+            {
+                return;
+            }
+
+            ResolveTournamentPathPreviewRoot();
+            if (_tournamentPathPreviewRoot == null)
+            {
+                return;
+            }
+
+            bool targetVisibility = _tournamentPathPreviewVisibilityCaptured ? _tournamentPathPreviewInitialVisibility : true;
+            if (_tournamentPathPreviewRoot.activeSelf != targetVisibility)
+            {
+                _tournamentPathPreviewRoot.SetActive(targetVisibility);
+            }
+        }
+
+        private void ResolvePopupMenuCanvasGroup()
+        {
+            if (_popupMenuCanvasGroup == null)
+            {
+                _popupMenuCanvasGroup = GetComponent<CanvasGroup>();
+                if (_popupMenuCanvasGroup == null)
+                {
+                    _popupMenuCanvasGroup = gameObject.AddComponent<CanvasGroup>();
+                }
+            }
+
+            if (_popupMenuCanvasGroup != null && !_popupMenuVisibilityCaptured)
+            {
+                _popupMenuInitialAlpha = _popupMenuCanvasGroup.alpha;
+                _popupMenuInitialInteractable = _popupMenuCanvasGroup.interactable;
+                _popupMenuInitialBlocksRaycasts = _popupMenuCanvasGroup.blocksRaycasts;
+                _popupMenuVisibilityCaptured = true;
+            }
+        }
+
+        private void SetPopupMenuVisible(bool visible)
+        {
+            if (!_hidePopupMenuWhileInventoryVisible)
+            {
+                return;
+            }
+
+            ResolvePopupMenuCanvasGroup();
+            if (_popupMenuCanvasGroup == null)
+            {
+                return;
+            }
+
+            _popupMenuCanvasGroup.alpha = visible ? _popupMenuInitialAlpha : 0f;
+            _popupMenuCanvasGroup.interactable = visible ? _popupMenuInitialInteractable : false;
+            _popupMenuCanvasGroup.blocksRaycasts = visible ? _popupMenuInitialBlocksRaycasts : false;
+        }
+
+        private void RestorePopupMenuVisibility()
+        {
+            if (!_hidePopupMenuWhileInventoryVisible)
+            {
+                return;
+            }
+
+            ResolvePopupMenuCanvasGroup();
+            if (_popupMenuCanvasGroup == null)
+            {
+                return;
+            }
+
+            _popupMenuCanvasGroup.alpha = _popupMenuInitialAlpha;
+            _popupMenuCanvasGroup.interactable = _popupMenuInitialInteractable;
+            _popupMenuCanvasGroup.blocksRaycasts = _popupMenuInitialBlocksRaycasts;
+        }
+
+        private void ResolvePreparationResourcesPanelCanvasGroup()
+        {
+            if (_preparationResourcesPanelRoot == null)
+            {
+                Transform excludedInventoryRoot = _inventoryPanel != null ? _inventoryPanel.transform : null;
+                _preparationResourcesPanelRoot = FindObjectByNameInSceneRootExcludingBranch(
+                    _preparationResourcesPanelObjectName,
+                    excludedInventoryRoot);
+            }
+
+            if (_preparationResourcesPanelRoot == null)
+            {
+                return;
+            }
+
+            if (_preparationResourcesPanelCanvasGroup == null)
+            {
+                _preparationResourcesPanelCanvasGroup = _preparationResourcesPanelRoot.GetComponent<CanvasGroup>();
+                if (_preparationResourcesPanelCanvasGroup == null)
+                {
+                    _preparationResourcesPanelCanvasGroup = _preparationResourcesPanelRoot.AddComponent<CanvasGroup>();
+                }
+            }
+
+            if (_preparationResourcesPanelCanvasGroup != null && !_preparationResourcesVisibilityCaptured)
+            {
+                _preparationResourcesInitialAlpha = _preparationResourcesPanelCanvasGroup.alpha;
+                _preparationResourcesInitialInteractable = _preparationResourcesPanelCanvasGroup.interactable;
+                _preparationResourcesInitialBlocksRaycasts = _preparationResourcesPanelCanvasGroup.blocksRaycasts;
+                _preparationResourcesVisibilityCaptured = true;
+            }
+        }
+
+        private void SetPreparationResourcesPanelVisible(bool visible)
+        {
+            if (!_hidePreparationResourcesWhileInventoryVisible)
+            {
+                return;
+            }
+
+            ResolvePreparationResourcesPanelCanvasGroup();
+            if (_preparationResourcesPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            _preparationResourcesPanelCanvasGroup.alpha = visible ? _preparationResourcesInitialAlpha : 0f;
+            _preparationResourcesPanelCanvasGroup.interactable = visible ? _preparationResourcesInitialInteractable : false;
+            _preparationResourcesPanelCanvasGroup.blocksRaycasts = visible ? _preparationResourcesInitialBlocksRaycasts : false;
+        }
+
+        private void RestorePreparationResourcesPanelVisibility()
+        {
+            if (!_hidePreparationResourcesWhileInventoryVisible)
+            {
+                return;
+            }
+
+            ResolvePreparationResourcesPanelCanvasGroup();
+            if (_preparationResourcesPanelCanvasGroup == null)
+            {
+                return;
+            }
+
+            _preparationResourcesPanelCanvasGroup.alpha = _preparationResourcesInitialAlpha;
+            _preparationResourcesPanelCanvasGroup.interactable = _preparationResourcesInitialInteractable;
+            _preparationResourcesPanelCanvasGroup.blocksRaycasts = _preparationResourcesInitialBlocksRaycasts;
         }
 
         private void ResolveInventoryPanel()
@@ -385,6 +718,7 @@ namespace SevenBattles.Preparation
                 _inventoryPanelScaleCaptured = true;
             }
 
+            EnsureInventoryPanelCanvasRenderSetup();
             EnsureInventoryPanelStartupHidden();
         }
 
@@ -433,6 +767,40 @@ namespace SevenBattles.Preparation
             return _inventoryPanel.transform;
         }
 
+        private void EnsureInventoryPanelCanvasRenderSetup()
+        {
+            if (!_inventoryPanelForceCameraRenderMode)
+            {
+                return;
+            }
+
+            Canvas inventoryCanvas = _inventoryPanelAnimatedRoot != null
+                ? _inventoryPanelAnimatedRoot.GetComponent<Canvas>()
+                : null;
+            if (inventoryCanvas == null && _inventoryPanel != null)
+            {
+                inventoryCanvas = _inventoryPanel.GetComponentInChildren<Canvas>(true);
+            }
+
+            if (inventoryCanvas == null)
+            {
+                return;
+            }
+
+            if (_inventoryPanelRenderCamera == null)
+            {
+                _inventoryPanelRenderCamera = Camera.main;
+                if (_inventoryPanelRenderCamera == null)
+                {
+                    _inventoryPanelRenderCamera = UnityEngine.Object.FindFirstObjectByType<Camera>();
+                }
+            }
+
+            inventoryCanvas.renderMode = RenderMode.ScreenSpaceCamera;
+            inventoryCanvas.worldCamera = _inventoryPanelRenderCamera;
+            inventoryCanvas.planeDistance = Mathf.Max(0.31f, _inventoryPanelCameraPlaneDistance);
+        }
+
         private static GameObject ResolvePanelRootFromCanvasGroup(CanvasGroup canvasGroup)
         {
             if (canvasGroup == null)
@@ -469,6 +837,59 @@ namespace SevenBattles.Preparation
 
             var global = GameObject.Find(objectName);
             return global;
+        }
+
+        private GameObject FindObjectByNameInSceneRootExcludingBranch(string objectName, Transform excludedRoot)
+        {
+            if (string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            Transform searchRoot = transform.root != null ? transform.root : transform;
+            var transforms = searchRoot.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node == null || !string.Equals(node.name, objectName, System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!IsSameOrDescendantOf(node, excludedRoot))
+                {
+                    return node.gameObject;
+                }
+            }
+
+            GameObject global = GameObject.Find(objectName);
+            if (global != null && !IsSameOrDescendantOf(global.transform, excludedRoot))
+            {
+                return global;
+            }
+
+            return null;
+        }
+
+        private static bool IsSameOrDescendantOf(Transform candidate, Transform possibleAncestor)
+        {
+            if (candidate == null || possibleAncestor == null)
+            {
+                return false;
+            }
+
+            Transform current = candidate;
+            while (current != null)
+            {
+                if (current == possibleAncestor)
+                {
+                    return true;
+                }
+
+                current = current.parent;
+            }
+
+            return false;
         }
 
         private TMP_Text FindButtonLabel(string buttonObjectName)
@@ -589,6 +1010,31 @@ namespace SevenBattles.Preparation
                 if (text != null)
                 {
                     return text;
+                }
+            }
+
+            return null;
+        }
+
+        private RectTransform FindRectTransformInRoot(GameObject root, string objectName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            var transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node == null || !string.Equals(node.name, objectName, System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (node is RectTransform rectTransform)
+                {
+                    return rectTransform;
                 }
             }
 
@@ -860,12 +1306,14 @@ namespace SevenBattles.Preparation
             ResolveSquadPanel();
             PlayClickSfx();
             HideSquadPanel();
+            EnsureDefaultPreparationViewVisible();
         }
 
         private void HandleInventoryButtonClicked()
         {
             ResolveSquadPanel();
             ResolveInventoryTargets();
+            RefreshInventorySelectedUnitPreview();
             PlayClickSfx();
             StartPanelSwitch(toInventory: true);
         }
@@ -878,6 +1326,319 @@ namespace SevenBattles.Preparation
             StartPanelSwitch(toInventory: false);
         }
 
+        private void WireInventoryUnitPreviewSelection()
+        {
+            ResolveSquadSetupController();
+            if (_inventoryUnitPreviewEventsWired || _resolvedSquadSetupController == null)
+            {
+                return;
+            }
+
+            _resolvedSquadSetupController.UnitSelected += HandleInventoryUnitSelected;
+            _inventoryUnitPreviewEventsWired = true;
+        }
+
+        private void UnwireInventoryUnitPreviewSelection()
+        {
+            if (!_inventoryUnitPreviewEventsWired || _resolvedSquadSetupController == null)
+            {
+                return;
+            }
+
+            _resolvedSquadSetupController.UnitSelected -= HandleInventoryUnitSelected;
+            _inventoryUnitPreviewEventsWired = false;
+        }
+
+        private void HandleInventoryUnitSelected(UnitSpellLoadout loadout)
+        {
+            _inventorySelectedLoadout = loadout;
+            RefreshInventorySelectedUnitPreview();
+        }
+
+        private void RefreshInventorySelectedUnitPreview()
+        {
+            ResolveInventoryTargets();
+            ResolveInventoryUnitPreviewAnchor();
+            ResolveInventoryPreviewWorldRoot();
+
+            if (_inventoryUnitPreviewAnchor == null)
+            {
+                if (_inventoryUnitPreviewDiagnostics)
+                {
+                    SBLog.Warn("PreparationPopupMenu: Inventory preview anchor is missing. Cannot spawn preview.", this);
+                }
+                ClearInventoryUnitPreview();
+                return;
+            }
+
+            UnitSpellLoadout selected = ResolveInventorySelectedLoadout();
+            if (selected == null || selected.Definition == null || selected.Definition.Prefab == null)
+            {
+                if (_inventoryUnitPreviewDiagnostics)
+                {
+                    SBLog.Warn("PreparationPopupMenu: No selected unit prefab resolved for inventory preview.", this);
+                }
+                ClearInventoryUnitPreview();
+                return;
+            }
+
+            GameObject selectedPrefab = selected.Definition.Prefab;
+            bool shouldRespawn = _inventoryUnitPreviewInstance == null || _inventoryUnitPreviewPrefab != selectedPrefab;
+            if (shouldRespawn)
+            {
+                SpawnInventoryUnitPreview(selectedPrefab);
+            }
+
+            if (_inventoryUnitPreviewInstance == null)
+            {
+                return;
+            }
+
+            UpdateInventoryPreviewWorldPlacement();
+            ApplyInventoryUnitPreviewTransform(_inventoryUnitPreviewInstance.transform);
+            SetInventoryPreviewFrontIdle(_inventoryUnitPreviewInstance);
+        }
+
+        private UnitSpellLoadout ResolveInventorySelectedLoadout()
+        {
+            ResolveSquadSetupController();
+            if (_resolvedSquadSetupController != null && _resolvedSquadSetupController.SelectedUnit != null)
+            {
+                _inventorySelectedLoadout = _resolvedSquadSetupController.SelectedUnit;
+            }
+
+            return _inventorySelectedLoadout;
+        }
+
+        private void SpawnInventoryUnitPreview(GameObject previewPrefab)
+        {
+            ClearInventoryUnitPreview();
+            ResolveInventoryPreviewWorldRoot();
+            if (_inventoryUnitPreviewAnchor == null || previewPrefab == null || _inventoryUnitPreviewWorldRoot == null)
+            {
+                return;
+            }
+
+            _inventoryUnitPreviewInstance = Instantiate(previewPrefab, _inventoryUnitPreviewWorldRoot, false);
+            _inventoryUnitPreviewInstance.name = $"{previewPrefab.name}_InventoryPreview";
+            _inventoryUnitPreviewPrefab = previewPrefab;
+            if (_inventoryUnitPreviewAsFirstSibling)
+            {
+                _inventoryUnitPreviewInstance.transform.SetAsFirstSibling();
+            }
+
+            _inventoryUnitPreviewInstance.transform.localScale = Vector3.zero;
+            _inventoryUnitPreviewInstance.transform.localPosition = _inventoryUnitPreviewLocalPosition;
+
+            ApplyInventoryUnitPreviewSorting(_inventoryUnitPreviewInstance);
+            UpdateInventoryPreviewWorldPlacement();
+            SetInventoryPreviewFrontIdle(_inventoryUnitPreviewInstance);
+
+            if (_inventoryUnitPreviewRoutine != null)
+            {
+                StopCoroutine(_inventoryUnitPreviewRoutine);
+            }
+
+            _inventoryUnitPreviewRoutine = StartCoroutine(AutoFitInventoryPreviewRoutine(_inventoryUnitPreviewInstance));
+            if (_inventoryUnitPreviewDiagnostics)
+            {
+                SBLog.Info(
+                    $"PreparationPopupMenu: Spawned inventory preview '{_inventoryUnitPreviewInstance.name}' under '{_inventoryUnitPreviewWorldRoot.name}'.",
+                    this);
+            }
+        }
+
+        private System.Collections.IEnumerator AutoFitInventoryPreviewRoutine(GameObject instance)
+        {
+            yield return null;
+
+            if (instance == null || instance != _inventoryUnitPreviewInstance)
+            {
+                yield break;
+            }
+
+            ApplyInventoryUnitPreviewTransform(instance.transform);
+            _inventoryUnitPreviewRoutine = null;
+        }
+
+        private void ApplyInventoryUnitPreviewSorting(GameObject instance)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+
+            var groups = instance.GetComponentsInChildren<UnityEngine.Rendering.SortingGroup>(true);
+            for (int i = 0; i < groups.Length; i++)
+            {
+                var group = groups[i];
+                if (group == null)
+                {
+                    continue;
+                }
+
+                group.sortingLayerName = _inventoryUnitPreviewSortingLayer;
+                group.sortingOrder = _inventoryUnitPreviewSortingOrder;
+            }
+
+            var renderers = instance.GetComponentsInChildren<SpriteRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                SpriteRenderer sr = renderers[i];
+                if (sr != null)
+                {
+                    sr.sortingLayerName = _inventoryUnitPreviewSortingLayer;
+                    sr.sortingOrder = _inventoryUnitPreviewSortingOrder;
+                }
+            }
+        }
+
+        private void ApplyInventoryUnitPreviewTransform(Transform previewTransform)
+        {
+            if (previewTransform == null)
+            {
+                return;
+            }
+
+            Vector3 configuredScale = _inventoryUnitPreviewLocalScale;
+            if (Mathf.Abs(configuredScale.x) <= 0.0001f ||
+                Mathf.Abs(configuredScale.y) <= 0.0001f ||
+                Mathf.Abs(configuredScale.z) <= 0.0001f)
+            {
+                configuredScale = Vector3.one;
+            }
+
+            previewTransform.localPosition = _inventoryUnitPreviewLocalPosition;
+            previewTransform.localScale = configuredScale;
+            TryAutoFitInventoryPreviewScale(previewTransform);
+        }
+
+        private void ClearInventoryUnitPreview()
+        {
+            if (_inventoryUnitPreviewRoutine != null)
+            {
+                StopCoroutine(_inventoryUnitPreviewRoutine);
+                _inventoryUnitPreviewRoutine = null;
+            }
+
+            _inventoryUnitPreviewPrefab = null;
+            if (_inventoryUnitPreviewInstance == null)
+            {
+                return;
+            }
+
+            // Hide immediately to avoid one-frame ghosting while destruction is deferred.
+            _inventoryUnitPreviewInstance.SetActive(false);
+
+            if (Application.isPlaying)
+            {
+                Destroy(_inventoryUnitPreviewInstance);
+            }
+            else
+            {
+                DestroyImmediate(_inventoryUnitPreviewInstance);
+            }
+
+            _inventoryUnitPreviewInstance = null;
+        }
+
+        private void ResolveInventoryPreviewWorldRoot()
+        {
+            if (_inventoryUnitPreviewWorldRoot != null)
+            {
+                return;
+            }
+
+            Transform root = transform.root != null ? transform.root : transform;
+            Transform existing = root.Find("InventoryPreviewWorldRoot_Runtime");
+            if (existing != null)
+            {
+                _inventoryUnitPreviewWorldRoot = existing;
+                return;
+            }
+
+            GameObject runtimeRoot = new GameObject("InventoryPreviewWorldRoot_Runtime");
+            runtimeRoot.transform.SetParent(root, false);
+            _inventoryUnitPreviewWorldRoot = runtimeRoot.transform;
+        }
+
+        private void UpdateInventoryPreviewWorldPlacement()
+        {
+            if (_inventoryUnitPreviewInstance == null || _inventoryUnitPreviewAnchor == null)
+            {
+                return;
+            }
+
+            if (!TryResolveInventoryPreviewWorldPosition(out Vector3 targetWorldPosition))
+            {
+                if (_inventoryUnitPreviewDiagnostics && Time.unscaledTime - _lastInventoryPreviewPlacementWarnTime >= INVENTORY_PREVIEW_WARN_LOG_COOLDOWN_SECONDS)
+                {
+                    SBLog.Warn("PreparationPopupMenu: Failed to resolve inventory preview world position from anchor.", this);
+                    _lastInventoryPreviewPlacementWarnTime = Time.unscaledTime;
+                }
+
+                return;
+            }
+
+            _inventoryUnitPreviewInstance.transform.position = targetWorldPosition + _inventoryUnitPreviewWorldOffset;
+        }
+
+        private bool TryResolveInventoryPreviewWorldPosition(out Vector3 worldPosition)
+        {
+            worldPosition = Vector3.zero;
+            if (_inventoryUnitPreviewAnchor == null)
+            {
+                return false;
+            }
+
+            Canvas inventoryCanvas = _inventoryPanelAnimatedRoot != null
+                ? _inventoryPanelAnimatedRoot.GetComponent<Canvas>()
+                : null;
+            if (inventoryCanvas == null && _inventoryPanel != null)
+            {
+                inventoryCanvas = _inventoryPanel.GetComponentInChildren<Canvas>(true);
+            }
+
+            Camera uiCamera = inventoryCanvas != null ? inventoryCanvas.worldCamera : _inventoryPanelRenderCamera;
+            if (uiCamera == null)
+            {
+                uiCamera = Camera.main;
+            }
+
+            if (uiCamera == null)
+            {
+                return false;
+            }
+
+            Vector3[] corners = new Vector3[4];
+            _inventoryUnitPreviewAnchor.GetWorldCorners(corners);
+            Vector3 centerWorld = (corners[0] + corners[2]) * 0.5f;
+
+            Vector3 screen = RectTransformUtility.WorldToScreenPoint(uiCamera, centerWorld);
+            float planeDistance = inventoryCanvas != null && inventoryCanvas.renderMode == RenderMode.ScreenSpaceCamera
+                ? Mathf.Max(0.31f, inventoryCanvas.planeDistance)
+                : Mathf.Max(0.31f, _inventoryPanelCameraPlaneDistance);
+            float targetDistanceFromCamera = planeDistance + _inventoryUnitPreviewPlaneDepthOffset;
+            float minDistanceFromCamera = uiCamera.nearClipPlane + 0.02f;
+            if (targetDistanceFromCamera < minDistanceFromCamera)
+            {
+                targetDistanceFromCamera = minDistanceFromCamera;
+            }
+
+            screen.z = targetDistanceFromCamera;
+
+            worldPosition = uiCamera.ScreenToWorldPoint(screen);
+            if (_inventoryUnitPreviewDiagnostics && Time.unscaledTime - _lastInventoryPreviewPlacementInfoTime >= INVENTORY_PREVIEW_INFO_LOG_COOLDOWN_SECONDS)
+            {
+                SBLog.Info(
+                    $"PreparationPopupMenu: Inventory preview anchor '{_inventoryUnitPreviewAnchor.name}' -> world {worldPosition} (camera '{uiCamera.name}', plane={planeDistance:0.###}, depth={targetDistanceFromCamera:0.###}).",
+                    this);
+                _lastInventoryPreviewPlacementInfoTime = Time.unscaledTime;
+            }
+
+            return true;
+        }
+
         private void StartPanelSwitch(bool toInventory)
         {
             ResolveSquadPanel();
@@ -885,6 +1646,12 @@ namespace SevenBattles.Preparation
             StopPanelSwitchRoutine();
             StopSquadPanelRoutine();
             StopInventoryPanelRoutine();
+            SetTournamentPathPreviewVisible(!toInventory);
+            if (toInventory)
+            {
+                SetPopupMenuVisible(false);
+                SetPreparationResourcesPanelVisible(false);
+            }
 
             bool panelsReady = _squadPanel != null
                 && _squadPanelCanvasGroup != null
@@ -1284,6 +2051,9 @@ namespace SevenBattles.Preparation
             _inventoryPanelCanvasGroup.blocksRaycasts = true;
             Transform animatedRoot = _inventoryPanelAnimatedRoot != null ? _inventoryPanelAnimatedRoot : _inventoryPanel.transform;
             animatedRoot.localScale = _inventoryPanelBaseScale;
+            SetTournamentPathPreviewVisible(false);
+            SetPopupMenuVisible(false);
+            SetPreparationResourcesPanelVisible(false);
         }
 
         private void SetInventoryPanelHiddenImmediate()
@@ -1311,6 +2081,11 @@ namespace SevenBattles.Preparation
             {
                 animatedRoot.localScale = _inventoryPanelBaseScale;
             }
+
+            SetTournamentPathPreviewVisible(true);
+            SetPopupMenuVisible(true);
+            SetPreparationResourcesPanelVisible(true);
+            ClearInventoryUnitPreview();
         }
 
         private void EnsureInventoryPanelStartupHidden()
@@ -1327,7 +2102,19 @@ namespace SevenBattles.Preparation
                 _inventoryPanel.SetActive(false);
             }
 
+            SetTournamentPathPreviewVisible(true);
+            SetPopupMenuVisible(true);
+            SetPreparationResourcesPanelVisible(true);
+            ClearInventoryUnitPreview();
             _inventoryPanelStartupHiddenApplied = true;
+        }
+
+        private void EnsureDefaultPreparationViewVisible()
+        {
+            SetTournamentPathPreviewVisible(true);
+            SetPopupMenuVisible(true);
+            SetPreparationResourcesPanelVisible(true);
+            ClearInventoryUnitPreview();
         }
 
         private System.Collections.IEnumerator SwitchPanelsCinematicRoutine(bool toInventory, float halfDuration)
@@ -1653,6 +2440,323 @@ namespace SevenBattles.Preparation
             {
                 _panelSwitchOverlayCanvasGroup.gameObject.SetActive(false);
             }
+        }
+
+        private static void SetInventoryPreviewFrontIdle(GameObject instance)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+
+            SetCharacter4DDirection(instance, Vector2.down);
+            TryPlayInventoryPreviewIdle(instance);
+        }
+
+        private static void SetCharacter4DDirection(GameObject instance, Vector2 direction)
+        {
+            if (instance == null)
+            {
+                return;
+            }
+
+            try
+            {
+                MonoBehaviour[] components = instance.GetComponentsInChildren<MonoBehaviour>(true);
+                for (int i = 0; i < components.Length; i++)
+                {
+                    MonoBehaviour component = components[i];
+                    if (component == null)
+                    {
+                        continue;
+                    }
+
+                    System.Type type = component.GetType();
+                    if (type.Name != "Character4D" &&
+                        type.FullName != "Assets.HeroEditor4D.Common.Scripts.CharacterScripts.Character4D")
+                    {
+                        continue;
+                    }
+
+                    System.Reflection.MethodInfo setDirection = type.GetMethod(
+                        "SetDirection",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+                        null,
+                        new[] { typeof(Vector2) },
+                        null);
+                    if (setDirection == null)
+                    {
+                        return;
+                    }
+
+                    setDirection.Invoke(component, new object[] { direction });
+                    return;
+                }
+            }
+            catch
+            {
+                // Ignore reflection failures for non-HeroEditor prefabs.
+            }
+        }
+
+        private static bool TryPlayInventoryPreviewIdle(GameObject instance)
+        {
+            if (instance == null)
+            {
+                return false;
+            }
+
+            object animationManager = null;
+            try
+            {
+                MonoBehaviour[] components = instance.GetComponentsInChildren<MonoBehaviour>(true);
+                for (int i = 0; i < components.Length; i++)
+                {
+                    MonoBehaviour component = components[i];
+                    if (component == null)
+                    {
+                        continue;
+                    }
+
+                    System.Type type = component.GetType();
+                    if (type.Name == "AnimationManager" ||
+                        type.FullName == "Assets.HeroEditor4D.Common.Scripts.CharacterScripts.AnimationManager")
+                    {
+                        animationManager = component;
+                        break;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore reflection failures for non-HeroEditor prefabs.
+            }
+
+            if (animationManager != null && TryInvokeIdleOnAnimationManager(animationManager))
+            {
+                return true;
+            }
+
+            Animator animator = instance.GetComponentInChildren<Animator>(true);
+            if (animator == null)
+            {
+                return false;
+            }
+
+            int idleHash = Animator.StringToHash("Idle");
+            if (animator.HasState(0, idleHash))
+            {
+                animator.Play(idleHash, 0, 0f);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryInvokeIdleOnAnimationManager(object animationManager)
+        {
+            if (animationManager == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                System.Type managerType = animationManager.GetType();
+                System.Reflection.MethodInfo idleMethod = managerType.GetMethod(
+                    "Idle",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance,
+                    null,
+                    System.Type.EmptyTypes,
+                    null);
+                if (idleMethod != null)
+                {
+                    idleMethod.Invoke(animationManager, null);
+                    return true;
+                }
+
+                System.Reflection.MethodInfo[] methods = managerType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                for (int i = 0; i < methods.Length; i++)
+                {
+                    System.Reflection.MethodInfo method = methods[i];
+                    if (!string.Equals(method.Name, "SetState", System.StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    System.Reflection.ParameterInfo[] parameters = method.GetParameters();
+                    if (parameters.Length != 1)
+                    {
+                        continue;
+                    }
+
+                    System.Type enumType = parameters[0].ParameterType;
+                    if (!enumType.IsEnum)
+                    {
+                        continue;
+                    }
+
+                    if (enumType.FullName != "Assets.HeroEditor4D.Common.Scripts.Enums.CharacterState" && enumType.Name != "CharacterState")
+                    {
+                        continue;
+                    }
+
+                    object enumValue = System.Enum.Parse(enumType, "Idle", true);
+                    method.Invoke(animationManager, new[] { enumValue });
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+
+            return false;
+        }
+
+        private void TryAutoFitInventoryPreviewScale(Transform previewTransform)
+        {
+            if (!_inventoryUnitPreviewAutoFitScale || previewTransform == null)
+            {
+                return;
+            }
+
+            if (!TryGetInventoryPreviewBounds(previewTransform.gameObject, out Bounds previewBounds))
+            {
+                return;
+            }
+
+            if (!TryGetInventoryPreviewCamera(out Camera previewCamera))
+            {
+                return;
+            }
+
+            float currentScreenHeight = GetBoundsScreenHeight(previewBounds, previewCamera);
+            if (currentScreenHeight <= 0.01f)
+            {
+                return;
+            }
+
+            float anchorScreenHeight = GetAnchorScreenHeight();
+            if (anchorScreenHeight <= 0.01f)
+            {
+                return;
+            }
+
+            float targetFill = Mathf.Clamp(_inventoryUnitPreviewAutoFitFill, 0.2f, 1.2f);
+            float targetScreenHeight = anchorScreenHeight * targetFill;
+            float rawMultiplier = targetScreenHeight / currentScreenHeight;
+            float minMultiplier = Mathf.Max(0.01f, _inventoryUnitPreviewAutoFitMinScaleMultiplier);
+            float maxMultiplier = Mathf.Max(minMultiplier, _inventoryUnitPreviewAutoFitMaxScaleMultiplier);
+            float multiplier = Mathf.Clamp(rawMultiplier, minMultiplier, maxMultiplier);
+
+            previewTransform.localScale = previewTransform.localScale * multiplier;
+            if (_inventoryUnitPreviewDiagnostics)
+            {
+                SBLog.Info(
+                    $"PreparationPopupMenu: Inventory preview auto-fit currentPx={currentScreenHeight:0.##}, anchorPx={anchorScreenHeight:0.##}, multiplier={multiplier:0.###}, finalScale={previewTransform.localScale}.",
+                    this);
+            }
+        }
+
+        private bool TryGetInventoryPreviewCamera(out Camera camera)
+        {
+            camera = null;
+
+            Canvas inventoryCanvas = _inventoryPanelAnimatedRoot != null
+                ? _inventoryPanelAnimatedRoot.GetComponent<Canvas>()
+                : null;
+            if (inventoryCanvas == null && _inventoryPanel != null)
+            {
+                inventoryCanvas = _inventoryPanel.GetComponentInChildren<Canvas>(true);
+            }
+
+            if (inventoryCanvas != null && inventoryCanvas.worldCamera != null && inventoryCanvas.worldCamera.isActiveAndEnabled)
+            {
+                camera = inventoryCanvas.worldCamera;
+                return true;
+            }
+
+            if (_inventoryPanelRenderCamera != null && _inventoryPanelRenderCamera.isActiveAndEnabled)
+            {
+                camera = _inventoryPanelRenderCamera;
+                return true;
+            }
+
+            camera = Camera.main;
+            if (camera != null && camera.isActiveAndEnabled)
+            {
+                return true;
+            }
+
+            camera = UnityEngine.Object.FindFirstObjectByType<Camera>();
+            return camera != null && camera.isActiveAndEnabled;
+        }
+
+        private static bool TryGetInventoryPreviewBounds(GameObject instance, out Bounds bounds)
+        {
+            bounds = default;
+            if (instance == null)
+            {
+                return false;
+            }
+
+            Renderer[] renderers = instance.GetComponentsInChildren<Renderer>(true);
+            bool hasBounds = false;
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                Renderer renderer = renderers[i];
+                if (renderer == null || !renderer.enabled)
+                {
+                    continue;
+                }
+
+                if (!hasBounds)
+                {
+                    bounds = renderer.bounds;
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(renderer.bounds);
+                }
+            }
+
+            return hasBounds;
+        }
+
+        private float GetAnchorScreenHeight()
+        {
+            if (_inventoryUnitPreviewAnchor == null)
+            {
+                return 0f;
+            }
+
+            var corners = new Vector3[4];
+            _inventoryUnitPreviewAnchor.GetWorldCorners(corners);
+
+            if (!TryGetInventoryPreviewCamera(out Camera previewCamera))
+            {
+                return 0f;
+            }
+
+            Vector2 bottomScreen = RectTransformUtility.WorldToScreenPoint(previewCamera, corners[0]);
+            Vector2 topScreen = RectTransformUtility.WorldToScreenPoint(previewCamera, corners[1]);
+            return Mathf.Abs(topScreen.y - bottomScreen.y);
+        }
+
+        private static float GetBoundsScreenHeight(Bounds bounds, Camera camera)
+        {
+            if (camera == null)
+            {
+                return 0f;
+            }
+
+            Vector3 top = new Vector3(bounds.center.x, bounds.max.y, bounds.center.z);
+            Vector3 bottom = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+            Vector3 topScreen = camera.WorldToScreenPoint(top);
+            Vector3 bottomScreen = camera.WorldToScreenPoint(bottom);
+            return Mathf.Abs(topScreen.y - bottomScreen.y);
         }
 
         private void PlayClickSfx()

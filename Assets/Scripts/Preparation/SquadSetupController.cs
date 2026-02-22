@@ -48,6 +48,7 @@ namespace SevenBattles.Preparation
         public int MaxSquadSize => _squadService != null ? _squadService.MaxSquadSize : 1;
         public int ActiveSquadCount => _activeSquadLoadouts.Count;
         public bool IsSquadFull => _squadService != null && _squadService.IsSquadFull;
+        public UnitSpellLoadout SelectedUnit => _selectedLoadout;
         public IReadOnlyList<UnitSpellLoadout> AllAvailableUnits => _allAvailableLoadouts;
         public IReadOnlyList<UnitSpellLoadout> ActiveSquad => _activeSquadLoadouts;
 

@@ -9,6 +9,7 @@ namespace SevenBattles.Core
         int MaxSquadSize { get; }
         int ActiveSquadCount { get; }
         bool IsSquadFull { get; }
+        UnitSpellLoadout SelectedUnit { get; }
         IReadOnlyList<UnitSpellLoadout> AllAvailableUnits { get; }
         IReadOnlyList<UnitSpellLoadout> ActiveSquad { get; }
 

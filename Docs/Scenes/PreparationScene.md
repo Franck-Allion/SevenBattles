@@ -99,11 +99,26 @@
   - `_inventoryBackButton` -> optional explicit reference to `InventoryPanel/.../Button_Back` (`Button`) (auto-found under `InventoryPanel` when empty).
   - `_inventoryPanel` -> optional explicit reference to `InventoryPanel` root (`GameObject`) (auto-found when empty).
   - `_inventoryPanelCanvasGroup` -> optional `CanvasGroup` on `InventoryPanel/Canvas` for fade/input state (auto-added when missing).
+  - `_inventoryPanelForceCameraRenderMode` / `_inventoryPanelCameraPlaneDistance` / `_inventoryPanelRenderCamera` -> enforces `InventoryPanel/Canvas` camera render mode and near plane distance (default `1`) so world `SpriteRenderer` previews are not occluded by world content.
   - `_inventoryPanelFadeDuration` / `_inventoryPanelStartScale` / `_inventoryPanelRevealCurve` -> controls unscaled-time show/hide transition when opening from `InventoryButton` and returning via Inventory `Button_Back`.
+  - `_squadSetupController` -> optional explicit `SquadSetupController` reference used to resolve the currently selected unit for inventory preview (auto-found when empty).
+  - `_inventoryUnitPreviewAnchor` -> optional explicit `RectTransform` reference for the inventory character preview spawn point (auto-found when empty).
+  - `_inventoryUnitPreviewAnchorObjectName` -> inventory preview anchor auto-discovery name (default: `CharacterBgBottom`).
+  - `_inventoryUnitPreviewLocalPosition` / `_inventoryUnitPreviewLocalScale` -> configurable local transform offset/scale applied to the spawned selected unit preview.
+  - `_inventoryUnitPreviewWorldRoot` / `_inventoryUnitPreviewWorldOffset` -> optional world host and additional world offset for the spawned selected unit preview (runtime host is auto-created when empty).
+  - `_inventoryUnitPreviewPlaneDepthOffset` -> offsets preview depth relative to inventory canvas plane distance; negative values render closer to camera so the preview appears over the inventory layout.
+  - `_inventoryUnitPreviewSortingLayer` / `_inventoryUnitPreviewSortingOrder` -> sorting layer/order forced on spawned preview `SortingGroup` + `SpriteRenderer` so the prefab renders above inventory background widgets.
+  - `_inventoryUnitPreviewAutoFitScale` / `_inventoryUnitPreviewAutoFitFill` / `_inventoryUnitPreviewAutoFitMinScaleMultiplier` / `_inventoryUnitPreviewAutoFitMaxScaleMultiplier` -> optional on-screen auto-fit scaling so world-rendered unit prefabs remain readable inside inventory.
+  - `_inventoryUnitPreviewAsFirstSibling` -> inserts spawned preview as first child of the anchor (disabled by default so the preview is less likely to hide behind frame decorations).
+  - Inventory preview lifecycle -> runtime preview instance is cleared when inventory closes and when returning to default preparation view to prevent world-space prefab bleed-through.
+  - `_hideTournamentPathWhileInventoryVisible` / `_tournamentPathPreviewRoot` -> hides `TournamentPathPreview` while inventory is visible to prevent tournament map/world-node bleed-through under transparent inventory widgets.
+  - `_inventoryUnitPreviewDiagnostics` -> optional `SBLog` diagnostics for inventory preview spawn, world placement and auto-fit values.
   - `_panelSwitchOverlayCanvasGroup` / `_panelSwitchOverlayImage` -> optional cinematic transition veil (runtime-created when empty) used to hide scene pop-through between squad and inventory panels.
   - `_panelSwitchOverlayColor` / `_panelSwitchOverlayPeakAlpha` / `_panelSwitchHalfDuration` / `_panelSwitchCurve` -> controls the two-phase unscaled-time veil fade-in/fade-out timing.
   - `_panelSwitchIncomingOvershootScale` -> slight incoming panel scale overshoot for a more polished AAA-style reveal.
   - `_panelSwitchSlideDistanceMultiplier` / `_panelSwitchOutgoingSlideRatio` -> controls the right-to-left panel switch travel (incoming inventory/squad enters from the right while outgoing panel drifts left).
+  - `_hidePopupMenuWhileInventoryVisible` / `_popupMenuCanvasGroup` -> hides the popup HUD root containing `ShopButtonMenu` and `SquadButtonMenu` while inventory is visible to avoid overlap/display artifacts.
+  - `_hidePreparationResourcesWhileInventoryVisible` / `_preparationResourcesPanelRoot` / `_preparationResourcesPanelObjectName` / `_preparationResourcesPanelCanvasGroup` -> hides the default preparation `ResourcesPanel` (outside Inventory) while inventory is visible, without disabling runtime resource update logic.
   - `_inventoryTitleTMP` -> `InventoryPanel/Canvas/InventoryView/TopBar/Button_Back/Text_Title` (`TMP_Text`) (auto-found under `InventoryPanel` when empty).
   - `_inventoryTitleLabel` -> table `UI.Common`, key `Preparation.Inventory.Title`.
 - `SquadPanel` (`SquadSetupController`, `ActiveSquadGridView`, `AllUnitsGridView`)
@@ -144,3 +159,10 @@
   - `_animateBattleVictoryRewards` -> enabled to animate pending battle victory rewards on scene entry.
   - `_currencyNumberSpawnDepth` -> world projection depth used when converting gold/gem TMP screen positions to floating number spawn positions.
   - Debug testing (play mode): enable `_enableDebugSpawnHotkeys` and use `_debugSpawnGoldKey` / `_debugSpawnGemsKey` to spawn test floating numbers without completing a battle.
+
+### Inventory Canvas Mode
+- `InventoryPanel/Canvas`:
+  - `Canvas.m_RenderMode` -> `Screen Space - Camera`
+  - `Canvas.m_Camera` -> `Main Camera`
+  - `Canvas.m_PlaneDistance` -> `1`
+  - Rationale: allows world `SpriteRenderer` unit preview prefabs to render in front of inventory UI via sorting layer/order.
