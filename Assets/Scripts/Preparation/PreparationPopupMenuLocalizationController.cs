@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 using SevenBattles.Core.Diagnostics;
@@ -129,6 +130,8 @@ namespace SevenBattles.Preparation
         private string _inventorySelectedUnitStatsRootFallbackObjectName = "Stats2";
         [SerializeField, Tooltip("Child object name under each stat row used to resolve the numeric TMP label.")]
         private string _inventorySelectedUnitStatValueObjectName = "Value";
+        [SerializeField, Tooltip("Child object name under each stat row used to resolve the label TMP (Life, Attack, ...).")]
+        private string _inventorySelectedUnitStatLabelObjectName = "Label";
         [SerializeField, Tooltip("Local position offset applied to the spawned selected unit preview prefab.")]
         private Vector3 _inventoryUnitPreviewLocalPosition = Vector3.zero;
         [SerializeField, Tooltip("Local scale applied to the spawned selected unit preview prefab.")]
@@ -278,6 +281,7 @@ namespace SevenBattles.Preparation
             ResolvePopupMenuCanvasGroup();
             ResolvePreparationResourcesPanelCanvasGroup();
             BindLabels();
+            SubscribeLocaleChanged();
             WireHoverFeedback();
             WireSquadPanelButton();
             WireInventoryUnitPreviewSelection();
@@ -287,6 +291,7 @@ namespace SevenBattles.Preparation
 
         private void OnDisable()
         {
+            UnsubscribeLocaleChanged();
             UnbindLabels();
             UnwireHoverFeedback();
             UnwireSquadPanelButton();
@@ -1224,6 +1229,145 @@ namespace SevenBattles.Preparation
             _shopLabel?.RefreshString();
             _squadLabel?.RefreshString();
             _inventoryTitleLabel?.RefreshString();
+            RefreshInventorySelectedUnitStatLabels();
+        }
+
+        private void SubscribeLocaleChanged()
+        {
+            LocalizationSettings.SelectedLocaleChanged -= HandleSelectedLocaleChanged;
+            LocalizationSettings.SelectedLocaleChanged += HandleSelectedLocaleChanged;
+        }
+
+        private void UnsubscribeLocaleChanged()
+        {
+            LocalizationSettings.SelectedLocaleChanged -= HandleSelectedLocaleChanged;
+        }
+
+        private void HandleSelectedLocaleChanged(Locale _)
+        {
+            RefreshLabels();
+        }
+
+        private void RefreshInventorySelectedUnitStatLabels()
+        {
+            ResolveInventorySelectedUnitStatsRoot();
+            if (_inventorySelectedUnitStatsRoot == null)
+            {
+                return;
+            }
+
+            SetInventorySelectedUnitStatLabel("Life", "stats.life", "Life");
+            SetInventorySelectedUnitStatLabel("Attack", "stats.attack", "Attack");
+            SetInventorySelectedUnitStatLabel("Shoot", "stats.shoot", "Shoot");
+            SetInventorySelectedUnitStatLabel("Spell", "stats.spell", "Spell");
+            SetInventorySelectedUnitStatLabel("Speed", "stats.speed", "Speed");
+            SetInventorySelectedUnitStatLabel("Luck", "stats.luck", "Luck");
+            SetInventorySelectedUnitStatLabel("Defense", "stats.defense", "Defense");
+            SetInventorySelectedUnitStatLabel("Protection", "stats.protection", "Protection");
+            SetInventorySelectedUnitStatLabel("Initiative", "stats.initiative", "Initiative");
+            SetInventorySelectedUnitStatLabel("Morale", "stats.morale", "Morale");
+        }
+
+        private void SetInventorySelectedUnitStatLabel(string rowObjectName, string localizationKey, string fallback)
+        {
+            TMP_Text label = FindInventorySelectedUnitStatLabelText(rowObjectName);
+            if (label == null)
+            {
+                return;
+            }
+
+            label.text = GetLocalizedCommonString(localizationKey, fallback);
+        }
+
+        private TMP_Text FindInventorySelectedUnitStatLabelText(string rowObjectName)
+        {
+            if (_inventorySelectedUnitStatsRoot == null || string.IsNullOrWhiteSpace(rowObjectName))
+            {
+                return null;
+            }
+
+            Transform row = FindTransformInRoot(_inventorySelectedUnitStatsRoot.gameObject, rowObjectName);
+            if (row == null)
+            {
+                return null;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_inventorySelectedUnitStatLabelObjectName))
+            {
+                Transform labelNode = FindTransformInRoot(row.gameObject, _inventorySelectedUnitStatLabelObjectName);
+                if (labelNode != null)
+                {
+                    TMP_Text labelText = labelNode.GetComponent<TMP_Text>();
+                    if (labelText != null)
+                    {
+                        return labelText;
+                    }
+
+                    labelText = labelNode.GetComponentInChildren<TMP_Text>(true);
+                    if (labelText != null)
+                    {
+                        return labelText;
+                    }
+                }
+            }
+
+            TMP_Text[] texts = row.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < texts.Length; i++)
+            {
+                TMP_Text candidate = texts[i];
+                if (candidate == null || candidate.gameObject == null)
+                {
+                    continue;
+                }
+
+                string name = candidate.gameObject.name;
+                if (!string.IsNullOrWhiteSpace(name) &&
+                    name.IndexOf("label", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return candidate;
+                }
+            }
+
+            for (int i = 0; i < texts.Length; i++)
+            {
+                TMP_Text candidate = texts[i];
+                if (candidate == null || candidate.gameObject == null)
+                {
+                    continue;
+                }
+
+                string name = candidate.gameObject.name;
+                if (string.IsNullOrWhiteSpace(name) ||
+                    name.IndexOf("value", System.StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    return candidate;
+                }
+            }
+
+            return texts.Length > 0 ? texts[0] : null;
+        }
+
+        private static string GetLocalizedCommonString(string key, string fallback)
+        {
+            if (LocalizationSettings.StringDatabase == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                string value = LocalizationSettings.StringDatabase.GetLocalizedString(UI_COMMON_TABLE, key);
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value;
+                }
+            }
+            catch
+            {
+                // Fallback when localization system is not ready in tests/bootstrap.
+            }
+
+            return fallback;
         }
 
         private void WireHoverFeedback()

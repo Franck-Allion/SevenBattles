@@ -37,12 +37,24 @@ namespace SevenBattles.Preparation
         [SerializeField] private TMP_Text _moraleValue;
         [SerializeField] private GameObject _emptyState;
         [SerializeField] private GameObject _statsContainer;
+        [SerializeField, Tooltip("Child object name used to auto-find stat label TMP under each stat row.")]
+        private string _statLabelObjectName = "Label";
 
         private string _selectedOwnedUnitId;
         private string _editingOwnedUnitId;
         private string _displayName;
         private bool _isEditingName;
         private bool _nameEditFinalized;
+        private TMP_Text _lifeLabel;
+        private TMP_Text _attackLabel;
+        private TMP_Text _shootLabel;
+        private TMP_Text _spellLabel;
+        private TMP_Text _speedLabel;
+        private TMP_Text _luckLabel;
+        private TMP_Text _defenseLabel;
+        private TMP_Text _protectionLabel;
+        private TMP_Text _initiativeLabel;
+        private TMP_Text _moraleLabel;
 
         public event System.Action<string, string> NameCommitRequested;
 
@@ -58,11 +70,15 @@ namespace SevenBattles.Preparation
         {
             WireNameEditEvents();
             RefreshNamePlaceholder();
+            RefreshStatLabels();
+            LocalizationSettings.SelectedLocaleChanged -= HandleSelectedLocaleChanged;
+            LocalizationSettings.SelectedLocaleChanged += HandleSelectedLocaleChanged;
             ClearNameValidation();
         }
 
         private void OnDisable()
         {
+            LocalizationSettings.SelectedLocaleChanged -= HandleSelectedLocaleChanged;
             CancelNameEditSilently();
             UnwireNameEditEvents();
         }
@@ -217,6 +233,146 @@ namespace SevenBattles.Preparation
             }
 
             return definition.Id ?? string.Empty;
+        }
+
+        private void HandleSelectedLocaleChanged(Locale _)
+        {
+            RefreshNamePlaceholder();
+            RefreshStatLabels();
+        }
+
+        private void RefreshStatLabels()
+        {
+            _lifeLabel = ResolveStatLabel(_lifeValue, _lifeLabel);
+            _attackLabel = ResolveStatLabel(_attackValue, _attackLabel);
+            _shootLabel = ResolveStatLabel(_shootValue, _shootLabel);
+            _spellLabel = ResolveStatLabel(_spellValue, _spellLabel);
+            _speedLabel = ResolveStatLabel(_speedValue, _speedLabel);
+            _luckLabel = ResolveStatLabel(_luckValue, _luckLabel);
+            _defenseLabel = ResolveStatLabel(_defenseValue, _defenseLabel);
+            _protectionLabel = ResolveStatLabel(_protectionValue, _protectionLabel);
+            _initiativeLabel = ResolveStatLabel(_initiativeValue, _initiativeLabel);
+            _moraleLabel = ResolveStatLabel(_moraleValue, _moraleLabel);
+
+            SetLabelText(_lifeLabel, "stats.life", "Life");
+            SetLabelText(_attackLabel, "stats.attack", "Attack");
+            SetLabelText(_shootLabel, "stats.shoot", "Shoot");
+            SetLabelText(_spellLabel, "stats.spell", "Spell");
+            SetLabelText(_speedLabel, "stats.speed", "Speed");
+            SetLabelText(_luckLabel, "stats.luck", "Luck");
+            SetLabelText(_defenseLabel, "stats.defense", "Defense");
+            SetLabelText(_protectionLabel, "stats.protection", "Protection");
+            SetLabelText(_initiativeLabel, "stats.initiative", "Initiative");
+            SetLabelText(_moraleLabel, "stats.morale", "Morale");
+        }
+
+        private TMP_Text ResolveStatLabel(TMP_Text valueText, TMP_Text cachedLabel)
+        {
+            if (cachedLabel != null)
+            {
+                return cachedLabel;
+            }
+
+            if (valueText == null || valueText.transform == null || valueText.transform.parent == null)
+            {
+                return null;
+            }
+
+            Transform row = valueText.transform.parent;
+            if (!string.IsNullOrWhiteSpace(_statLabelObjectName))
+            {
+                Transform labelNode = FindChildByName(row, _statLabelObjectName);
+                if (labelNode != null)
+                {
+                    TMP_Text label = labelNode.GetComponent<TMP_Text>();
+                    if (label != null)
+                    {
+                        return label;
+                    }
+
+                    label = labelNode.GetComponentInChildren<TMP_Text>(true);
+                    if (label != null)
+                    {
+                        return label;
+                    }
+                }
+            }
+
+            TMP_Text[] texts = row.GetComponentsInChildren<TMP_Text>(true);
+            for (int i = 0; i < texts.Length; i++)
+            {
+                TMP_Text candidate = texts[i];
+                if (candidate == null || candidate == valueText || candidate.gameObject == null)
+                {
+                    continue;
+                }
+
+                string name = candidate.gameObject.name;
+                if (!string.IsNullOrWhiteSpace(name) &&
+                    name.IndexOf("label", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return candidate;
+                }
+            }
+
+            for (int i = 0; i < texts.Length; i++)
+            {
+                TMP_Text candidate = texts[i];
+                if (candidate != null && candidate != valueText)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static Transform FindChildByName(Transform root, string childName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(childName))
+            {
+                return null;
+            }
+
+            var nodes = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                Transform node = nodes[i];
+                if (node != null && string.Equals(node.name, childName, System.StringComparison.Ordinal))
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
+        private static void SetLabelText(TMP_Text target, string key, string fallback)
+        {
+            if (target == null)
+            {
+                return;
+            }
+
+            target.text = GetLocalizedCommonString(key, fallback);
+        }
+
+        private static string GetLocalizedCommonString(string key, string fallback)
+        {
+            if (LocalizationSettings.StringDatabase == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                string localized = LocalizationSettings.StringDatabase.GetLocalizedString(DefaultLocalizationTable, key);
+                return !string.IsNullOrWhiteSpace(localized) ? localized : fallback;
+            }
+            catch
+            {
+                return fallback;
+            }
         }
 
         private void EnsureNameDisplayRoot()

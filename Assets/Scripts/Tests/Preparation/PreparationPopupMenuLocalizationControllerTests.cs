@@ -441,5 +441,33 @@ namespace SevenBattles.Tests.Preparation
             Object.DestroyImmediate(unitDefinition);
             Object.DestroyImmediate(root);
         }
+
+        [Test]
+        public void RefreshLabels_LocalizesInventoryStatLabelObjects()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+
+            var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
+            inventoryPanel.transform.SetParent(root.transform, false);
+
+            var statsRoot = new GameObject("Stats", typeof(RectTransform));
+            statsRoot.transform.SetParent(inventoryPanel.transform, false);
+
+            var lifeRow = new GameObject("Life", typeof(RectTransform));
+            lifeRow.transform.SetParent(statsRoot.transform, false);
+            var lifeLabelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lifeLabelObject.transform.SetParent(lifeRow.transform, false);
+            var lifeLabel = lifeLabelObject.GetComponent<TextMeshProUGUI>();
+            lifeLabel.text = "OLD";
+            var lifeValueObject = new GameObject("Value", typeof(RectTransform), typeof(TextMeshProUGUI));
+            lifeValueObject.transform.SetParent(lifeRow.transform, false);
+
+            CallPrivate(controller, "RefreshLabels");
+
+            Assert.AreEqual("Life", lifeLabel.text);
+
+            Object.DestroyImmediate(root);
+        }
     }
 }

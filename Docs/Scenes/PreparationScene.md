@@ -124,14 +124,17 @@
   - `_inventorySelectedUnitNameObjectName` / `_inventorySelectedUnitNameFallbackObjectName` -> selected unit-name label auto-discovery names (defaults: `UnitName` and `NameText`).
   - `_inventorySelectedUnitStatsRoot` -> `InventoryPanel/.../Stats` (`Transform`) containing stat rows (`Life`, `Attack`, `Shoot`, `Spell`, `Speed`, `Luck`, `Defense`, `Protection`, `Initiative`, `Morale`).
   - `_inventorySelectedUnitStatsRootObjectName` / `_inventorySelectedUnitStatsRootFallbackObjectName` -> selected unit-stats root auto-discovery names (defaults: `Stats` and `Stats2`).
+  - `_inventorySelectedUnitStatLabelObjectName` -> child name used to resolve localized stat label TMPs inside each stat row (default: `Label`).
   - `_inventorySelectedUnitStatValueObjectName` -> child name used to resolve numeric TMPs inside each stat row (default: `Value`).
   - Inventory stats values use the same formula as squad details (`UnitInfoPanelView`): `UnitDefinition.LevelBonus.ApplyTo(UnitDefinition.BaseStats, loadout.EffectiveLevel)`.
+  - Inventory stats labels use `UI.Common` keys `stats.life`, `stats.attack`, `stats.shoot`, `stats.spell`, `stats.speed`, `stats.luck`, `stats.defense`, `stats.protection`, `stats.initiative`, `stats.morale` and target the per-row `Label` TMP.
   - `_inventoryTitleLabel` -> table `UI.Common`, key `Preparation.Inventory.Title`.
 - `SquadPanel` (`SquadSetupController`, `ActiveSquadGridView`, `AllUnitsGridView`)
   - `SquadSetupController` (`SquadSetupView`)
     - `_allUnitsView` -> `Top_AllSquad` (`AllUnitsGridView`).
     - `_activeSquadView` -> `Bottom_ActiveSquad` (`ActiveSquadGridView`).
     - `_unitInfoView` -> `Right_UnitInfo` (`UnitInfoPanelView`).
+    - `UnitInfoPanelView` auto-localizes stat labels from `UI.Common` (`stats.life`, `stats.attack`, `stats.shoot`, `stats.spell`, `stats.speed`, `stats.luck`, `stats.defense`, `stats.protection`, `stats.initiative`, `stats.morale`) by resolving the `Label` child in each stat row.
     - `Right_UnitInfo/NameText` is clickable and enters inline name edit mode (runtime-created TMP input field).
       - Enter or clicking outside commits rename.
       - Escape or clicking a portrait in either grid cancels the current edit.
