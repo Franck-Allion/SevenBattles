@@ -100,6 +100,10 @@
   - `_inventoryPanel` -> optional explicit reference to `InventoryPanel` root (`GameObject`) (auto-found when empty).
   - `_inventoryPanelCanvasGroup` -> optional `CanvasGroup` on `InventoryPanel/Canvas` for fade/input state (auto-added when missing).
   - `_inventoryPanelFadeDuration` / `_inventoryPanelStartScale` / `_inventoryPanelRevealCurve` -> controls unscaled-time show/hide transition when opening from `InventoryButton` and returning via Inventory `Button_Back`.
+  - `_panelSwitchOverlayCanvasGroup` / `_panelSwitchOverlayImage` -> optional cinematic transition veil (runtime-created when empty) used to hide scene pop-through between squad and inventory panels.
+  - `_panelSwitchOverlayColor` / `_panelSwitchOverlayPeakAlpha` / `_panelSwitchHalfDuration` / `_panelSwitchCurve` -> controls the two-phase unscaled-time veil fade-in/fade-out timing.
+  - `_panelSwitchIncomingOvershootScale` -> slight incoming panel scale overshoot for a more polished AAA-style reveal.
+  - `_panelSwitchSlideDistanceMultiplier` / `_panelSwitchOutgoingSlideRatio` -> controls the right-to-left panel switch travel (incoming inventory/squad enters from the right while outgoing panel drifts left).
   - `_inventoryTitleTMP` -> `InventoryPanel/Canvas/InventoryView/TopBar/Button_Back/Text_Title` (`TMP_Text`) (auto-found under `InventoryPanel` when empty).
   - `_inventoryTitleLabel` -> table `UI.Common`, key `Preparation.Inventory.Title`.
 - `SquadPanel` (`SquadSetupController`, `ActiveSquadGridView`, `AllUnitsGridView`)

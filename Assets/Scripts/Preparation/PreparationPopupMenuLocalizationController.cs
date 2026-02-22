@@ -16,6 +16,7 @@ namespace SevenBattles.Preparation
         private const string SHOP_DEFAULT_KEY = "Preparation.Popup.Shop";
         private const string SQUAD_DEFAULT_KEY = "Preparation.Popup.Squad";
         private const string INVENTORY_TITLE_DEFAULT_KEY = "Preparation.Inventory.Title";
+        private const string PANEL_SWITCH_OVERLAY_RUNTIME_NAME = "PreparationPanelSwitchOverlay_Runtime";
 
         [Header("Label Targets")]
         [SerializeField, Tooltip("TMP label shown in the Shop menu button.")]
@@ -77,6 +78,26 @@ namespace SevenBattles.Preparation
         [SerializeField, Tooltip("Easing curve used for Inventory panel reveal.")]
         private AnimationCurve _inventoryPanelRevealCurve = null;
 
+        [Header("Panel Switch FX")]
+        [SerializeField, Tooltip("Optional overlay CanvasGroup used during Squad <-> Inventory transitions. Runtime-created when null.")]
+        private CanvasGroup _panelSwitchOverlayCanvasGroup;
+        [SerializeField, Tooltip("Optional Image paired with the overlay CanvasGroup. Runtime-created when null.")]
+        private Image _panelSwitchOverlayImage;
+        [SerializeField, Tooltip("Overlay tint used for the cinematic panel switch veil.")]
+        private Color _panelSwitchOverlayColor = Color.black;
+        [SerializeField, Range(0f, 1f), Tooltip("Peak alpha reached by the panel switch veil.")]
+        private float _panelSwitchOverlayPeakAlpha = 0.78f;
+        [SerializeField, Min(0f), Tooltip("Duration in seconds for each half of the panel switch transition. Uses unscaled time.")]
+        private float _panelSwitchHalfDuration = 0.1f;
+        [SerializeField, Range(1f, 1.2f), Tooltip("Slight overshoot scale applied to the incoming panel for a premium reveal.")]
+        private float _panelSwitchIncomingOvershootScale = 1.02f;
+        [SerializeField, Tooltip("Easing curve used for the panel switch veil and incoming reveal.")]
+        private AnimationCurve _panelSwitchCurve = null;
+        [SerializeField, Min(0.2f), Tooltip("Multiplier applied to slide distance based on panel width.")]
+        private float _panelSwitchSlideDistanceMultiplier = 1.05f;
+        [SerializeField, Range(0f, 1f), Tooltip("How far the outgoing panel drifts to the left relative to full slide distance.")]
+        private float _panelSwitchOutgoingSlideRatio = 0.2f;
+
         [Header("Localization")]
         [SerializeField, Tooltip("Localized label for the Shop button.")]
         private LocalizedString _shopLabel;
@@ -123,6 +144,7 @@ namespace SevenBattles.Preparation
         private float _lastClickSfxTime = -999f;
         private Coroutine _squadPanelRoutine;
         private Coroutine _inventoryPanelRoutine;
+        private Coroutine _panelSwitchRoutine;
         private Vector3 _squadPanelBaseScale = Vector3.one;
         private Vector3 _inventoryPanelBaseScale = Vector3.one;
         private bool _squadPanelScaleCaptured;
@@ -131,6 +153,7 @@ namespace SevenBattles.Preparation
         private bool _inventoryPanelStartupHiddenApplied;
         private Transform _squadPanelAnimatedRoot;
         private Transform _inventoryPanelAnimatedRoot;
+        private Canvas _panelSwitchOverlayRuntimeCanvas;
 
         private void Awake()
         {
@@ -161,6 +184,8 @@ namespace SevenBattles.Preparation
             UnwireSquadPanelButton();
             StopSquadPanelRoutine();
             StopInventoryPanelRoutine();
+            StopPanelSwitchRoutine();
+            HidePanelSwitchOverlayImmediate();
             RestoreDefaultCursor();
         }
 
@@ -842,8 +867,7 @@ namespace SevenBattles.Preparation
             ResolveSquadPanel();
             ResolveInventoryTargets();
             PlayClickSfx();
-            HideSquadPanel();
-            ShowInventoryPanel();
+            StartPanelSwitch(toInventory: true);
         }
 
         private void HandleInventoryBackButtonClicked()
@@ -851,8 +875,55 @@ namespace SevenBattles.Preparation
             ResolveSquadPanel();
             ResolveInventoryTargets();
             PlayClickSfx();
-            HideInventoryPanel();
-            ShowSquadPanel();
+            StartPanelSwitch(toInventory: false);
+        }
+
+        private void StartPanelSwitch(bool toInventory)
+        {
+            ResolveSquadPanel();
+            ResolveInventoryTargets();
+            StopPanelSwitchRoutine();
+            StopSquadPanelRoutine();
+            StopInventoryPanelRoutine();
+
+            bool panelsReady = _squadPanel != null
+                && _squadPanelCanvasGroup != null
+                && _inventoryPanel != null
+                && _inventoryPanelCanvasGroup != null;
+            if (!panelsReady)
+            {
+                if (toInventory)
+                {
+                    HideSquadPanel();
+                    ShowInventoryPanel();
+                }
+                else
+                {
+                    HideInventoryPanel();
+                    ShowSquadPanel();
+                }
+
+                return;
+            }
+
+            float halfDuration = Mathf.Max(0f, _panelSwitchHalfDuration);
+            if (halfDuration <= 0.0001f)
+            {
+                if (toInventory)
+                {
+                    SetSquadPanelHiddenAndDisabledImmediate();
+                    SetInventoryPanelVisibleImmediate();
+                }
+                else
+                {
+                    SetInventoryPanelHiddenAndDisabledImmediate();
+                    SetSquadPanelVisibleImmediate();
+                }
+
+                return;
+            }
+
+            _panelSwitchRoutine = StartCoroutine(SwitchPanelsCinematicRoutine(toInventory, halfDuration));
         }
 
         private void ShowSquadPanel()
@@ -1257,6 +1328,331 @@ namespace SevenBattles.Preparation
             }
 
             _inventoryPanelStartupHiddenApplied = true;
+        }
+
+        private System.Collections.IEnumerator SwitchPanelsCinematicRoutine(bool toInventory, float halfDuration)
+        {
+            CanvasGroup overlay = EnsurePanelSwitchOverlay();
+            if (overlay == null)
+            {
+                if (toInventory)
+                {
+                    HideSquadPanel();
+                    ShowInventoryPanel();
+                }
+                else
+                {
+                    HideInventoryPanel();
+                    ShowSquadPanel();
+                }
+
+                _panelSwitchRoutine = null;
+                yield break;
+            }
+
+            CanvasGroup outgoingCanvasGroup = toInventory ? _squadPanelCanvasGroup : _inventoryPanelCanvasGroup;
+            CanvasGroup incomingCanvasGroup = toInventory ? _inventoryPanelCanvasGroup : _squadPanelCanvasGroup;
+            GameObject outgoingPanel = toInventory ? _squadPanel : _inventoryPanel;
+            GameObject incomingPanel = toInventory ? _inventoryPanel : _squadPanel;
+            Transform outgoingAnimatedRoot = toInventory
+                ? (_squadPanelAnimatedRoot != null ? _squadPanelAnimatedRoot : _squadPanel != null ? _squadPanel.transform : null)
+                : (_inventoryPanelAnimatedRoot != null ? _inventoryPanelAnimatedRoot : _inventoryPanel != null ? _inventoryPanel.transform : null);
+            Transform incomingAnimatedRoot = toInventory
+                ? (_inventoryPanelAnimatedRoot != null ? _inventoryPanelAnimatedRoot : _inventoryPanel != null ? _inventoryPanel.transform : null)
+                : (_squadPanelAnimatedRoot != null ? _squadPanelAnimatedRoot : _squadPanel != null ? _squadPanel.transform : null);
+
+            Vector3 outgoingBaseScale = toInventory ? _squadPanelBaseScale : _inventoryPanelBaseScale;
+            Vector3 incomingBaseScale = toInventory ? _inventoryPanelBaseScale : _squadPanelBaseScale;
+            float incomingStartScaleFactor = Mathf.Clamp(toInventory ? _inventoryPanelStartScale : _squadPanelStartScale, 0.8f, 1f);
+            float incomingOvershootScale = Mathf.Clamp(_panelSwitchIncomingOvershootScale, 1f, 1.2f);
+            float outgoingSlideRatio = Mathf.Clamp01(_panelSwitchOutgoingSlideRatio);
+            float slideDuration = Mathf.Max(0.04f, halfDuration * 2f);
+            float settleDuration = halfDuration * 0.45f;
+            float slideDistance = ResolvePanelSlideDistance(outgoingAnimatedRoot, incomingAnimatedRoot);
+
+            if (incomingPanel != null)
+            {
+                incomingPanel.transform.SetAsLastSibling();
+            }
+
+            if (outgoingPanel != null && !outgoingPanel.activeSelf)
+            {
+                outgoingPanel.SetActive(true);
+            }
+
+            if (incomingPanel != null && !incomingPanel.activeSelf)
+            {
+                incomingPanel.SetActive(true);
+            }
+
+            if (outgoingCanvasGroup != null)
+            {
+                outgoingCanvasGroup.alpha = Mathf.Clamp01(outgoingCanvasGroup.alpha);
+                outgoingCanvasGroup.interactable = false;
+                outgoingCanvasGroup.blocksRaycasts = true;
+            }
+
+            if (incomingCanvasGroup != null)
+            {
+                incomingCanvasGroup.alpha = 1f;
+                incomingCanvasGroup.interactable = false;
+                incomingCanvasGroup.blocksRaycasts = true;
+            }
+
+            if (outgoingAnimatedRoot != null)
+            {
+                outgoingAnimatedRoot.localScale = outgoingBaseScale;
+            }
+
+            float outgoingStartX = GetPanelHorizontalPosition(outgoingAnimatedRoot);
+            float incomingBaseX = GetPanelHorizontalPosition(incomingAnimatedRoot);
+            float incomingStartX = incomingBaseX + slideDistance;
+            Vector3 incomingStartScale = new Vector3(
+                incomingBaseScale.x * incomingStartScaleFactor,
+                incomingBaseScale.y * incomingStartScaleFactor,
+                incomingBaseScale.z);
+            Vector3 incomingOvershoot = incomingBaseScale * incomingOvershootScale;
+            if (incomingAnimatedRoot != null)
+            {
+                SetPanelHorizontalPosition(incomingAnimatedRoot, incomingStartX);
+                incomingAnimatedRoot.localScale = incomingStartScale;
+            }
+
+            float peakAlpha = Mathf.Clamp01(_panelSwitchOverlayPeakAlpha);
+            float t = 0f;
+            while (t < slideDuration)
+            {
+                t += Time.unscaledDeltaTime;
+                float normalized = Mathf.Clamp01(t / slideDuration);
+                float eased = EvaluateRevealCurve(_panelSwitchCurve, normalized);
+
+                float veilBlend = Mathf.Sin(normalized * Mathf.PI);
+                overlay.alpha = peakAlpha * veilBlend;
+
+                if (outgoingAnimatedRoot != null)
+                {
+                    float outgoingX = Mathf.LerpUnclamped(outgoingStartX, outgoingStartX - (slideDistance * outgoingSlideRatio), eased);
+                    SetPanelHorizontalPosition(outgoingAnimatedRoot, outgoingX);
+                }
+
+                if (incomingAnimatedRoot != null)
+                {
+                    float incomingX = Mathf.LerpUnclamped(incomingStartX, incomingBaseX, eased);
+                    SetPanelHorizontalPosition(incomingAnimatedRoot, incomingX);
+                    incomingAnimatedRoot.localScale = Vector3.LerpUnclamped(incomingStartScale, incomingOvershoot, eased);
+                }
+
+                yield return null;
+            }
+
+            if (incomingAnimatedRoot != null)
+            {
+                if (settleDuration > 0.0001f)
+                {
+                    float settleT = 0f;
+                    Vector3 settleFrom = incomingAnimatedRoot.localScale;
+                    while (settleT < settleDuration)
+                    {
+                        settleT += Time.unscaledDeltaTime;
+                        float normalized = Mathf.Clamp01(settleT / settleDuration);
+                        float eased = EvaluateRevealCurve(_panelSwitchCurve, normalized);
+                        incomingAnimatedRoot.localScale = Vector3.LerpUnclamped(settleFrom, incomingBaseScale, eased);
+                        yield return null;
+                    }
+                }
+
+                SetPanelHorizontalPosition(incomingAnimatedRoot, incomingBaseX);
+                incomingAnimatedRoot.localScale = incomingBaseScale;
+            }
+
+            if (outgoingAnimatedRoot != null)
+            {
+                SetPanelHorizontalPosition(outgoingAnimatedRoot, outgoingStartX);
+                outgoingAnimatedRoot.localScale = outgoingBaseScale;
+            }
+
+            if (toInventory)
+            {
+                SetSquadPanelHiddenAndDisabledImmediate();
+                SetInventoryPanelVisibleImmediate();
+            }
+            else
+            {
+                SetInventoryPanelHiddenAndDisabledImmediate();
+                SetSquadPanelVisibleImmediate();
+            }
+
+            HidePanelSwitchOverlayImmediate();
+            _panelSwitchRoutine = null;
+        }
+
+        private float ResolvePanelSlideDistance(Transform outgoingAnimatedRoot, Transform incomingAnimatedRoot)
+        {
+            float outgoingWidth = GetPanelWidth(outgoingAnimatedRoot);
+            float incomingWidth = GetPanelWidth(incomingAnimatedRoot);
+            float panelWidth = Mathf.Max(outgoingWidth, incomingWidth);
+            if (panelWidth <= 0.001f)
+            {
+                panelWidth = Mathf.Max(1f, Screen.width);
+            }
+
+            float multiplier = Mathf.Max(0.2f, _panelSwitchSlideDistanceMultiplier);
+            return Mathf.Max(32f, panelWidth * multiplier);
+        }
+
+        private static float GetPanelWidth(Transform panelTransform)
+        {
+            if (panelTransform is RectTransform rectTransform)
+            {
+                return Mathf.Abs(rectTransform.rect.width);
+            }
+
+            return 0f;
+        }
+
+        private static float GetPanelHorizontalPosition(Transform panelTransform)
+        {
+            if (panelTransform == null)
+            {
+                return 0f;
+            }
+
+            if (panelTransform is RectTransform rectTransform)
+            {
+                return rectTransform.anchoredPosition.x;
+            }
+
+            return panelTransform.localPosition.x;
+        }
+
+        private static void SetPanelHorizontalPosition(Transform panelTransform, float x)
+        {
+            if (panelTransform == null)
+            {
+                return;
+            }
+
+            if (panelTransform is RectTransform rectTransform)
+            {
+                Vector2 anchoredPosition = rectTransform.anchoredPosition;
+                anchoredPosition.x = x;
+                rectTransform.anchoredPosition = anchoredPosition;
+                return;
+            }
+
+            Vector3 localPosition = panelTransform.localPosition;
+            localPosition.x = x;
+            panelTransform.localPosition = localPosition;
+        }
+
+        private CanvasGroup EnsurePanelSwitchOverlay()
+        {
+            if (_panelSwitchOverlayCanvasGroup == null)
+            {
+                CreateRuntimePanelSwitchOverlay();
+            }
+
+            if (_panelSwitchOverlayCanvasGroup == null)
+            {
+                return null;
+            }
+
+            if (_panelSwitchOverlayImage == null)
+            {
+                _panelSwitchOverlayImage = _panelSwitchOverlayCanvasGroup.GetComponent<Image>();
+                if (_panelSwitchOverlayImage == null)
+                {
+                    _panelSwitchOverlayImage = _panelSwitchOverlayCanvasGroup.gameObject.AddComponent<Image>();
+                }
+            }
+
+            _panelSwitchOverlayImage.color = _panelSwitchOverlayColor;
+            _panelSwitchOverlayImage.raycastTarget = true;
+            if (!_panelSwitchOverlayCanvasGroup.gameObject.activeSelf)
+            {
+                _panelSwitchOverlayCanvasGroup.gameObject.SetActive(true);
+            }
+
+            _panelSwitchOverlayCanvasGroup.alpha = 0f;
+            _panelSwitchOverlayCanvasGroup.interactable = true;
+            _panelSwitchOverlayCanvasGroup.blocksRaycasts = true;
+            return _panelSwitchOverlayCanvasGroup;
+        }
+
+        private void CreateRuntimePanelSwitchOverlay()
+        {
+            if (_panelSwitchOverlayRuntimeCanvas != null)
+            {
+                return;
+            }
+
+            GameObject canvasObject = new GameObject(
+                PANEL_SWITCH_OVERLAY_RUNTIME_NAME,
+                typeof(RectTransform),
+                typeof(Canvas),
+                typeof(CanvasScaler),
+                typeof(GraphicRaycaster));
+
+            _panelSwitchOverlayRuntimeCanvas = canvasObject.GetComponent<Canvas>();
+            _panelSwitchOverlayRuntimeCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            _panelSwitchOverlayRuntimeCanvas.overrideSorting = true;
+            _panelSwitchOverlayRuntimeCanvas.sortingOrder = short.MaxValue - 16;
+
+            CanvasScaler canvasScaler = canvasObject.GetComponent<CanvasScaler>();
+            canvasScaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            canvasScaler.referenceResolution = new Vector2(1920f, 1080f);
+            canvasScaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+            canvasScaler.matchWidthOrHeight = 0.5f;
+
+            GameObject overlayObject = new GameObject(
+                "Overlay",
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(CanvasGroup));
+            overlayObject.transform.SetParent(canvasObject.transform, false);
+
+            RectTransform overlayRect = overlayObject.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.offsetMin = Vector2.zero;
+            overlayRect.offsetMax = Vector2.zero;
+            overlayRect.localScale = Vector3.one;
+
+            _panelSwitchOverlayCanvasGroup = overlayObject.GetComponent<CanvasGroup>();
+            _panelSwitchOverlayImage = overlayObject.GetComponent<Image>();
+            if (_panelSwitchOverlayImage != null)
+            {
+                _panelSwitchOverlayImage.color = _panelSwitchOverlayColor;
+                _panelSwitchOverlayImage.raycastTarget = true;
+            }
+
+            HidePanelSwitchOverlayImmediate();
+        }
+
+        private void StopPanelSwitchRoutine()
+        {
+            if (_panelSwitchRoutine != null)
+            {
+                StopCoroutine(_panelSwitchRoutine);
+                _panelSwitchRoutine = null;
+            }
+        }
+
+        private void HidePanelSwitchOverlayImmediate()
+        {
+            if (_panelSwitchOverlayCanvasGroup == null)
+            {
+                return;
+            }
+
+            _panelSwitchOverlayCanvasGroup.alpha = 0f;
+            _panelSwitchOverlayCanvasGroup.interactable = false;
+            _panelSwitchOverlayCanvasGroup.blocksRaycasts = false;
+            if (_panelSwitchOverlayCanvasGroup.gameObject.activeSelf)
+            {
+                _panelSwitchOverlayCanvasGroup.gameObject.SetActive(false);
+            }
         }
 
         private void PlayClickSfx()
