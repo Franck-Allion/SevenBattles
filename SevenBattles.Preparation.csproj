@@ -70,10 +70,13 @@
     <Compile Include="Assets\Scripts\Preparation\UnitDropZone.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleEllipseGizmo.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationResourcesPanelPresenter.cs" />
+    <Compile Include="Assets\Scripts\Preparation\UnitPortraitTooltipHandler.cs" />
+    <Compile Include="Assets\Scripts\Preparation\UnitTooltipView.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleMapPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationPopupMenuLocalizationController.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentOpponentHoverPanelPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationAutoSaveLoader.cs" />
+    <Compile Include="Assets\Scripts\Preparation\UnitTooltipController.cs" />
     <Compile Include="Assets\Scripts\Preparation\ActiveSquadGridView.cs" />
     <Compile Include="Assets\Scripts\Preparation\AllUnitsGridView.cs" />
     <Compile Include="Assets\Scripts\Preparation\UnitPortraitView.cs" />

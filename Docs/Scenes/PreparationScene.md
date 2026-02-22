@@ -106,6 +106,11 @@
   - `Bottom_ActiveSquad` (`ActiveSquadGridView` + `UnitDropZone`)
     - Empty-state text is driven by `_emptyLabel` and is only visible when the active squad list is empty.
     - Squad-complete feedback is driven by `UnitDropZone` completion visuals (`_completionColor`, `_completionAlpha`, `_completionScale`) rather than a dedicated full text label.
+  - Unit portrait hover tooltip (`UnitPortraitTooltipHandler` + `UnitTooltipController`)
+    - Portraits resolve tooltip ownership through a shared `UnitTooltipController` (one per root canvas).
+    - `UnitTooltipController` auto-creates a single `UnitNameTooltip` runtime view under the canvas when no authored tooltip exists.
+    - Tooltip text comes from `UnitPortraitView.DisplayName` (custom owned-unit name first, then unit definition fallback).
+    - Tooltip is hidden while `UnitDragHandler.IsDragging` is true and resumes on hover when drag ends.
 - `ResourcesPanel` (`PreparationResourcesPanelPresenter`)
   - `_playerContext` -> `Assets/Data/PlayerContext.asset`.
   - `_goldValueTMP` -> `Canvas/ResourcesPanel/Coin/CoinValue` (`TMP_Text`).

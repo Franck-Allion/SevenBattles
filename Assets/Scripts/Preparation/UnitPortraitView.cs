@@ -21,8 +21,17 @@ namespace SevenBattles.Preparation
         private readonly LocalizedString _levelLocalized = new LocalizedString(LevelTable, LevelKey);
 
         public UnitSpellLoadout Loadout { get; private set; }
+        public string DisplayName { get; private set; } = string.Empty;
 
         public event Action<UnitPortraitView> Clicked;
+
+        private void Awake()
+        {
+            if (GetComponent<UnitPortraitTooltipHandler>() == null)
+            {
+                gameObject.AddComponent<UnitPortraitTooltipHandler>();
+            }
+        }
 
         /// <summary>
         /// Applies a uniform scale for mini-portrait usage while preserving authored child layout.
@@ -46,6 +55,7 @@ namespace SevenBattles.Preparation
         public void Bind(UnitSpellLoadout loadout, string displayName = null)
         {
             Loadout = loadout;
+            DisplayName = loadout != null ? ResolveDisplayName(loadout, displayName) : string.Empty;
 
             if (_portraitImage != null)
             {
@@ -75,7 +85,7 @@ namespace SevenBattles.Preparation
                 }
                 else
                 {
-                    _nameLabel.text = ResolveDisplayName(loadout, displayName);
+                    _nameLabel.text = DisplayName;
                 }
             }
         }
@@ -83,6 +93,7 @@ namespace SevenBattles.Preparation
         public void Clear()
         {
             Loadout = null;
+            DisplayName = string.Empty;
 
             if (_portraitImage != null)
             {

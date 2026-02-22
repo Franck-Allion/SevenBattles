@@ -134,6 +134,11 @@ namespace SevenBattles.Preparation
                     dragHandler = view.gameObject.AddComponent<UnitDragHandler>();
                 }
                 dragHandler.SetDragGhostRoot(_dragGhostRoot);
+
+                if (view.GetComponent<UnitPortraitTooltipHandler>() == null)
+                {
+                    view.gameObject.AddComponent<UnitPortraitTooltipHandler>();
+                }
             }
 
             _lastCount = count;

@@ -1,4 +1,6 @@
 using NUnit.Framework;
+using SevenBattles.Core.Battle;
+using SevenBattles.Core.Units;
 using SevenBattles.Preparation;
 using TMPro;
 using UnityEngine;
@@ -21,7 +23,7 @@ namespace SevenBattles.Tests.Preparation
         [Test]
         public void ApplyGridCellLayout_ScalesRootOnly_WithoutChangingLevelLayout()
         {
-            UnitPortraitView view = BuildView(out RectTransform levelRoot, out RectTransform levelTextRect);
+            UnitPortraitView view = BuildView(out RectTransform levelRoot, out RectTransform levelTextRect, out _);
             RectTransform rootRect = (RectTransform)view.transform;
             levelRoot.anchoredPosition = new Vector2(3f, -7f);
             levelRoot.sizeDelta = new Vector2(174f, 39f);
@@ -51,7 +53,7 @@ namespace SevenBattles.Tests.Preparation
         [Test]
         public void ApplyGridCellLayout_ScalesRootUniformly()
         {
-            UnitPortraitView view = BuildView(out _, out _);
+            UnitPortraitView view = BuildView(out _, out _, out _);
 
             view.ApplyGridCellLayout(1.2f);
 
@@ -64,7 +66,7 @@ namespace SevenBattles.Tests.Preparation
         [Test]
         public void ApplyGridCellLayout_AllowsSubUnitScaleForFittedMiniPortraits()
         {
-            UnitPortraitView view = BuildView(out _, out _);
+            UnitPortraitView view = BuildView(out _, out _, out _);
 
             view.ApplyGridCellLayout(0.45f);
 
@@ -74,7 +76,59 @@ namespace SevenBattles.Tests.Preparation
             Object.DestroyImmediate(view.gameObject);
         }
 
-        private static UnitPortraitView BuildView(out RectTransform levelRoot, out RectTransform levelTextRect)
+        [Test]
+        public void Bind_ExplicitDisplayName_UpdatesDisplayNameProperty()
+        {
+            UnitPortraitView view = BuildView(out _, out _, out _);
+            UnitDefinition definition = ScriptableObject.CreateInstance<UnitDefinition>();
+            definition.Id = "unit_01";
+            definition.name = "Arcanist";
+            UnitSpellLoadout loadout = new UnitSpellLoadout { Definition = definition, Level = 2 };
+
+            view.Bind(loadout, "Raven");
+
+            Assert.AreEqual("Raven", view.DisplayName);
+
+            Object.DestroyImmediate(definition);
+            Object.DestroyImmediate(view.gameObject);
+        }
+
+        [Test]
+        public void Bind_WithoutExplicitName_UsesDefinitionName()
+        {
+            UnitPortraitView view = BuildView(out _, out _, out _);
+            UnitDefinition definition = ScriptableObject.CreateInstance<UnitDefinition>();
+            definition.Id = "unit_02";
+            definition.name = "Guardian";
+            UnitSpellLoadout loadout = new UnitSpellLoadout { Definition = definition, Level = 1 };
+
+            view.Bind(loadout);
+
+            Assert.AreEqual("Guardian", view.DisplayName);
+
+            Object.DestroyImmediate(definition);
+            Object.DestroyImmediate(view.gameObject);
+        }
+
+        [Test]
+        public void Clear_ResetsDisplayNameProperty()
+        {
+            UnitPortraitView view = BuildView(out _, out _, out _);
+            UnitDefinition definition = ScriptableObject.CreateInstance<UnitDefinition>();
+            definition.Id = "unit_03";
+            definition.name = "Invoker";
+            UnitSpellLoadout loadout = new UnitSpellLoadout { Definition = definition, Level = 4 };
+
+            view.Bind(loadout, "Echo");
+            view.Clear();
+
+            Assert.AreEqual(string.Empty, view.DisplayName);
+
+            Object.DestroyImmediate(definition);
+            Object.DestroyImmediate(view.gameObject);
+        }
+
+        private static UnitPortraitView BuildView(out RectTransform levelRoot, out RectTransform levelTextRect, out TMP_Text nameLabel)
         {
             var root = new GameObject("UnitPortrait", typeof(RectTransform), typeof(UnitPortraitView));
             var view = root.GetComponent<UnitPortraitView>();
@@ -91,8 +145,13 @@ namespace SevenBattles.Tests.Preparation
             var label = levelText.GetComponent<TextMeshProUGUI>();
             levelTextRect = levelText.GetComponent<RectTransform>();
 
+            var nameText = new GameObject("NameText", typeof(RectTransform), typeof(TextMeshProUGUI));
+            nameText.transform.SetParent(root.transform, false);
+            nameLabel = nameText.GetComponent<TextMeshProUGUI>();
+
             SetPrivate(view, "_portraitImage", portrait.GetComponent<Image>());
             SetPrivate(view, "_levelLabel", label);
+            SetPrivate(view, "_nameLabel", nameLabel);
 
             return view;
         }
