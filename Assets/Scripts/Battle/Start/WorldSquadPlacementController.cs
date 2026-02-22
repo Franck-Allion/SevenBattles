@@ -271,6 +271,35 @@ namespace SevenBattles.Battle.Start
             return UnitSpellLoadout.DefaultLevel;
         }
 
+        public string GetDisplayName(int index)
+        {
+            if (TryGetOwnedDisplayName(index, out string ownedDisplayName))
+            {
+                return ownedDisplayName;
+            }
+
+            var squad = GetPlayerSquadLoadouts();
+            if (squad != null && index >= 0 && index < squad.Count)
+            {
+                var loadout = squad[index];
+                var definition = loadout != null ? loadout.Definition : null;
+                if (definition != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(definition.name))
+                    {
+                        return definition.name;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(definition.Id))
+                    {
+                        return definition.Id;
+                    }
+                }
+            }
+
+            return string.Empty;
+        }
+
         public bool TryPlaceAt(int index, Vector2Int tile)
         {
             if (_locked) return false;
@@ -290,6 +319,48 @@ namespace SevenBattles.Battle.Start
             var squad = GetPlayerSquadLoadouts();
             int defCount = squad != null ? squad.Count : 0;
             return Mathf.Clamp(defCount, 0, 8);
+        }
+
+        private static bool TryGetOwnedDisplayName(int index, out string displayName)
+        {
+            displayName = string.Empty;
+            if (index < 0 || !PlayerContext.HasRuntimeInstance || PlayerContext.RuntimeInstance == null)
+            {
+                return false;
+            }
+
+            PlayerContext context = PlayerContext.RuntimeInstance;
+            IReadOnlyList<string> activeOwnedIds = context.ActiveSquadOwnedUnitIds;
+            if (activeOwnedIds == null || index >= activeOwnedIds.Count)
+            {
+                return false;
+            }
+
+            string ownedId = activeOwnedIds[index];
+            if (string.IsNullOrWhiteSpace(ownedId))
+            {
+                return false;
+            }
+
+            IReadOnlyList<OwnedUnitData> ownedUnits = context.OwnedUnits;
+            if (ownedUnits == null || ownedUnits.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < ownedUnits.Count; i++)
+            {
+                OwnedUnitData owned = ownedUnits[i];
+                if (owned == null || !string.Equals(owned.OwnedUnitId, ownedId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                displayName = OwnedUnitNamingPolicy.ResolveDisplayName(owned);
+                return !string.IsNullOrWhiteSpace(displayName);
+            }
+
+            return false;
         }
 
         /// <summary>

@@ -8364,6 +8364,16 @@ MonoBehaviour:
   _container: {fileID: 677899856}
   _centerSpacing: 130
   _logBindings: 1
+  _enableNameTooltip: 1
+  _nameTooltipShowDelaySeconds: 2
+  _nameTooltipOffsetX: 75
+  _nameTooltipOffsetY: 75
+  _nameTooltipEdgePadding: {x: 8, y: 8}
+  _nameTooltipTextPadding: {x: 18, y: 10}
+  _nameTooltipMinWidth: 250
+  _nameTooltipMinHeight: 75
+  _nameTooltipMaxWidth: 420
+  _logTooltip: 1
   _logSelection: 1
   references:
     version: 2
@@ -33281,7 +33291,6 @@ MonoBehaviour:
   _board: {fileID: 461991018}
   _placementHighlightMaterial: {fileID: 0}
   _sessionServiceBehaviour: {fileID: 541858501}
-  _playerSquad: {fileID: 11400000, guid: 6e9cbee2f6f2b5941a34872ce3ae56e6, type: 2}
   _playerRows: 2
   _sortingLayer: Characters
   _baseSortingOrder: 0
@@ -37569,6 +37578,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _playerContext: {fileID: 11400000, guid: c073641df4db2fd4ca1ea6cfa9b9325d, type: 2}
+  _unitRegistry: {fileID: 0}
+  _spellRegistry: {fileID: 0}
 --- !u!1 &2101619736
 GameObject:
   m_ObjectHideFlags: 0

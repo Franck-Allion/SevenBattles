@@ -155,6 +155,10 @@ When adding new functionality, prefer extending these areas instead of inventing
 
 - `SquadPlacementHUD` (under `SquadPlacementHUD` root)
   - Should be wired to the placement controller (`WorldSquadPlacementController` under `_System`) rather than talking directly to board/unit components.
+  - Portrait hover name tooltip is runtime-wired by `SquadPlacementHUD`:
+    - Hovering `SquadPlacement/Unit0..Unit7/Portrait0..Portrait7` shows a cursor-following tooltip (`SquadPlacementNameTooltip`) on the root canvas.
+    - Tooltip text comes from `ISquadPlacementController.GetDisplayName(index)` (owned-unit custom name first via `PlayerContext`, then unit definition fallback).
+    - Show timing uses unscaled hover delay (`_nameTooltipShowDelaySeconds`, default `1.0`) and position tuning via `_nameTooltipOffsetX` / `_nameTooltipOffsetY`.
 
 - `BattleSpellsHUD` (under `BattleHUD/SpellsContainer`)
   - `_controllerBehaviour` → reference to a component implementing `ITurnOrderController` (e.g., `SimpleTurnOrderController` under `_System`).

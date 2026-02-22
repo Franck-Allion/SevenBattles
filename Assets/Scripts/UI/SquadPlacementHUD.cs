@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization;
+using UnityEngine.EventSystems;
 using TMPro;
 using SevenBattles.Core;
 
@@ -75,6 +77,39 @@ namespace SevenBattles.UI
         private float _centerSpacing = 130f;
         [SerializeField, Tooltip("When enabled, logs portrait binding/visibility decisions for debugging.")]
         private bool _logBindings;
+        [Header("Name Tooltip")]
+        [SerializeField, Tooltip("When enabled, hovering a portrait during placement shows the unit display name near the cursor.")]
+        private bool _enableNameTooltip = true;
+        [SerializeField, Min(0f), Tooltip("Delay (seconds, unscaled time) before showing the tooltip on hover. Matches Squad menu behavior.")]
+        private float _nameTooltipShowDelaySeconds = 1f;
+        [SerializeField, Tooltip("Tooltip horizontal offset from cursor in canvas coordinates.")]
+        private float _nameTooltipOffsetX = 16f;
+        [SerializeField, Tooltip("Tooltip vertical offset from cursor in canvas coordinates.")]
+        private float _nameTooltipOffsetY = -20f;
+        [SerializeField, Tooltip("Minimum edge padding from the canvas bounds.")]
+        private Vector2 _nameTooltipEdgePadding = new Vector2(8f, 8f);
+        [SerializeField, Tooltip("Text padding inside the tooltip background.")]
+        private Vector2 _nameTooltipTextPadding = new Vector2(18f, 10f);
+        [SerializeField, Min(1f)] private float _nameTooltipMinWidth = 80f;
+        [SerializeField, Min(1f)] private float _nameTooltipMinHeight = 36f;
+        [SerializeField, Min(1f)] private float _nameTooltipMaxWidth = 420f;
+        [SerializeField, Tooltip("When enabled, logs tooltip show/hide diagnostics.")]
+        private bool _logTooltip;
+
+        private readonly List<PortraitHoverForwarder> _portraitHoverForwarders = new List<PortraitHoverForwarder>(8);
+        private RectTransform _tooltipCanvasRect;
+        private RectTransform _nameTooltipRect;
+        private CanvasGroup _nameTooltipCanvasGroup;
+        private Image _nameTooltipBackground;
+        private TMP_Text _nameTooltipLabel;
+        private string _nameTooltipText = string.Empty;
+        private int _hoveredPortraitIndex = -1;
+        private bool _nameTooltipShowPending;
+        private int _pendingTooltipIndex = -1;
+        private float _pendingTooltipShowTime;
+        private string _pendingTooltipText = string.Empty;
+        private bool _createdRuntimeTooltip;
+        private bool _loggedMissingTooltipCanvas;
 
         private void Awake()
         {
@@ -108,6 +143,7 @@ namespace SevenBattles.UI
 
         private void OnDisable()
         {
+            HideNameTooltip();
             if (_controller == null) return;
             _controller.WizardSelected -= HandleSelected;
             _controller.WizardPlaced -= HandlePlaced;
@@ -116,6 +152,40 @@ namespace SevenBattles.UI
             _controller.PlacementLocked -= HandlePlacementLocked;
             TeardownStartButtonLocalization();
             TeardownInstructionLocalization();
+        }
+
+        private void LateUpdate()
+        {
+            ProcessPendingTooltipShow();
+
+            if (!IsNameTooltipVisible())
+            {
+                return;
+            }
+
+            if (_controller != null && _controller.IsLocked)
+            {
+                HideNameTooltip();
+                return;
+            }
+
+            UpdateNameTooltipPosition();
+        }
+
+        private void OnDestroy()
+        {
+            if (!_createdRuntimeTooltip || _nameTooltipRect == null)
+            {
+                return;
+            }
+
+            if (Application.isPlaying)
+            {
+                Destroy(_nameTooltipRect.gameObject);
+                return;
+            }
+
+            DestroyImmediate(_nameTooltipRect.gameObject);
         }
 
         private void WireButtons()
@@ -136,6 +206,7 @@ namespace SevenBattles.UI
                         var img = FindPortraitImage(_portraitButtons[i].transform);
                         var sprite = _controller != null ? _controller.GetPortrait(idx) : null;
                         if (img != null && sprite != null) img.sprite = sprite;
+                        RegisterPortraitHover(_portraitButtons[i], idx);
                     }
                 }
             }
@@ -237,6 +308,10 @@ namespace SevenBattles.UI
             {
                 _portraitButtons[index].gameObject.SetActive(false);
             }
+            if (_hoveredPortraitIndex == index)
+            {
+                HideNameTooltip();
+            }
             UpdateLevelLabel(index, false);
             CenterActivePortraits();
             // If the placed wizard was selected, clear selection glow
@@ -326,7 +401,14 @@ namespace SevenBattles.UI
                 }
 
                 // Ensure highlight is off when this entry isn't currently usable
-                if (!visible) SetHighlightActive(i, false);
+                if (!visible)
+                {
+                    SetHighlightActive(i, false);
+                    if (_hoveredPortraitIndex == i)
+                    {
+                        HideNameTooltip();
+                    }
+                }
             }
             if (recenter) CenterActivePortraits();
         }
@@ -451,6 +533,353 @@ namespace SevenBattles.UI
             return root.GetComponent<Image>();
         }
 
+        private void RegisterPortraitHover(Button button, int index)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            var forwarder = button.GetComponent<PortraitHoverForwarder>();
+            if (forwarder == null)
+            {
+                forwarder = button.gameObject.AddComponent<PortraitHoverForwarder>();
+            }
+
+            forwarder.Configure(this, index);
+            if (!_portraitHoverForwarders.Contains(forwarder))
+            {
+                _portraitHoverForwarders.Add(forwarder);
+            }
+        }
+
+        private void HandlePortraitPointerEnter(int index)
+        {
+            if (!_enableNameTooltip || _controller == null || _controller.IsLocked)
+            {
+                return;
+            }
+
+            string displayName = _controller.GetDisplayName(index);
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                HideNameTooltip();
+                return;
+            }
+
+            if (!EnsureNameTooltipReady())
+            {
+                return;
+            }
+
+            _hoveredPortraitIndex = index;
+            if (_nameTooltipShowDelaySeconds <= 0f)
+            {
+                CancelPendingTooltipShow();
+                ShowNameTooltipNow(index, displayName);
+                return;
+            }
+
+            HideVisibleNameTooltip();
+            _pendingTooltipIndex = index;
+            _pendingTooltipText = displayName;
+            _pendingTooltipShowTime = Time.unscaledTime + _nameTooltipShowDelaySeconds;
+            _nameTooltipShowPending = true;
+
+            if (_logTooltip)
+            {
+                SBLog.Info(
+                    $"SquadPlacementHUD: Scheduled name tooltip '{displayName}' for slot {index} in {_nameTooltipShowDelaySeconds:0.###}s.",
+                    this);
+            }
+        }
+
+        private void HandlePortraitPointerExit(int index)
+        {
+            if (index != _hoveredPortraitIndex)
+            {
+                return;
+            }
+
+            HideNameTooltip();
+        }
+
+        private bool EnsureNameTooltipReady()
+        {
+            if (_nameTooltipRect != null && _nameTooltipCanvasGroup != null && _nameTooltipLabel != null && _tooltipCanvasRect != null)
+            {
+                return true;
+            }
+
+            Canvas canvas = GetComponentInParent<Canvas>();
+            if (canvas == null)
+            {
+                canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+            }
+
+            Canvas rootCanvas = canvas != null ? (canvas.isRootCanvas ? canvas : canvas.rootCanvas) : null;
+            if (rootCanvas == null)
+            {
+                if (!_loggedMissingTooltipCanvas)
+                {
+                    _loggedMissingTooltipCanvas = true;
+                    SBLog.Warn("SquadPlacementHUD: Unable to resolve a canvas for portrait name tooltip.", this);
+                }
+
+                return false;
+            }
+
+            _loggedMissingTooltipCanvas = false;
+            _tooltipCanvasRect = rootCanvas.transform as RectTransform;
+
+            if (_nameTooltipRect == null)
+            {
+                var tooltipObject = new GameObject(
+                    "SquadPlacementNameTooltip",
+                    typeof(RectTransform),
+                    typeof(CanvasGroup),
+                    typeof(Image));
+
+                tooltipObject.layer = rootCanvas.gameObject.layer;
+                _nameTooltipRect = tooltipObject.GetComponent<RectTransform>();
+                _nameTooltipCanvasGroup = tooltipObject.GetComponent<CanvasGroup>();
+                _nameTooltipBackground = tooltipObject.GetComponent<Image>();
+                _nameTooltipRect.SetParent(rootCanvas.transform, false);
+                _nameTooltipRect.anchorMin = new Vector2(0.5f, 0.5f);
+                _nameTooltipRect.anchorMax = new Vector2(0.5f, 0.5f);
+                _nameTooltipRect.pivot = new Vector2(0.5f, 0.5f);
+                _nameTooltipRect.anchoredPosition = Vector2.zero;
+                _nameTooltipRect.sizeDelta = new Vector2(1f, 1f);
+
+                var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                labelObject.layer = tooltipObject.layer;
+                RectTransform labelRect = labelObject.GetComponent<RectTransform>();
+                labelRect.SetParent(_nameTooltipRect, false);
+                labelRect.anchorMin = Vector2.zero;
+                labelRect.anchorMax = Vector2.one;
+                labelRect.offsetMin = Vector2.zero;
+                labelRect.offsetMax = Vector2.zero;
+                _nameTooltipLabel = labelObject.GetComponent<TextMeshProUGUI>();
+                _createdRuntimeTooltip = true;
+            }
+
+            if (_nameTooltipBackground != null)
+            {
+                _nameTooltipBackground.raycastTarget = false;
+                _nameTooltipBackground.color = new Color32(24, 28, 35, 235);
+            }
+
+            if (_nameTooltipLabel != null)
+            {
+                _nameTooltipLabel.raycastTarget = false;
+                _nameTooltipLabel.textWrappingMode = TextWrappingModes.NoWrap;
+                _nameTooltipLabel.overflowMode = TextOverflowModes.Overflow;
+                _nameTooltipLabel.alignment = TextAlignmentOptions.Center;
+                _nameTooltipLabel.color = Color.white;
+            }
+
+            HideVisibleNameTooltip();
+            return _nameTooltipRect != null && _nameTooltipCanvasGroup != null && _nameTooltipLabel != null;
+        }
+
+        private void ResizeNameTooltipToContent()
+        {
+            if (_nameTooltipRect == null || _nameTooltipLabel == null)
+            {
+                return;
+            }
+
+            RectTransform labelRect = _nameTooltipLabel.rectTransform;
+            float halfPadX = _nameTooltipTextPadding.x * 0.5f;
+            float halfPadY = _nameTooltipTextPadding.y * 0.5f;
+            labelRect.anchorMin = Vector2.zero;
+            labelRect.anchorMax = Vector2.one;
+            labelRect.offsetMin = new Vector2(halfPadX, halfPadY);
+            labelRect.offsetMax = new Vector2(-halfPadX, -halfPadY);
+
+            Vector2 preferred = _nameTooltipLabel.GetPreferredValues(_nameTooltipText, _nameTooltipMaxWidth, 0f);
+            float width = Mathf.Clamp(preferred.x + _nameTooltipTextPadding.x, _nameTooltipMinWidth, _nameTooltipMaxWidth);
+            float height = Mathf.Max(_nameTooltipMinHeight, preferred.y + _nameTooltipTextPadding.y);
+
+            _nameTooltipRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
+            _nameTooltipRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
+        }
+
+        private void UpdateNameTooltipPosition()
+        {
+            if (_nameTooltipRect == null || _tooltipCanvasRect == null)
+            {
+                return;
+            }
+
+            Camera eventCamera = ResolveTooltipEventCamera();
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                    _tooltipCanvasRect,
+                    Input.mousePosition,
+                    eventCamera,
+                    out Vector2 localPoint))
+            {
+                return;
+            }
+
+            Vector2 tooltipSize = _nameTooltipRect.rect.size;
+            Vector2 tooltipPivot = _nameTooltipRect.pivot;
+            Rect canvasBounds = _tooltipCanvasRect.rect;
+            Vector2 desired = localPoint + new Vector2(_nameTooltipOffsetX, _nameTooltipOffsetY);
+
+            float minX = canvasBounds.xMin + (tooltipSize.x * tooltipPivot.x) + _nameTooltipEdgePadding.x;
+            float maxX = canvasBounds.xMax - (tooltipSize.x * (1f - tooltipPivot.x)) - _nameTooltipEdgePadding.x;
+            float minY = canvasBounds.yMin + (tooltipSize.y * tooltipPivot.y) + _nameTooltipEdgePadding.y;
+            float maxY = canvasBounds.yMax - (tooltipSize.y * (1f - tooltipPivot.y)) - _nameTooltipEdgePadding.y;
+
+            if (minX > maxX)
+            {
+                float midX = (canvasBounds.xMin + canvasBounds.xMax) * 0.5f;
+                minX = midX;
+                maxX = midX;
+            }
+
+            if (minY > maxY)
+            {
+                float midY = (canvasBounds.yMin + canvasBounds.yMax) * 0.5f;
+                minY = midY;
+                maxY = midY;
+            }
+
+            desired.x = Mathf.Clamp(desired.x, minX, maxX);
+            desired.y = Mathf.Clamp(desired.y, minY, maxY);
+
+            Vector3 worldPoint = _tooltipCanvasRect.TransformPoint(new Vector3(desired.x, desired.y, 0f));
+            _nameTooltipRect.position = worldPoint;
+        }
+
+        private Camera ResolveTooltipEventCamera()
+        {
+            if (_tooltipCanvasRect == null)
+            {
+                return null;
+            }
+
+            var canvas = _tooltipCanvasRect.GetComponent<Canvas>();
+            if (canvas == null || canvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                return null;
+            }
+
+            if (canvas.worldCamera != null)
+            {
+                return canvas.worldCamera;
+            }
+
+            var raycaster = canvas.GetComponent<GraphicRaycaster>();
+            if (raycaster != null && raycaster.eventCamera != null)
+            {
+                return raycaster.eventCamera;
+            }
+
+            return Camera.main;
+        }
+
+        private bool IsNameTooltipVisible()
+        {
+            return _nameTooltipCanvasGroup != null && _nameTooltipCanvasGroup.alpha > 0.001f;
+        }
+
+        private void ProcessPendingTooltipShow()
+        {
+            if (!_nameTooltipShowPending)
+            {
+                return;
+            }
+
+            if (!_enableNameTooltip || _controller == null || _controller.IsLocked)
+            {
+                HideNameTooltip();
+                return;
+            }
+
+            if (_pendingTooltipIndex < 0 || _pendingTooltipIndex != _hoveredPortraitIndex)
+            {
+                CancelPendingTooltipShow();
+                return;
+            }
+
+            if (Time.unscaledTime < _pendingTooltipShowTime)
+            {
+                return;
+            }
+
+            string text = _pendingTooltipText;
+            int index = _pendingTooltipIndex;
+            CancelPendingTooltipShow();
+
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                HideNameTooltip();
+                return;
+            }
+
+            ShowNameTooltipNow(index, text);
+        }
+
+        private void ShowNameTooltipNow(int index, string text)
+        {
+            if (!EnsureNameTooltipReady())
+            {
+                return;
+            }
+
+            _hoveredPortraitIndex = index;
+            if (!string.Equals(_nameTooltipText, text, StringComparison.Ordinal))
+            {
+                _nameTooltipText = text;
+                _nameTooltipLabel.SetText(_nameTooltipText);
+                ResizeNameTooltipToContent();
+            }
+
+            _nameTooltipRect.SetAsLastSibling();
+            _nameTooltipCanvasGroup.alpha = 1f;
+            _nameTooltipCanvasGroup.interactable = false;
+            _nameTooltipCanvasGroup.blocksRaycasts = false;
+            UpdateNameTooltipPosition();
+
+            if (_logTooltip)
+            {
+                SBLog.Info($"SquadPlacementHUD: Show name tooltip '{text}' for slot {index}.", this);
+            }
+        }
+
+        private void CancelPendingTooltipShow()
+        {
+            _nameTooltipShowPending = false;
+            _pendingTooltipIndex = -1;
+            _pendingTooltipShowTime = 0f;
+            _pendingTooltipText = string.Empty;
+        }
+
+        private void HideVisibleNameTooltip()
+        {
+            _nameTooltipText = string.Empty;
+            if (_nameTooltipCanvasGroup != null)
+            {
+                _nameTooltipCanvasGroup.alpha = 0f;
+                _nameTooltipCanvasGroup.interactable = false;
+                _nameTooltipCanvasGroup.blocksRaycasts = false;
+            }
+        }
+
+        private void HideNameTooltip()
+        {
+            CancelPendingTooltipShow();
+            _hoveredPortraitIndex = -1;
+            HideVisibleNameTooltip();
+
+            if (_logTooltip)
+            {
+                SBLog.Info("SquadPlacementHUD: Hide name tooltip.", this);
+            }
+        }
+
         [SerializeField, Tooltip("When enabled, logs selection/highlight operations.")]
         private bool _logSelection;
 
@@ -541,6 +970,8 @@ namespace SevenBattles.UI
 
         private void HandlePlacementLocked()
         {
+            HideNameTooltip();
+
             // Play confirm SFX
             if (_startClip != null)
             {
@@ -580,6 +1011,8 @@ namespace SevenBattles.UI
 
         public void EnterBattleModeFromLoad()
         {
+            HideNameTooltip();
+
             // Hide Start button immediately
             if (_startBattleButton != null)
             {
@@ -659,6 +1092,33 @@ namespace SevenBattles.UI
             if (target != null && target.activeSelf != visible)
             {
                 target.SetActive(visible);
+            }
+        }
+
+        private sealed class PortraitHoverForwarder : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+        {
+            private SquadPlacementHUD _owner;
+            private int _slotIndex;
+
+            public void Configure(SquadPlacementHUD owner, int slotIndex)
+            {
+                _owner = owner;
+                _slotIndex = slotIndex;
+            }
+
+            public void OnPointerEnter(PointerEventData eventData)
+            {
+                _owner?.HandlePortraitPointerEnter(_slotIndex);
+            }
+
+            public void OnPointerExit(PointerEventData eventData)
+            {
+                _owner?.HandlePortraitPointerExit(_slotIndex);
+            }
+
+            private void OnDisable()
+            {
+                _owner?.HandlePortraitPointerExit(_slotIndex);
             }
         }
     }
