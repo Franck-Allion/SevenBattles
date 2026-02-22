@@ -207,6 +207,11 @@ namespace SevenBattles.Preparation
             UnitSelected?.Invoke(null);
         }
 
+        public string ResolveDisplayName(UnitSpellLoadout loadout)
+        {
+            return ResolveDisplayNameForLoadout(loadout);
+        }
+
         private void WireEvents()
         {
             if (_eventsWired || _squadService == null)

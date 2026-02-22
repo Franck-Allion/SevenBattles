@@ -114,6 +114,12 @@ namespace SevenBattles.Preparation
         private RectTransform _inventoryUnitPreviewAnchor;
         [SerializeField, Tooltip("Object name used to auto-find the selected unit preview anchor under InventoryPanel.")]
         private string _inventoryUnitPreviewAnchorObjectName = "CharacterBgBottom";
+        [SerializeField, Tooltip("Optional TMP label under InventoryView/Character used to display the currently selected unit name.")]
+        private TMP_Text _inventorySelectedUnitNameTMP;
+        [SerializeField, Tooltip("Object name used to auto-find the selected unit name label under InventoryPanel.")]
+        private string _inventorySelectedUnitNameObjectName = "UnitName";
+        [SerializeField, Tooltip("Fallback object name used when the primary selected unit name label cannot be found.")]
+        private string _inventorySelectedUnitNameFallbackObjectName = "NameText";
         [SerializeField, Tooltip("Local position offset applied to the spawned selected unit preview prefab.")]
         private Vector3 _inventoryUnitPreviewLocalPosition = Vector3.zero;
         [SerializeField, Tooltip("Local scale applied to the spawned selected unit preview prefab.")]
@@ -436,6 +442,7 @@ namespace SevenBattles.Preparation
                 _inventoryTitleTMP = FindTextInRoot(_inventoryPanel, _inventoryTitleObjectName);
             }
 
+            ResolveInventorySelectedUnitNameLabel();
             ResolveInventoryUnitPreviewAnchor();
         }
 
@@ -475,6 +482,42 @@ namespace SevenBattles.Preparation
             if (anchorObject != null)
             {
                 _inventoryUnitPreviewAnchor = anchorObject.GetComponent<RectTransform>();
+            }
+        }
+
+        private void ResolveInventorySelectedUnitNameLabel()
+        {
+            if (_inventorySelectedUnitNameTMP != null)
+            {
+                return;
+            }
+
+            if (_inventoryPanel != null)
+            {
+                _inventorySelectedUnitNameTMP = FindTextInRoot(_inventoryPanel, _inventorySelectedUnitNameObjectName);
+                if (_inventorySelectedUnitNameTMP == null &&
+                    !string.IsNullOrWhiteSpace(_inventorySelectedUnitNameFallbackObjectName) &&
+                    !string.Equals(_inventorySelectedUnitNameObjectName, _inventorySelectedUnitNameFallbackObjectName, System.StringComparison.Ordinal))
+                {
+                    _inventorySelectedUnitNameTMP = FindTextInRoot(_inventoryPanel, _inventorySelectedUnitNameFallbackObjectName);
+                }
+            }
+
+            if (_inventorySelectedUnitNameTMP != null)
+            {
+                return;
+            }
+
+            _inventorySelectedUnitNameTMP = FindTextByNameInSceneRoot(_inventorySelectedUnitNameObjectName);
+            if (_inventorySelectedUnitNameTMP != null)
+            {
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(_inventorySelectedUnitNameFallbackObjectName) &&
+                !string.Equals(_inventorySelectedUnitNameObjectName, _inventorySelectedUnitNameFallbackObjectName, System.StringComparison.Ordinal))
+            {
+                _inventorySelectedUnitNameTMP = FindTextByNameInSceneRoot(_inventorySelectedUnitNameFallbackObjectName);
             }
         }
 
@@ -1016,6 +1059,28 @@ namespace SevenBattles.Preparation
             return null;
         }
 
+        private TMP_Text FindTextByNameInSceneRoot(string textObjectName)
+        {
+            if (string.IsNullOrWhiteSpace(textObjectName))
+            {
+                return null;
+            }
+
+            GameObject textObject = FindObjectByNameInSceneRoot(textObjectName);
+            if (textObject == null)
+            {
+                return null;
+            }
+
+            TMP_Text text = textObject.GetComponent<TMP_Text>();
+            if (text != null)
+            {
+                return text;
+            }
+
+            return textObject.GetComponentInChildren<TMP_Text>(true);
+        }
+
         private RectTransform FindRectTransformInRoot(GameObject root, string objectName)
         {
             if (root == null || string.IsNullOrWhiteSpace(objectName))
@@ -1361,6 +1426,9 @@ namespace SevenBattles.Preparation
             ResolveInventoryUnitPreviewAnchor();
             ResolveInventoryPreviewWorldRoot();
 
+            UnitSpellLoadout selected = ResolveInventorySelectedLoadout();
+            RefreshInventorySelectedUnitName(selected);
+
             if (_inventoryUnitPreviewAnchor == null)
             {
                 if (_inventoryUnitPreviewDiagnostics)
@@ -1371,7 +1439,6 @@ namespace SevenBattles.Preparation
                 return;
             }
 
-            UnitSpellLoadout selected = ResolveInventorySelectedLoadout();
             if (selected == null || selected.Definition == null || selected.Definition.Prefab == null)
             {
                 if (_inventoryUnitPreviewDiagnostics)
@@ -1399,6 +1466,17 @@ namespace SevenBattles.Preparation
             SetInventoryPreviewFrontIdle(_inventoryUnitPreviewInstance);
         }
 
+        private void RefreshInventorySelectedUnitName(UnitSpellLoadout selectedLoadout)
+        {
+            ResolveInventorySelectedUnitNameLabel();
+            if (_inventorySelectedUnitNameTMP == null)
+            {
+                return;
+            }
+
+            _inventorySelectedUnitNameTMP.text = ResolveInventorySelectedUnitName(selectedLoadout);
+        }
+
         private UnitSpellLoadout ResolveInventorySelectedLoadout()
         {
             ResolveSquadSetupController();
@@ -1408,6 +1486,30 @@ namespace SevenBattles.Preparation
             }
 
             return _inventorySelectedLoadout;
+        }
+
+        private string ResolveInventorySelectedUnitName(UnitSpellLoadout selectedLoadout)
+        {
+            if (_resolvedSquadSetupController != null)
+            {
+                string resolved = _resolvedSquadSetupController.ResolveDisplayName(selectedLoadout);
+                if (!string.IsNullOrWhiteSpace(resolved))
+                {
+                    return resolved;
+                }
+            }
+
+            if (selectedLoadout == null || selectedLoadout.Definition == null)
+            {
+                return string.Empty;
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedLoadout.Definition.name))
+            {
+                return selectedLoadout.Definition.name;
+            }
+
+            return selectedLoadout.Definition.Id ?? string.Empty;
         }
 
         private void SpawnInventoryUnitPreview(GameObject previewPrefab)

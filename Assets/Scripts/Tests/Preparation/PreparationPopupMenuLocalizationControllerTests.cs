@@ -1,12 +1,40 @@
+using System;
+using System.Collections.Generic;
 using NUnit.Framework;
+using SevenBattles.Core;
+using SevenBattles.Core.Battle;
+using SevenBattles.Core.Units;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 using SevenBattles.Preparation;
+using Object = UnityEngine.Object;
 
 namespace SevenBattles.Tests.Preparation
 {
     public class PreparationPopupMenuLocalizationControllerTests
     {
+        private sealed class FakeSquadSetupController : ISquadSetupController
+        {
+            public int MaxSquadSize => 1;
+            public int ActiveSquadCount => 1;
+            public bool IsSquadFull => true;
+            public UnitSpellLoadout SelectedUnit { get; set; }
+            public IReadOnlyList<UnitSpellLoadout> AllAvailableUnits => Array.Empty<UnitSpellLoadout>();
+            public IReadOnlyList<UnitSpellLoadout> ActiveSquad => Array.Empty<UnitSpellLoadout>();
+            public string DisplayNameToReturn { get; set; } = string.Empty;
+
+            public bool TryAddToSquad(UnitSpellLoadout loadout) => false;
+            public bool TryRemoveFromSquad(UnitSpellLoadout loadout) => false;
+            public void SelectUnit(UnitSpellLoadout loadout) => SelectedUnit = loadout;
+            public string ResolveDisplayName(UnitSpellLoadout loadout) => DisplayNameToReturn;
+
+            public event Action<UnitSpellLoadout> UnitAddedToSquad { add { } remove { } }
+            public event Action<UnitSpellLoadout> UnitRemovedFromSquad { add { } remove { } }
+            public event Action SquadChanged { add { } remove { } }
+            public event Action<UnitSpellLoadout> UnitSelected { add { } remove { } }
+        }
+
         private static void CallPrivate(object target, string methodName)
         {
             var type = target.GetType();
@@ -200,6 +228,82 @@ namespace SevenBattles.Tests.Preparation
             Assert.IsFalse(canvasGroup.interactable);
             Assert.IsFalse(canvasGroup.blocksRaycasts);
 
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void RefreshInventorySelectedUnitPreview_UpdatesSelectedUnitNameLabel()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+
+            var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
+            inventoryPanel.transform.SetParent(root.transform, false);
+
+            var inventoryView = new GameObject("InventoryView", typeof(RectTransform));
+            inventoryView.transform.SetParent(inventoryPanel.transform, false);
+
+            var character = new GameObject("Character", typeof(RectTransform));
+            character.transform.SetParent(inventoryView.transform, false);
+
+            var unitNameObject = new GameObject("UnitName", typeof(RectTransform), typeof(TextMeshProUGUI));
+            unitNameObject.transform.SetParent(character.transform, false);
+            var unitNameLabel = unitNameObject.GetComponent<TextMeshProUGUI>();
+
+            var unitDefinition = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitDefinition.name = "Arcane Knight";
+            unitDefinition.Id = "unit_arcane_knight";
+
+            var selectedLoadout = new UnitSpellLoadout
+            {
+                Definition = unitDefinition,
+                Level = 1
+            };
+
+            SetPrivate(controller, "_inventorySelectedLoadout", selectedLoadout);
+            CallPrivate(controller, "RefreshInventorySelectedUnitPreview");
+
+            Assert.AreEqual("Arcane Knight", unitNameLabel.text);
+
+            Object.DestroyImmediate(unitDefinition);
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void RefreshInventorySelectedUnitPreview_UsesSquadSetupDisplayName_WhenAvailable()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+
+            var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
+            inventoryPanel.transform.SetParent(root.transform, false);
+
+            var unitNameObject = new GameObject("UnitName", typeof(RectTransform), typeof(TextMeshProUGUI));
+            unitNameObject.transform.SetParent(inventoryPanel.transform, false);
+            var unitNameLabel = unitNameObject.GetComponent<TextMeshProUGUI>();
+
+            var unitDefinition = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitDefinition.name = "Arcane Knight";
+            unitDefinition.Id = "unit_arcane_knight";
+
+            var selectedLoadout = new UnitSpellLoadout
+            {
+                Definition = unitDefinition,
+                Level = 1
+            };
+
+            var fakeSquadSetup = new FakeSquadSetupController
+            {
+                SelectedUnit = selectedLoadout,
+                DisplayNameToReturn = "Sir Nova"
+            };
+
+            SetPrivate(controller, "_resolvedSquadSetupController", fakeSquadSetup);
+            CallPrivate(controller, "RefreshInventorySelectedUnitPreview");
+
+            Assert.AreEqual("Sir Nova", unitNameLabel.text);
+
+            Object.DestroyImmediate(unitDefinition);
             Object.DestroyImmediate(root);
         }
     }

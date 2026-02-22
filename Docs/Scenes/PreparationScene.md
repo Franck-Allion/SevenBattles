@@ -120,6 +120,8 @@
   - `_hidePopupMenuWhileInventoryVisible` / `_popupMenuCanvasGroup` -> hides the popup HUD root containing `ShopButtonMenu` and `SquadButtonMenu` while inventory is visible to avoid overlap/display artifacts.
   - `_hidePreparationResourcesWhileInventoryVisible` / `_preparationResourcesPanelRoot` / `_preparationResourcesPanelObjectName` / `_preparationResourcesPanelCanvasGroup` -> hides the default preparation `ResourcesPanel` (outside Inventory) while inventory is visible, without disabling runtime resource update logic.
   - `_inventoryTitleTMP` -> `InventoryPanel/Canvas/InventoryView/TopBar/Button_Back/Text_Title` (`TMP_Text`) (auto-found under `InventoryPanel` when empty).
+  - `_inventorySelectedUnitNameTMP` -> `InventoryPanel/Canvas/InventoryView/Character/UnitName` (`TMP_Text`) (auto-found under `InventoryPanel`; falls back to `NameText` when `UnitName` is not present).
+  - `_inventorySelectedUnitNameObjectName` / `_inventorySelectedUnitNameFallbackObjectName` -> selected unit-name label auto-discovery names (defaults: `UnitName` and `NameText`).
   - `_inventoryTitleLabel` -> table `UI.Common`, key `Preparation.Inventory.Title`.
 - `SquadPanel` (`SquadSetupController`, `ActiveSquadGridView`, `AllUnitsGridView`)
   - `SquadSetupController` (`SquadSetupView`)

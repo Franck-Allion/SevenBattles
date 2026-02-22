@@ -16,6 +16,7 @@ namespace SevenBattles.Core
         bool TryAddToSquad(UnitSpellLoadout loadout);
         bool TryRemoveFromSquad(UnitSpellLoadout loadout);
         void SelectUnit(UnitSpellLoadout loadout);
+        string ResolveDisplayName(UnitSpellLoadout loadout);
 
         event Action<UnitSpellLoadout> UnitAddedToSquad;
         event Action<UnitSpellLoadout> UnitRemovedFromSquad;
