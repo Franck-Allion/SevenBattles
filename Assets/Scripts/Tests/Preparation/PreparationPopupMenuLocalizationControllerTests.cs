@@ -469,5 +469,88 @@ namespace SevenBattles.Tests.Preparation
 
             Object.DestroyImmediate(root);
         }
+
+        [Test]
+        public void RefreshInventorySelectedUnitPreview_UpdatesInventoryLevelAndXpProgression()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+
+            var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
+            inventoryPanel.transform.SetParent(root.transform, false);
+
+            var levelTextObject = new GameObject("TextLevelNum", typeof(RectTransform), typeof(TextMeshProUGUI));
+            levelTextObject.transform.SetParent(inventoryPanel.transform, false);
+            var levelText = levelTextObject.GetComponent<TextMeshProUGUI>();
+
+            var xpTextObject = new GameObject("TextExp", typeof(RectTransform), typeof(TextMeshProUGUI));
+            xpTextObject.transform.SetParent(inventoryPanel.transform, false);
+            var xpText = xpTextObject.GetComponent<TextMeshProUGUI>();
+
+            var sliderObject = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
+            sliderObject.transform.SetParent(inventoryPanel.transform, false);
+            var xpSlider = sliderObject.GetComponent<Slider>();
+
+            var unitDefinition = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitDefinition.MaxLevel = 5;
+            unitDefinition.XpToNextLevel = new[] { 100, 200, 300, 400 };
+
+            var selectedLoadout = new UnitSpellLoadout
+            {
+                Definition = unitDefinition,
+                Level = 2,
+                Xp = 75
+            };
+
+            SetPrivate(controller, "_inventorySelectedLoadout", selectedLoadout);
+            CallPrivate(controller, "RefreshInventorySelectedUnitPreview");
+
+            Assert.AreEqual("2", levelText.text);
+            Assert.AreEqual("75/200", xpText.text);
+            Assert.AreEqual(0f, xpSlider.minValue, 0.001f);
+            Assert.AreEqual(1f, xpSlider.maxValue, 0.001f);
+            Assert.AreEqual(0.375f, xpSlider.value, 0.001f);
+
+            Object.DestroyImmediate(unitDefinition);
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void RefreshInventorySelectedUnitPreview_ClearsInventoryLevelAndXpProgression_WhenSelectionIsMissing()
+        {
+            var root = new GameObject("PopupMenu");
+            var controller = root.AddComponent<PreparationPopupMenuLocalizationController>();
+
+            var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
+            inventoryPanel.transform.SetParent(root.transform, false);
+
+            var levelTextObject = new GameObject("TextLevelNum", typeof(RectTransform), typeof(TextMeshProUGUI));
+            levelTextObject.transform.SetParent(inventoryPanel.transform, false);
+            var levelText = levelTextObject.GetComponent<TextMeshProUGUI>();
+            levelText.text = "9";
+
+            var xpTextObject = new GameObject("TextExp", typeof(RectTransform), typeof(TextMeshProUGUI));
+            xpTextObject.transform.SetParent(inventoryPanel.transform, false);
+            var xpText = xpTextObject.GetComponent<TextMeshProUGUI>();
+            xpText.text = "999/999";
+
+            var sliderObject = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
+            sliderObject.transform.SetParent(inventoryPanel.transform, false);
+            var xpSlider = sliderObject.GetComponent<Slider>();
+            xpSlider.minValue = 0f;
+            xpSlider.maxValue = 1f;
+            xpSlider.SetValueWithoutNotify(0.75f);
+
+            SetPrivate(controller, "_inventorySelectedLoadout", null);
+            CallPrivate(controller, "RefreshInventorySelectedUnitPreview");
+
+            Assert.AreEqual(string.Empty, levelText.text);
+            Assert.AreEqual(string.Empty, xpText.text);
+            Assert.AreEqual(0f, xpSlider.minValue, 0.001f);
+            Assert.AreEqual(1f, xpSlider.maxValue, 0.001f);
+            Assert.AreEqual(0f, xpSlider.value, 0.001f);
+
+            Object.DestroyImmediate(root);
+        }
     }
 }

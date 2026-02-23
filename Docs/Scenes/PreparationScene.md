@@ -126,6 +126,12 @@
   - `_inventorySelectedUnitStatsRootObjectName` / `_inventorySelectedUnitStatsRootFallbackObjectName` -> selected unit-stats root auto-discovery names (defaults: `Stats` and `Stats2`).
   - `_inventorySelectedUnitStatLabelObjectName` -> child name used to resolve localized stat label TMPs inside each stat row (default: `Label`).
   - `_inventorySelectedUnitStatValueObjectName` -> child name used to resolve numeric TMPs inside each stat row (default: `Value`).
+  - `_inventorySelectedUnitLevelTMP` -> `InventoryPanel/.../TextLevelNum` (`TMP_Text`) showing the selected unit level.
+  - `_inventorySelectedUnitLevelObjectName` -> selected unit level auto-discovery name (default: `TextLevelNum`).
+  - `_inventorySelectedUnitXpSlider` -> `InventoryPanel/.../Slider` (`Slider`) showing selected unit XP progression toward next level (normalized fill).
+  - `_inventorySelectedUnitXpSliderObjectName` -> selected unit XP slider auto-discovery name (default: `Slider`).
+  - `_inventorySelectedUnitXpTextTMP` -> `InventoryPanel/.../TextExp` (`TMP_Text`) showing selected unit XP as `current/next` (example: `350/500`).
+  - `_inventorySelectedUnitXpTextObjectName` -> selected unit XP text auto-discovery name (default: `TextExp`).
   - Inventory stats values use the same formula as squad details (`UnitInfoPanelView`): `UnitDefinition.LevelBonus.ApplyTo(UnitDefinition.BaseStats, loadout.EffectiveLevel)`.
   - Inventory stats labels use `UI.Common` keys `stats.life`, `stats.attack`, `stats.shoot`, `stats.spell`, `stats.speed`, `stats.luck`, `stats.defense`, `stats.protection`, `stats.initiative`, `stats.morale` and target the per-row `Label` TMP.
   - `_inventoryTitleLabel` -> table `UI.Common`, key `Preparation.Inventory.Title`.

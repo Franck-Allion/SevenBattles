@@ -132,6 +132,18 @@ namespace SevenBattles.Preparation
         private string _inventorySelectedUnitStatValueObjectName = "Value";
         [SerializeField, Tooltip("Child object name under each stat row used to resolve the label TMP (Life, Attack, ...).")]
         private string _inventorySelectedUnitStatLabelObjectName = "Label";
+        [SerializeField, Tooltip("Optional TMP label under InventoryView used to display the selected unit level number.")]
+        private TMP_Text _inventorySelectedUnitLevelTMP;
+        [SerializeField, Tooltip("Object name used to auto-find the selected unit level label under InventoryPanel.")]
+        private string _inventorySelectedUnitLevelObjectName = "TextLevelNum";
+        [SerializeField, Tooltip("Optional Slider under InventoryView used to display selected unit XP progress to next level.")]
+        private Slider _inventorySelectedUnitXpSlider;
+        [SerializeField, Tooltip("Object name used to auto-find the selected unit XP Slider under InventoryPanel.")]
+        private string _inventorySelectedUnitXpSliderObjectName = "Slider";
+        [SerializeField, Tooltip("Optional TMP label under InventoryView used to display selected unit XP text (current/next).")]
+        private TMP_Text _inventorySelectedUnitXpTextTMP;
+        [SerializeField, Tooltip("Object name used to auto-find the selected unit XP text label under InventoryPanel.")]
+        private string _inventorySelectedUnitXpTextObjectName = "TextExp";
         [SerializeField, Tooltip("Local position offset applied to the spawned selected unit preview prefab.")]
         private Vector3 _inventoryUnitPreviewLocalPosition = Vector3.zero;
         [SerializeField, Tooltip("Local scale applied to the spawned selected unit preview prefab.")]
@@ -458,6 +470,7 @@ namespace SevenBattles.Preparation
 
             ResolveInventorySelectedUnitNameLabel();
             ResolveInventorySelectedUnitStatsRoot();
+            ResolveInventorySelectedUnitProgressionTargets();
             ResolveInventoryUnitPreviewAnchor();
         }
 
@@ -570,6 +583,73 @@ namespace SevenBattles.Preparation
             {
                 _inventorySelectedUnitStatsRoot = FindTransformByNameInSceneRoot(_inventorySelectedUnitStatsRootFallbackObjectName);
             }
+        }
+
+        private void ResolveInventorySelectedUnitProgressionTargets()
+        {
+            ResolveInventorySelectedUnitLevelLabel();
+            ResolveInventorySelectedUnitXpTextLabel();
+            ResolveInventorySelectedUnitXpSlider();
+        }
+
+        private void ResolveInventorySelectedUnitLevelLabel()
+        {
+            if (_inventorySelectedUnitLevelTMP != null)
+            {
+                return;
+            }
+
+            if (_inventoryPanel != null)
+            {
+                _inventorySelectedUnitLevelTMP = FindTextInRoot(_inventoryPanel, _inventorySelectedUnitLevelObjectName);
+            }
+
+            if (_inventorySelectedUnitLevelTMP != null)
+            {
+                return;
+            }
+
+            _inventorySelectedUnitLevelTMP = FindTextByNameInSceneRoot(_inventorySelectedUnitLevelObjectName);
+        }
+
+        private void ResolveInventorySelectedUnitXpTextLabel()
+        {
+            if (_inventorySelectedUnitXpTextTMP != null)
+            {
+                return;
+            }
+
+            if (_inventoryPanel != null)
+            {
+                _inventorySelectedUnitXpTextTMP = FindTextInRoot(_inventoryPanel, _inventorySelectedUnitXpTextObjectName);
+            }
+
+            if (_inventorySelectedUnitXpTextTMP != null)
+            {
+                return;
+            }
+
+            _inventorySelectedUnitXpTextTMP = FindTextByNameInSceneRoot(_inventorySelectedUnitXpTextObjectName);
+        }
+
+        private void ResolveInventorySelectedUnitXpSlider()
+        {
+            if (_inventorySelectedUnitXpSlider != null)
+            {
+                return;
+            }
+
+            if (_inventoryPanel != null)
+            {
+                _inventorySelectedUnitXpSlider = FindSliderInRoot(_inventoryPanel, _inventorySelectedUnitXpSliderObjectName);
+            }
+
+            if (_inventorySelectedUnitXpSlider != null)
+            {
+                return;
+            }
+
+            _inventorySelectedUnitXpSlider = FindSliderByNameInSceneRoot(_inventorySelectedUnitXpSliderObjectName);
         }
 
         private void ResolveTournamentPathPreviewRoot()
@@ -1132,6 +1212,60 @@ namespace SevenBattles.Preparation
             return textObject.GetComponentInChildren<TMP_Text>(true);
         }
 
+        private Slider FindSliderInRoot(GameObject root, string sliderObjectName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(sliderObjectName))
+            {
+                return null;
+            }
+
+            var transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node == null || !string.Equals(node.name, sliderObjectName, System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Slider slider = node.GetComponent<Slider>();
+                if (slider != null)
+                {
+                    return slider;
+                }
+
+                slider = node.GetComponentInChildren<Slider>(true);
+                if (slider != null)
+                {
+                    return slider;
+                }
+            }
+
+            return null;
+        }
+
+        private Slider FindSliderByNameInSceneRoot(string sliderObjectName)
+        {
+            if (string.IsNullOrWhiteSpace(sliderObjectName))
+            {
+                return null;
+            }
+
+            GameObject sliderObject = FindObjectByNameInSceneRoot(sliderObjectName);
+            if (sliderObject == null)
+            {
+                return null;
+            }
+
+            Slider slider = sliderObject.GetComponent<Slider>();
+            if (slider != null)
+            {
+                return slider;
+            }
+
+            return sliderObject.GetComponentInChildren<Slider>(true);
+        }
+
         private Transform FindTransformInRoot(GameObject root, string objectName)
         {
             if (root == null || string.IsNullOrWhiteSpace(objectName))
@@ -1650,6 +1784,7 @@ namespace SevenBattles.Preparation
             UnitSpellLoadout selected = ResolveInventorySelectedLoadout();
             RefreshInventorySelectedUnitName(selected);
             RefreshInventorySelectedUnitStats(selected);
+            RefreshInventorySelectedUnitProgression(selected);
 
             if (_inventoryUnitPreviewAnchor == null)
             {
@@ -1725,6 +1860,55 @@ namespace SevenBattles.Preparation
             SetInventorySelectedUnitStat("Morale", stats.Morale);
         }
 
+        private void RefreshInventorySelectedUnitProgression(UnitSpellLoadout selectedLoadout)
+        {
+            ResolveInventorySelectedUnitProgressionTargets();
+
+            if (selectedLoadout == null || selectedLoadout.Definition == null)
+            {
+                ClearInventorySelectedUnitProgression();
+                return;
+            }
+
+            UnitDefinition definition = selectedLoadout.Definition;
+            int level = Mathf.Max(UnitSpellLoadout.DefaultLevel, selectedLoadout.EffectiveLevel);
+            int maxLevel = Mathf.Max(UnitSpellLoadout.DefaultLevel, definition.MaxLevel);
+            int xpToNext = UnitXpProgressionUtil.GetXpToNextLevel(level, maxLevel, definition.XpToNextLevel);
+            int currentXp = Mathf.Max(0, selectedLoadout.EffectiveXp);
+            bool isMaxLevel = level >= maxLevel;
+
+            if (_inventorySelectedUnitLevelTMP != null)
+            {
+                _inventorySelectedUnitLevelTMP.text = level.ToString();
+            }
+
+            if (_inventorySelectedUnitXpSlider != null)
+            {
+                _inventorySelectedUnitXpSlider.minValue = 0f;
+                _inventorySelectedUnitXpSlider.maxValue = 1f;
+
+                float normalized = 0f;
+                if (isMaxLevel)
+                {
+                    normalized = 1f;
+                }
+                else if (xpToNext > 0)
+                {
+                    normalized = Mathf.Clamp01((float)currentXp / xpToNext);
+                }
+
+                _inventorySelectedUnitXpSlider.SetValueWithoutNotify(normalized);
+            }
+
+            if (_inventorySelectedUnitXpTextTMP != null)
+            {
+                int displayXp = xpToNext > 0
+                    ? Mathf.Clamp(currentXp, 0, xpToNext)
+                    : 0;
+                _inventorySelectedUnitXpTextTMP.text = string.Concat(displayXp.ToString(), "/", Mathf.Max(0, xpToNext).ToString());
+            }
+        }
+
         private UnitSpellLoadout ResolveInventorySelectedLoadout()
         {
             ResolveSquadSetupController();
@@ -1786,6 +1970,26 @@ namespace SevenBattles.Preparation
             SetInventorySelectedUnitStatText("Protection", string.Empty);
             SetInventorySelectedUnitStatText("Initiative", string.Empty);
             SetInventorySelectedUnitStatText("Morale", string.Empty);
+        }
+
+        private void ClearInventorySelectedUnitProgression()
+        {
+            if (_inventorySelectedUnitLevelTMP != null)
+            {
+                _inventorySelectedUnitLevelTMP.text = string.Empty;
+            }
+
+            if (_inventorySelectedUnitXpTextTMP != null)
+            {
+                _inventorySelectedUnitXpTextTMP.text = string.Empty;
+            }
+
+            if (_inventorySelectedUnitXpSlider != null)
+            {
+                _inventorySelectedUnitXpSlider.minValue = 0f;
+                _inventorySelectedUnitXpSlider.maxValue = 1f;
+                _inventorySelectedUnitXpSlider.SetValueWithoutNotify(0f);
+            }
         }
 
         private void SetInventorySelectedUnitStat(string rowObjectName, int value)
