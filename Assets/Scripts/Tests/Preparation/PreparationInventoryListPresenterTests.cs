@@ -1,5 +1,4 @@
 using NUnit.Framework;
-using SevenBattles.Core.Battle;
 using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
 using SevenBattles.Preparation;
@@ -12,6 +11,8 @@ namespace SevenBattles.Tests.Preparation
 {
     public class PreparationInventoryListPresenterTests
     {
+        private const int PAGE_SIZE = 30;
+
         [TearDown]
         public void TearDown()
         {
@@ -19,7 +20,7 @@ namespace SevenBattles.Tests.Preparation
         }
 
         [Test]
-        public void RefreshNow_DisplaysOnlyEquipmentAndItems_WithBoundVisuals()
+        public void RefreshNow_DisplaysFixedThirtySlots_WithBoundVisualsAndEmptyPadding()
         {
             var context = ScriptableObject.CreateInstance<PlayerContext>();
             var inventory = ScriptableObject.CreateInstance<PlayerInventory>();
@@ -60,13 +61,17 @@ namespace SevenBattles.Tests.Preparation
             content.SetParent(root.transform, false);
 
             var presenter = root.AddComponent<PreparationInventoryListPresenter>();
-            var template = CreateEntryTemplate("ItemTemplate");
-            presenter.Configure(context, null, content, template.gameObject, null, null);
+            var itemTemplate = CreateEntryTemplate("ItemTemplate");
+            var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
+            presenter.Configure(context, null, content, itemTemplate.gameObject, emptyTemplate, null, null);
             presenter.RefreshNow();
 
-            Assert.AreEqual(2, CountActiveEntryChildren(content));
+            Assert.AreEqual(PAGE_SIZE, CountActiveChildren(content));
+            Assert.AreEqual(2, CountActiveItemViews(content));
+            Assert.AreEqual(PAGE_SIZE - 2, CountActiveEmptySlots(content));
 
-            var firstView = content.GetChild(0).GetComponent<PreparationInventoryItemEntryView>();
+            GameObject firstSlot = GetActiveSlotAt(content, 0);
+            var firstView = firstSlot.GetComponent<PreparationInventoryItemEntryView>();
             var firstBg = firstView.GetComponent<Image>();
             var firstIcon = firstView.transform.Find("ItemIcon")?.GetComponent<Image>();
             var firstText = firstView.GetComponentInChildren<TMP_Text>(true);
@@ -75,7 +80,8 @@ namespace SevenBattles.Tests.Preparation
             Assert.AreEqual(equipmentDef.InventoryBackgroundColor, firstBg.color);
             Assert.AreEqual(equipmentDef.Icon, firstIcon.sprite);
 
-            var secondView = content.GetChild(1).GetComponent<PreparationInventoryItemEntryView>();
+            GameObject secondSlot = GetActiveSlotAt(content, 1);
+            var secondView = secondSlot.GetComponent<PreparationInventoryItemEntryView>();
             var secondBg = secondView.GetComponent<Image>();
             var secondIcon = secondView.transform.Find("ItemIcon")?.GetComponent<Image>();
             var secondText = secondView.GetComponentInChildren<TMP_Text>(true);
@@ -84,7 +90,12 @@ namespace SevenBattles.Tests.Preparation
             Assert.AreEqual(itemDef.InventoryBackgroundColor, secondBg.color);
             Assert.AreEqual(itemDef.Icon, secondIcon.sprite);
 
-            Object.DestroyImmediate(template.gameObject);
+            GameObject thirdSlot = GetActiveSlotAt(content, 2);
+            Assert.IsNotNull(thirdSlot);
+            Assert.AreEqual("ItemEmpty", thirdSlot.name);
+
+            Object.DestroyImmediate(itemTemplate.gameObject);
+            Object.DestroyImmediate(emptyTemplate);
             Object.DestroyImmediate(root);
             Object.DestroyImmediate(itemDef.Icon.texture);
             Object.DestroyImmediate(equipmentDef.Icon.texture);
@@ -114,31 +125,89 @@ namespace SevenBattles.Tests.Preparation
             content.SetParent(root.transform, false);
 
             var presenter = root.AddComponent<PreparationInventoryListPresenter>();
-            var template = CreateEntryTemplate("ItemTemplate");
-            presenter.Configure(context, null, content, template.gameObject, null, null);
+            var itemTemplate = CreateEntryTemplate("ItemTemplate");
+            var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
+            presenter.Configure(context, null, content, itemTemplate.gameObject, emptyTemplate, null, null);
             presenter.RefreshNow();
 
             int firstChildCount = content.childCount;
-            var firstChild = content.GetChild(0);
+            Assert.AreEqual(PAGE_SIZE * 2, firstChildCount);
+            var firstSlot = GetActiveSlotAt(content, 0);
 
             presenter.RefreshNow();
             presenter.RefreshNow();
             Assert.AreEqual(firstChildCount, content.childCount);
-            Assert.AreSame(firstChild, content.GetChild(0));
+            Assert.AreSame(firstSlot, GetActiveSlotAt(content, 0));
 
             inventory.AddItem(secondItem, 1);
 
-            Assert.AreEqual(2, CountActiveEntryChildren(content));
-            Assert.AreEqual(2, content.childCount);
+            Assert.AreEqual(PAGE_SIZE, CountActiveChildren(content));
+            Assert.AreEqual(2, CountActiveItemViews(content));
+            Assert.AreEqual(PAGE_SIZE * 2, content.childCount);
 
             presenter.RefreshNow();
-            Assert.AreEqual(2, content.childCount);
-            Assert.AreEqual(2, CountActiveEntryChildren(content));
+            Assert.AreEqual(PAGE_SIZE * 2, content.childCount);
+            Assert.AreEqual(PAGE_SIZE, CountActiveChildren(content));
 
-            Object.DestroyImmediate(template.gameObject);
+            Object.DestroyImmediate(itemTemplate.gameObject);
+            Object.DestroyImmediate(emptyTemplate);
             Object.DestroyImmediate(root);
             Object.DestroyImmediate(secondItem);
             Object.DestroyImmediate(firstItem);
+            Object.DestroyImmediate(inventory);
+            Object.DestroyImmediate(context);
+        }
+
+        [Test]
+        public void PageButtons_SwitchPages_AndRenderEmptyPageWhenNoEntriesExist()
+        {
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            var inventory = ScriptableObject.CreateInstance<PlayerInventory>();
+            context.Inventory = inventory;
+            PlayerContext.SetRuntimeInstance(context);
+
+            for (int i = 1; i <= 35; i++)
+            {
+                inventory.Entries.Add(new InventoryEntry
+                {
+                    Kind = InventoryEntry.EntryKind.Item,
+                    DefinitionId = $"item.{i:000}",
+                    Quantity = i
+                });
+            }
+
+            var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
+            var content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
+            content.SetParent(inventoryPanel.transform, false);
+
+            CreatePageButton(inventoryPanel.transform, "Page1Button", "1");
+            Button page2 = CreatePageButton(inventoryPanel.transform, "Page2Button", "2");
+            Button page3 = CreatePageButton(inventoryPanel.transform, "Page3Button", "3");
+
+            var presenterRoot = new GameObject("PresenterRoot");
+            var presenter = presenterRoot.AddComponent<PreparationInventoryListPresenter>();
+            var itemTemplate = CreateEntryTemplate("ItemTemplate");
+            var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
+            presenter.Configure(context, inventoryPanel, content, itemTemplate.gameObject, emptyTemplate, null, null);
+            presenter.RefreshNow();
+
+            Assert.AreEqual(PAGE_SIZE, CountActiveItemViews(content));
+            Assert.AreEqual(0, CountActiveEmptySlots(content));
+            Assert.AreEqual("1", GetQuantityAtSlot(content, 0));
+
+            page2.onClick.Invoke();
+            Assert.AreEqual(5, CountActiveItemViews(content));
+            Assert.AreEqual(PAGE_SIZE - 5, CountActiveEmptySlots(content));
+            Assert.AreEqual("31", GetQuantityAtSlot(content, 0));
+
+            page3.onClick.Invoke();
+            Assert.AreEqual(0, CountActiveItemViews(content));
+            Assert.AreEqual(PAGE_SIZE, CountActiveEmptySlots(content));
+
+            Object.DestroyImmediate(itemTemplate.gameObject);
+            Object.DestroyImmediate(emptyTemplate);
+            Object.DestroyImmediate(presenterRoot);
+            Object.DestroyImmediate(inventoryPanel);
             Object.DestroyImmediate(inventory);
             Object.DestroyImmediate(context);
         }
@@ -163,18 +232,23 @@ namespace SevenBattles.Tests.Preparation
             content.SetParent(root.transform, false);
 
             var presenter = root.AddComponent<PreparationInventoryListPresenter>();
-            var template = CreateEntryTemplate("ItemTemplate");
-            presenter.Configure(context, null, content, template.gameObject, null, null);
+            var itemTemplate = CreateEntryTemplate("ItemTemplate");
+            var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
+            presenter.Configure(context, null, content, itemTemplate.gameObject, emptyTemplate, null, null);
             presenter.RefreshNow();
 
-            Assert.AreEqual(1, CountActiveEntryChildren(content));
-            var view = content.GetChild(0).GetComponent<PreparationInventoryItemEntryView>();
+            Assert.AreEqual(PAGE_SIZE, CountActiveChildren(content));
+            Assert.AreEqual(1, CountActiveItemViews(content));
+            Assert.AreEqual(PAGE_SIZE - 1, CountActiveEmptySlots(content));
+
+            var view = GetActiveSlotAt(content, 0).GetComponent<PreparationInventoryItemEntryView>();
             var bg = view.GetComponent<Image>();
             var txt = view.GetComponentInChildren<TMP_Text>(true);
             Assert.AreEqual(Color.white, bg.color);
             Assert.AreEqual("1", txt.text);
 
-            Object.DestroyImmediate(template.gameObject);
+            Object.DestroyImmediate(itemTemplate.gameObject);
+            Object.DestroyImmediate(emptyTemplate);
             Object.DestroyImmediate(root);
             Object.DestroyImmediate(inventory);
             Object.DestroyImmediate(context);
@@ -190,7 +264,25 @@ namespace SevenBattles.Tests.Preparation
             return root.GetComponent<PreparationInventoryItemEntryView>();
         }
 
-        private static int CountActiveEntryChildren(Transform content)
+        private static GameObject CreateEmptyTemplate(string name)
+        {
+            return new GameObject(name, typeof(RectTransform), typeof(Image));
+        }
+
+        private static Button CreatePageButton(Transform parent, string name, string labelValue)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            buttonObject.transform.SetParent(parent, false);
+
+            var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            labelObject.transform.SetParent(buttonObject.transform, false);
+            var label = labelObject.GetComponent<TextMeshProUGUI>();
+            label.text = labelValue;
+
+            return buttonObject.GetComponent<Button>();
+        }
+
+        private static int CountActiveChildren(Transform content)
         {
             int count = 0;
             for (int i = 0; i < content.childCount; i++)
@@ -202,6 +294,77 @@ namespace SevenBattles.Tests.Preparation
             }
 
             return count;
+        }
+
+        private static int CountActiveItemViews(Transform content)
+        {
+            int count = 0;
+            for (int i = 0; i < content.childCount; i++)
+            {
+                Transform child = content.GetChild(i);
+                if (!child.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (child.GetComponent<PreparationInventoryItemEntryView>() != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountActiveEmptySlots(Transform content)
+        {
+            int count = 0;
+            for (int i = 0; i < content.childCount; i++)
+            {
+                Transform child = content.GetChild(i);
+                if (!child.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (string.Equals(child.name, "ItemEmpty", System.StringComparison.Ordinal))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static GameObject GetActiveSlotAt(Transform content, int slotIndex)
+        {
+            for (int i = 0; i < content.childCount; i++)
+            {
+                Transform child = content.GetChild(i);
+                if (!child.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (child.GetSiblingIndex() == slotIndex)
+                {
+                    return child.gameObject;
+                }
+            }
+
+            return null;
+        }
+
+        private static string GetQuantityAtSlot(Transform content, int slotIndex)
+        {
+            GameObject slot = GetActiveSlotAt(content, slotIndex);
+            if (slot == null)
+            {
+                return string.Empty;
+            }
+
+            var text = slot.GetComponentInChildren<TMP_Text>(true);
+            return text != null ? text.text : string.Empty;
         }
 
         private static Sprite CreateSprite(Color color)

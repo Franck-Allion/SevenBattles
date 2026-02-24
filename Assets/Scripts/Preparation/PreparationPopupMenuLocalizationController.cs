@@ -100,6 +100,8 @@ namespace SevenBattles.Preparation
         private RectTransform _inventoryItemsContentRoot;
         [SerializeField, Tooltip("Optional Item prefab used when pool growth is needed.")]
         private GameObject _inventoryItemPrefab;
+        [SerializeField, Tooltip("Optional ItemEmpty prefab used for empty inventory slots.")]
+        private GameObject _inventoryItemEmptyPrefab;
         [SerializeField, Tooltip("Optional registry for equipment icon/background lookup.")]
         private EquipmentDefinitionRegistry _equipmentDefinitionRegistry;
         [SerializeField, Tooltip("Optional registry for item icon/background lookup.")]
@@ -511,6 +513,7 @@ namespace SevenBattles.Preparation
                 _inventoryPanel,
                 _inventoryItemsContentRoot,
                 _inventoryItemPrefab,
+                _inventoryItemEmptyPrefab,
                 _equipmentDefinitionRegistry,
                 _itemDefinitionRegistry);
         }
