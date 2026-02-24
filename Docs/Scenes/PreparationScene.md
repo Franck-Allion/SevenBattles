@@ -101,6 +101,14 @@
   - `_inventoryPanelCanvasGroup` -> optional `CanvasGroup` on `InventoryPanel/Canvas` for fade/input state (auto-added when missing).
   - `_inventoryPanelForceCameraRenderMode` / `_inventoryPanelCameraPlaneDistance` / `_inventoryPanelRenderCamera` -> enforces `InventoryPanel/Canvas` camera render mode and near plane distance (default `1`) so world `SpriteRenderer` previews are not occluded by world content.
   - `_inventoryPanelFadeDuration` / `_inventoryPanelStartScale` / `_inventoryPanelRevealCurve` -> controls unscaled-time show/hide transition when opening from `InventoryButton` and returning via Inventory `Button_Back`.
+  - `_inventoryListPresenter` -> optional `PreparationInventoryListPresenter` (auto-added on `PopupMenu` when empty).
+  - `_inventoryItemsContentRoot` -> optional explicit reference to `InventoryPanel/Canvas/InventoryView/Right_Panel/ScrollRect/Viewport/Content` (`RectTransform`).
+  - `_inventoryItemPrefab` -> optional explicit item tile prefab (`Assets/Prefabs/UI/Item.prefab`) used when pool growth is needed (fallback: existing `Content` children named `Item`).
+  - `_equipmentDefinitionRegistry` -> optional `EquipmentDefinitionRegistry` used to resolve equipment icons/background colors by ID.
+  - `_itemDefinitionRegistry` -> optional `ItemDefinitionRegistry` used to resolve item icons/background colors by ID.
+  - Inventory list refresh trigger -> `HandleInventoryButtonClicked` and `SetInventoryPanelVisibleImmediate` call `PreparationInventoryListPresenter.RefreshNow()`.
+  - Inventory list filtering -> only `InventoryEntry.Kind` = `Equipment` and `Item` are rendered in `Right_Panel/ScrollRect/Viewport/Content`; other kinds are ignored.
+  - Inventory list pooling -> entries are reused and only grown when required (no destroy/recreate spam when reopening panel).
   - `_squadSetupController` -> optional explicit `SquadSetupController` reference used to resolve the currently selected unit for inventory preview (auto-found when empty).
   - `_inventoryUnitPreviewAnchor` -> optional explicit `RectTransform` reference for the inventory character preview spawn point (auto-found when empty).
   - `_inventoryUnitPreviewAnchorObjectName` -> inventory preview anchor auto-discovery name (default: `CharacterBgBottom`).

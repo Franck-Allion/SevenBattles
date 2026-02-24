@@ -115,6 +115,65 @@ namespace SevenBattles.Core.Items
             return matches.Count > 0 ? matches.ToArray() : Array.Empty<InventoryEntry>();
         }
 
+        /// <summary>
+        /// Copies filtered entries into <paramref name="buffer"/> without allocating.
+        /// </summary>
+        public int CollectEntriesNonAlloc(
+            List<InventoryEntry> buffer,
+            bool includeEquipment = true,
+            bool includeSpells = true,
+            bool includeItems = true)
+        {
+            if (buffer == null)
+            {
+                return 0;
+            }
+
+            EnsureEntriesList();
+            buffer.Clear();
+
+            for (int i = 0; i < _entries.Count; i++)
+            {
+                InventoryEntry entry = _entries[i];
+                if (entry == null || string.IsNullOrWhiteSpace(entry.DefinitionId))
+                {
+                    continue;
+                }
+
+                switch (entry.Kind)
+                {
+                    case InventoryEntry.EntryKind.Equipment:
+                        if (!includeEquipment)
+                        {
+                            continue;
+                        }
+                        break;
+                    case InventoryEntry.EntryKind.Spell:
+                        if (!includeSpells)
+                        {
+                            continue;
+                        }
+                        break;
+                    case InventoryEntry.EntryKind.Item:
+                        if (!includeItems)
+                        {
+                            continue;
+                        }
+                        break;
+                }
+
+                int quantity = entry.Kind == InventoryEntry.EntryKind.Item ? entry.Quantity : 1;
+                if (quantity <= 0)
+                {
+                    continue;
+                }
+
+                buffer.Add(entry);
+            }
+
+            return buffer.Count;
+        }
+
         private void AddSingleEntry(InventoryEntry.EntryKind kind, string definitionId)
         {
             if (string.IsNullOrWhiteSpace(definitionId))

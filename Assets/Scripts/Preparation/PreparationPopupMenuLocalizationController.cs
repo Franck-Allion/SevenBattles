@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Items;
+using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
 using TMPro;
 using UnityEngine;
@@ -8,6 +10,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Settings;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using UnityEngine.UI;
 using SevenBattles.Core.Diagnostics;
@@ -22,6 +25,7 @@ namespace SevenBattles.Preparation
         private const string INVENTORY_TITLE_DEFAULT_KEY = "Preparation.Inventory.Title";
         private const string PANEL_SWITCH_OVERLAY_RUNTIME_NAME = "PreparationPanelSwitchOverlay_Runtime";
         private const string TOURNAMENT_PATH_PREVIEW_OBJECT_NAME = "TournamentPathPreview";
+        private const string INVENTORY_ITEMS_CONTENT_PATH = "Canvas/InventoryView/Right_Panel/ScrollRect/Viewport/Content";
 
         [Header("Label Targets")]
         [SerializeField, Tooltip("TMP label shown in the Shop menu button.")]
@@ -88,6 +92,18 @@ namespace SevenBattles.Preparation
         private float _inventoryPanelStartScale = 0.95f;
         [SerializeField, Tooltip("Easing curve used for Inventory panel reveal.")]
         private AnimationCurve _inventoryPanelRevealCurve = null;
+
+        [Header("Inventory Items List")]
+        [SerializeField, Tooltip("Presenter that populates InventoryView item tiles. Auto-added when missing.")]
+        private PreparationInventoryListPresenter _inventoryListPresenter;
+        [SerializeField, Tooltip("Optional explicit Content root for inventory item tiles. Auto-found under InventoryPanel when null.")]
+        private RectTransform _inventoryItemsContentRoot;
+        [SerializeField, Tooltip("Optional Item prefab used when pool growth is needed.")]
+        private GameObject _inventoryItemPrefab;
+        [SerializeField, Tooltip("Optional registry for equipment icon/background lookup.")]
+        private EquipmentDefinitionRegistry _equipmentDefinitionRegistry;
+        [SerializeField, Tooltip("Optional registry for item icon/background lookup.")]
+        private ItemDefinitionRegistry _itemDefinitionRegistry;
 
         [Header("Panel Switch FX")]
         [SerializeField, Tooltip("Optional overlay CanvasGroup used during Squad <-> Inventory transitions. Runtime-created when null.")]
@@ -268,6 +284,7 @@ namespace SevenBattles.Preparation
         private bool _preparationResourcesInitialBlocksRaycasts = true;
         private float _lastInventoryPreviewPlacementInfoTime = -999f;
         private float _lastInventoryPreviewPlacementWarnTime = -999f;
+        private readonly List<GameObject> _sceneRootSearchBuffer = new List<GameObject>(16);
 
         private const float INVENTORY_PREVIEW_WARN_LOG_COOLDOWN_SECONDS = 0.75f;
         private const float INVENTORY_PREVIEW_INFO_LOG_COOLDOWN_SECONDS = 0.75f;
@@ -472,6 +489,62 @@ namespace SevenBattles.Preparation
             ResolveInventorySelectedUnitStatsRoot();
             ResolveInventorySelectedUnitProgressionTargets();
             ResolveInventoryUnitPreviewAnchor();
+            EnsureInventoryListPresenter();
+        }
+
+        private void EnsureInventoryListPresenter()
+        {
+            if (_inventoryListPresenter == null)
+            {
+                _inventoryListPresenter = GetComponent<PreparationInventoryListPresenter>();
+            }
+
+            if (_inventoryListPresenter == null)
+            {
+                _inventoryListPresenter = gameObject.AddComponent<PreparationInventoryListPresenter>();
+            }
+
+            ResolveInventoryItemsContentRoot();
+
+            _inventoryListPresenter.Configure(
+                ResolveCurrentPlayerContext(),
+                _inventoryPanel,
+                _inventoryItemsContentRoot,
+                _inventoryItemPrefab,
+                _equipmentDefinitionRegistry,
+                _itemDefinitionRegistry);
+        }
+
+        private void ResolveInventoryItemsContentRoot()
+        {
+            if (_inventoryItemsContentRoot != null)
+            {
+                return;
+            }
+
+            if (_inventoryPanel == null)
+            {
+                return;
+            }
+
+            Transform content = _inventoryPanel.transform.Find(INVENTORY_ITEMS_CONTENT_PATH);
+            _inventoryItemsContentRoot = content as RectTransform;
+        }
+
+        private PlayerContext ResolveCurrentPlayerContext()
+        {
+            if (PlayerContext.HasRuntimeInstance && PlayerContext.RuntimeInstance != null)
+            {
+                return PlayerContext.RuntimeInstance;
+            }
+
+            var contexts = Resources.FindObjectsOfTypeAll<PlayerContext>();
+            if (contexts != null && contexts.Length > 0)
+            {
+                return contexts[0];
+            }
+
+            return null;
         }
 
         private void ResolveSquadSetupController()
@@ -999,14 +1072,19 @@ namespace SevenBattles.Preparation
             }
 
             Transform searchRoot = transform.root != null ? transform.root : transform;
-            var transforms = searchRoot.GetComponentsInChildren<Transform>(true);
-            for (int i = 0; i < transforms.Length; i++)
+            if (TryFindObjectByNameUnderRoot(searchRoot, objectName, out GameObject fromBranch))
             {
-                Transform node = transforms[i];
-                if (node != null && string.Equals(node.name, objectName, System.StringComparison.Ordinal))
-                {
-                    return node.gameObject;
-                }
+                return fromBranch;
+            }
+
+            if (TryFindObjectByNameInScene(objectName, excludedRoot: null, out GameObject fromSceneRoots))
+            {
+                return fromSceneRoots;
+            }
+
+            if (!CanUseGlobalObjectFind())
+            {
+                return null;
             }
 
             var global = GameObject.Find(objectName);
@@ -1021,19 +1099,19 @@ namespace SevenBattles.Preparation
             }
 
             Transform searchRoot = transform.root != null ? transform.root : transform;
-            var transforms = searchRoot.GetComponentsInChildren<Transform>(true);
-            for (int i = 0; i < transforms.Length; i++)
+            if (TryFindObjectByNameUnderRoot(searchRoot, objectName, out GameObject fromBranch, excludedRoot))
             {
-                Transform node = transforms[i];
-                if (node == null || !string.Equals(node.name, objectName, System.StringComparison.Ordinal))
-                {
-                    continue;
-                }
+                return fromBranch;
+            }
 
-                if (!IsSameOrDescendantOf(node, excludedRoot))
-                {
-                    return node.gameObject;
-                }
+            if (TryFindObjectByNameInScene(objectName, excludedRoot, out GameObject fromSceneRoots))
+            {
+                return fromSceneRoots;
+            }
+
+            if (!CanUseGlobalObjectFind())
+            {
+                return null;
             }
 
             GameObject global = GameObject.Find(objectName);
@@ -1043,6 +1121,79 @@ namespace SevenBattles.Preparation
             }
 
             return null;
+        }
+
+        private bool TryFindObjectByNameInScene(string objectName, Transform excludedRoot, out GameObject found)
+        {
+            found = null;
+
+            Scene scene = gameObject.scene;
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                return false;
+            }
+
+            _sceneRootSearchBuffer.Clear();
+            scene.GetRootGameObjects(_sceneRootSearchBuffer);
+            for (int i = 0; i < _sceneRootSearchBuffer.Count; i++)
+            {
+                GameObject root = _sceneRootSearchBuffer[i];
+                if (root == null)
+                {
+                    continue;
+                }
+
+                if (TryFindObjectByNameUnderRoot(root.transform, objectName, out found, excludedRoot))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryFindObjectByNameUnderRoot(Transform root, string objectName, out GameObject found, Transform excludedRoot = null)
+        {
+            found = null;
+            if (root == null || string.IsNullOrWhiteSpace(objectName))
+            {
+                return false;
+            }
+
+            var transforms = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < transforms.Length; i++)
+            {
+                Transform node = transforms[i];
+                if (node == null || !string.Equals(node.name, objectName, System.StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (excludedRoot != null && IsSameOrDescendantOf(node, excludedRoot))
+                {
+                    continue;
+                }
+
+                found = node.gameObject;
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool CanUseGlobalObjectFind()
+        {
+            if (!Application.isPlaying || !isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            if (!gameObject.scene.IsValid() || !gameObject.scene.isLoaded)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static bool IsSameOrDescendantOf(Transform candidate, Transform possibleAncestor)
@@ -1734,6 +1885,7 @@ namespace SevenBattles.Preparation
             ResolveSquadPanel();
             ResolveInventoryTargets();
             RefreshInventorySelectedUnitPreview();
+            _inventoryListPresenter?.RefreshNow();
             PlayClickSfx();
             StartPanelSwitch(toInventory: true);
         }
@@ -2713,6 +2865,7 @@ namespace SevenBattles.Preparation
             SetTournamentPathPreviewVisible(false);
             SetPopupMenuVisible(false);
             SetPreparationResourcesPanelVisible(false);
+            _inventoryListPresenter?.RefreshNow();
         }
 
         private void SetInventoryPanelHiddenImmediate()

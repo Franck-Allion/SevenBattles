@@ -115,6 +115,7 @@
     <Compile Include="Assets\Scripts\Tests\UI\BattleResultHUDRewardTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Spells\UnitSpellDeckTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Preparation\PreparationResourcesPanelPresenterTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\PreparationInventoryListPresenterTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattlePauseHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerSpellCastTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />

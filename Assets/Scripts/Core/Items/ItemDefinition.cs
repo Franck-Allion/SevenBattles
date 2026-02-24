@@ -18,6 +18,10 @@ namespace SevenBattles.Core.Items
         [Header("Presentation")]
         [Tooltip("Icon displayed in inventory and reward UI.")]
         public Sprite Icon;
+        [Tooltip("Rarity bucket used by inventory filtering/sorting logic.")]
+        public ItemRarity Rarity = ItemRarity.Common;
+        [Tooltip("Background tint used by inventory item tiles.")]
+        public Color InventoryBackgroundColor = Color.white;
 
         [Header("Effect")]
         [Tooltip("Runtime effect category for this item.")]
