@@ -102,6 +102,12 @@ namespace SevenBattles.Preparation
         private GameObject _inventoryItemPrefab;
         [SerializeField, Tooltip("Optional ItemEmpty prefab used for empty inventory slots.")]
         private GameObject _inventoryItemEmptyPrefab;
+        [SerializeField, Tooltip("Optional explicit page-buttons root under InventoryView used for pagination buttons. Auto-found when null.")]
+        private RectTransform _inventoryPageButtonsRoot;
+        [SerializeField, Tooltip("Object name used to auto-find the page-buttons root under InventoryPanel.")]
+        private string _inventoryPageButtonsRootObjectName = "Pages";
+        [SerializeField, Tooltip("Optional Page button prefab used to dynamically build page buttons.")]
+        private GameObject _inventoryPageButtonPrefab;
         [SerializeField, Tooltip("Optional registry for equipment icon/background lookup.")]
         private EquipmentDefinitionRegistry _equipmentDefinitionRegistry;
         [SerializeField, Tooltip("Optional registry for item icon/background lookup.")]
@@ -507,6 +513,7 @@ namespace SevenBattles.Preparation
             }
 
             ResolveInventoryItemsContentRoot();
+            ResolveInventoryPageButtonsRoot();
 
             _inventoryListPresenter.Configure(
                 ResolveCurrentPlayerContext(),
@@ -514,6 +521,8 @@ namespace SevenBattles.Preparation
                 _inventoryItemsContentRoot,
                 _inventoryItemPrefab,
                 _inventoryItemEmptyPrefab,
+                _inventoryPageButtonsRoot,
+                _inventoryPageButtonPrefab,
                 _equipmentDefinitionRegistry,
                 _itemDefinitionRegistry);
         }
@@ -532,6 +541,16 @@ namespace SevenBattles.Preparation
 
             Transform content = _inventoryPanel.transform.Find(INVENTORY_ITEMS_CONTENT_PATH);
             _inventoryItemsContentRoot = content as RectTransform;
+        }
+
+        private void ResolveInventoryPageButtonsRoot()
+        {
+            if (_inventoryPageButtonsRoot != null || _inventoryPanel == null)
+            {
+                return;
+            }
+
+            _inventoryPageButtonsRoot = FindRectTransformInRoot(_inventoryPanel, _inventoryPageButtonsRootObjectName);
         }
 
         private PlayerContext ResolveCurrentPlayerContext()

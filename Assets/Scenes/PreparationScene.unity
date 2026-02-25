@@ -30927,6 +30927,9 @@ MonoBehaviour:
   _inventoryItemsContentRoot: {fileID: 3103417785839537589}
   _inventoryItemPrefab: {fileID: 879575142760963760, guid: f01344f84011d784d92a335c822a2161, type: 3}
   _inventoryItemEmptyPrefab: {fileID: 6513540880197881118, guid: 2ca1abe3e2664674bb6ef25a20eb82b9, type: 3}
+  _inventoryPageButtonsRoot: {fileID: 1511698480}
+  _inventoryPageButtonsRootObjectName: Pages
+  _inventoryPageButtonPrefab: {fileID: 2115533189589986142, guid: 0cdb5f29bf1a8eb41bd6eb9cbafa0d00, type: 3}
   _equipmentDefinitionRegistry: {fileID: 11400000, guid: c1ab7016dbb3e3b40a21ee44d921e385, type: 2}
   _itemDefinitionRegistry: {fileID: 11400000, guid: 41f03a15a2507e14a807a0058581acd6, type: 2}
   _panelSwitchOverlayCanvasGroup: {fileID: 0}
@@ -31783,6 +31786,9 @@ MonoBehaviour:
   _itemDefinitionRegistry: {fileID: 11400000, guid: 41f03a15a2507e14a807a0058581acd6, type: 2}
   _fallbackIcon: {fileID: 0}
   _fallbackBackgroundColor: {r: 1, g: 1, b: 1, a: 1}
+  _pageButtonsRoot: {fileID: 1511698480}
+  _pageButtonPrefab: {fileID: 2115533189589986142, guid: 0cdb5f29bf1a8eb41bd6eb9cbafa0d00, type: 3}
+  _pageButtonsRootObjectName: Pages
   _page1Button: {fileID: 577110814}
   _page2Button: {fileID: 1106150532}
   _page3Button: {fileID: 1646097950}

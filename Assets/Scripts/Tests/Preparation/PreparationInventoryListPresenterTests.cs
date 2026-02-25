@@ -159,14 +159,14 @@ namespace SevenBattles.Tests.Preparation
         }
 
         [Test]
-        public void PageButtons_SwitchPages_AndRenderEmptyPageWhenNoEntriesExist()
+        public void PageButtons_AreBuiltFromPrefab_ForEveryRequiredPage_AndCanNavigateBeyondThreePages()
         {
             var context = ScriptableObject.CreateInstance<PlayerContext>();
             var inventory = ScriptableObject.CreateInstance<PlayerInventory>();
             context.Inventory = inventory;
             PlayerContext.SetRuntimeInstance(context);
 
-            for (int i = 1; i <= 35; i++)
+            for (int i = 1; i <= 95; i++)
             {
                 inventory.Entries.Add(new InventoryEntry
                 {
@@ -179,33 +179,44 @@ namespace SevenBattles.Tests.Preparation
             var inventoryPanel = new GameObject("InventoryPanel", typeof(RectTransform));
             var content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
             content.SetParent(inventoryPanel.transform, false);
+            var pageRoot = new GameObject("Pages", typeof(RectTransform)).GetComponent<RectTransform>();
+            pageRoot.SetParent(inventoryPanel.transform, false);
 
-            CreatePageButton(inventoryPanel.transform, "Page1Button", "1");
-            Button page2 = CreatePageButton(inventoryPanel.transform, "Page2Button", "2");
-            Button page3 = CreatePageButton(inventoryPanel.transform, "Page3Button", "3");
+            var pageTemplate = CreatePageButtonTemplate("PageTemplate", "1");
+            pageTemplate.SetActive(false);
 
             var presenterRoot = new GameObject("PresenterRoot");
             var presenter = presenterRoot.AddComponent<PreparationInventoryListPresenter>();
             var itemTemplate = CreateEntryTemplate("ItemTemplate");
             var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
-            presenter.Configure(context, inventoryPanel, content, itemTemplate.gameObject, emptyTemplate, null, null);
+            presenter.Configure(
+                context,
+                inventoryPanel,
+                content,
+                itemTemplate.gameObject,
+                emptyTemplate,
+                pageRoot,
+                pageTemplate,
+                null,
+                null);
             presenter.RefreshNow();
 
+            Assert.AreEqual(4, CountActivePageButtons(pageRoot));
             Assert.AreEqual(PAGE_SIZE, CountActiveItemViews(content));
             Assert.AreEqual(0, CountActiveEmptySlots(content));
             Assert.AreEqual("1", GetQuantityAtSlot(content, 0));
 
-            page2.onClick.Invoke();
+            Button page4 = FindActivePageButtonByLabel(pageRoot, "4");
+            Assert.IsNotNull(page4);
+
+            page4.onClick.Invoke();
             Assert.AreEqual(5, CountActiveItemViews(content));
             Assert.AreEqual(PAGE_SIZE - 5, CountActiveEmptySlots(content));
-            Assert.AreEqual("31", GetQuantityAtSlot(content, 0));
-
-            page3.onClick.Invoke();
-            Assert.AreEqual(0, CountActiveItemViews(content));
-            Assert.AreEqual(PAGE_SIZE, CountActiveEmptySlots(content));
+            Assert.AreEqual("91", GetQuantityAtSlot(content, 0));
 
             Object.DestroyImmediate(itemTemplate.gameObject);
             Object.DestroyImmediate(emptyTemplate);
+            Object.DestroyImmediate(pageTemplate);
             Object.DestroyImmediate(presenterRoot);
             Object.DestroyImmediate(inventoryPanel);
             Object.DestroyImmediate(inventory);
@@ -269,17 +280,67 @@ namespace SevenBattles.Tests.Preparation
             return new GameObject(name, typeof(RectTransform), typeof(Image));
         }
 
-        private static Button CreatePageButton(Transform parent, string name, string labelValue)
+        private static GameObject CreatePageButtonTemplate(string name, string labelValue)
         {
             var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
-            buttonObject.transform.SetParent(parent, false);
 
-            var labelObject = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+            var labelObject = new GameObject("Text (TMP)", typeof(RectTransform), typeof(TextMeshProUGUI));
             labelObject.transform.SetParent(buttonObject.transform, false);
             var label = labelObject.GetComponent<TextMeshProUGUI>();
             label.text = labelValue;
 
-            return buttonObject.GetComponent<Button>();
+            return buttonObject;
+        }
+
+        private static int CountActivePageButtons(Transform pageRoot)
+        {
+            int count = 0;
+            for (int i = 0; i < pageRoot.childCount; i++)
+            {
+                var child = pageRoot.GetChild(i);
+                if (!child.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (child.GetComponent<Button>() != null || child.GetComponentInChildren<Button>(true) != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static Button FindActivePageButtonByLabel(Transform pageRoot, string labelValue)
+        {
+            for (int i = 0; i < pageRoot.childCount; i++)
+            {
+                var child = pageRoot.GetChild(i);
+                if (!child.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                Button button = child.GetComponent<Button>();
+                if (button == null)
+                {
+                    button = child.GetComponentInChildren<Button>(true);
+                }
+
+                if (button == null)
+                {
+                    continue;
+                }
+
+                TMP_Text text = button.GetComponentInChildren<TMP_Text>(true);
+                if (text != null && string.Equals(text.text, labelValue, System.StringComparison.Ordinal))
+                {
+                    return button;
+                }
+            }
+
+            return null;
         }
 
         private static int CountActiveChildren(Transform content)

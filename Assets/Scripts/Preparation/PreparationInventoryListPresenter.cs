@@ -5,6 +5,7 @@ using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace SevenBattles.Preparation
@@ -15,10 +16,10 @@ namespace SevenBattles.Preparation
     public sealed class PreparationInventoryListPresenter : MonoBehaviour
     {
         private const string INVENTORY_ITEMS_CONTENT_PATH = "Canvas/InventoryView/Right_Panel/ScrollRect/Viewport/Content";
+        private const string DEFAULT_PAGE_BUTTONS_ROOT_NAME = "Pages";
         private const int PAGE_COLUMNS = 6;
         private const int PAGE_ROWS = 5;
         private const int PAGE_SIZE = PAGE_COLUMNS * PAGE_ROWS;
-        private const int MAX_PAGE_COUNT = 3;
 
         [SerializeField, Tooltip("Optional explicit PlayerContext. RuntimeInstance is used first when available.")]
         private PlayerContext _playerContext;
@@ -39,11 +40,17 @@ namespace SevenBattles.Preparation
         [SerializeField, Tooltip("Fallback background tint when a definition is missing color data.")]
         private Color _fallbackBackgroundColor = Color.white;
         [Header("Pagination Buttons")]
-        [SerializeField, Tooltip("Optional explicit button for page 1. Auto-resolved when null.")]
+        [SerializeField, Tooltip("Optional explicit root that receives dynamic page buttons. Auto-resolved by object name when null.")]
+        private RectTransform _pageButtonsRoot;
+        [SerializeField, Tooltip("Optional page button prefab used to grow the page-button pool.")]
+        private GameObject _pageButtonPrefab;
+        [SerializeField, Tooltip("Object name used to auto-find the page-buttons root under InventoryPanel.")]
+        private string _pageButtonsRootObjectName = DEFAULT_PAGE_BUTTONS_ROOT_NAME;
+        [SerializeField, Tooltip("Legacy explicit button for page 1. Used as fallback seed if dynamic root/prefab are missing.")]
         private Button _page1Button;
-        [SerializeField, Tooltip("Optional explicit button for page 2. Auto-resolved when null.")]
+        [SerializeField, Tooltip("Legacy explicit button for page 2. Used as fallback seed if dynamic root/prefab are missing.")]
         private Button _page2Button;
-        [SerializeField, Tooltip("Optional explicit button for page 3. Auto-resolved when null.")]
+        [SerializeField, Tooltip("Legacy explicit button for page 3. Used as fallback seed if dynamic root/prefab are missing.")]
         private Button _page3Button;
         [Header("Category Filter")]
         [SerializeField] private bool _includeEquipment = true;
@@ -54,6 +61,7 @@ namespace SevenBattles.Preparation
         private readonly List<GameObject> _emptyPool = new List<GameObject>(PAGE_SIZE);
         private readonly Dictionary<string, EquipmentDefinition> _equipmentFallbackLookup = new Dictionary<string, EquipmentDefinition>(StringComparer.Ordinal);
         private readonly Dictionary<string, ItemDefinition> _itemFallbackLookup = new Dictionary<string, ItemDefinition>(StringComparer.Ordinal);
+        private readonly List<PageButtonView> _pageButtonPool = new List<PageButtonView>(8);
 
         private PlayerInventory _subscribedInventory;
         private bool _fallbackLookupBuilt;
@@ -61,8 +69,98 @@ namespace SevenBattles.Preparation
         private bool _missingItemTemplateWarnLogged;
         private bool _missingItemEmptyTemplateWarnLogged;
         private bool _missingContentWarnLogged;
-        private bool _pageButtonsWired;
+        private bool _pageButtonsWarmed;
+        private bool _missingPageButtonsRootWarnLogged;
+        private bool _missingPageTemplateWarnLogged;
         private int _currentPageIndex;
+        private int _activePageCount = 1;
+
+        private sealed class PageButtonView
+        {
+            private readonly TMP_Text _labelTMP;
+            private readonly Text _labelText;
+            private UnityAction _clickAction;
+
+            public PageButtonView(Button button, TMP_Text labelTMP, Text labelText)
+            {
+                Button = button;
+                _labelTMP = labelTMP;
+                _labelText = labelText;
+            }
+
+            public Button Button { get; }
+
+            public void Bind(int pageNumber, Action<int> onPageSelected)
+            {
+                RemoveBinding();
+                _clickAction = () => onPageSelected?.Invoke(pageNumber);
+                Button.onClick.AddListener(_clickAction);
+
+                string label = pageNumber.ToString();
+                if (_labelTMP != null)
+                {
+                    _labelTMP.text = label;
+                }
+                else if (_labelText != null)
+                {
+                    _labelText.text = label;
+                }
+
+                Button.gameObject.name = $"Page{label}";
+                if (!Button.gameObject.activeSelf)
+                {
+                    Button.gameObject.SetActive(true);
+                }
+            }
+
+            public void SetSelected(bool selected)
+            {
+                if (Button != null)
+                {
+                    Button.interactable = !selected;
+                }
+            }
+
+            public void Hide()
+            {
+                RemoveBinding();
+                if (Button != null && Button.gameObject.activeSelf)
+                {
+                    Button.gameObject.SetActive(false);
+                }
+            }
+
+            public void RemoveBinding()
+            {
+                if (Button != null && _clickAction != null)
+                {
+                    Button.onClick.RemoveListener(_clickAction);
+                }
+
+                _clickAction = null;
+            }
+        }
+
+        public void Configure(
+            PlayerContext playerContext,
+            GameObject inventoryPanelRoot,
+            RectTransform contentRoot,
+            GameObject itemPrefab,
+            GameObject itemEmptyPrefab,
+            EquipmentDefinitionRegistry equipmentDefinitionRegistry,
+            ItemDefinitionRegistry itemDefinitionRegistry)
+        {
+            Configure(
+                playerContext,
+                inventoryPanelRoot,
+                contentRoot,
+                itemPrefab,
+                itemEmptyPrefab,
+                _pageButtonsRoot,
+                _pageButtonPrefab,
+                equipmentDefinitionRegistry,
+                itemDefinitionRegistry);
+        }
 
         public void Configure(
             PlayerContext playerContext,
@@ -78,6 +176,8 @@ namespace SevenBattles.Preparation
                 contentRoot,
                 itemPrefab,
                 _itemEmptyPrefab,
+                _pageButtonsRoot,
+                _pageButtonPrefab,
                 equipmentDefinitionRegistry,
                 itemDefinitionRegistry);
         }
@@ -88,6 +188,8 @@ namespace SevenBattles.Preparation
             RectTransform contentRoot,
             GameObject itemPrefab,
             GameObject itemEmptyPrefab,
+            RectTransform pageButtonsRoot,
+            GameObject pageButtonPrefab,
             EquipmentDefinitionRegistry equipmentDefinitionRegistry,
             ItemDefinitionRegistry itemDefinitionRegistry)
         {
@@ -96,6 +198,8 @@ namespace SevenBattles.Preparation
             _contentRoot = contentRoot;
             _itemPrefab = itemPrefab;
             _itemEmptyPrefab = itemEmptyPrefab;
+            _pageButtonsRoot = pageButtonsRoot;
+            _pageButtonPrefab = pageButtonPrefab;
             _equipmentDefinitionRegistry = equipmentDefinitionRegistry;
             _itemDefinitionRegistry = itemDefinitionRegistry;
 
@@ -104,7 +208,7 @@ namespace SevenBattles.Preparation
 
         public void ShowPage(int pageNumber)
         {
-            int pageIndex = Mathf.Clamp(pageNumber - 1, 0, MAX_PAGE_COUNT - 1);
+            int pageIndex = Mathf.Clamp(pageNumber - 1, 0, Mathf.Max(0, _activePageCount - 1));
             if (_currentPageIndex == pageIndex)
             {
                 return;
@@ -112,6 +216,7 @@ namespace SevenBattles.Preparation
 
             _currentPageIndex = pageIndex;
             BindCurrentPage();
+            RefreshPageButtonSelection();
         }
 
         public void RefreshNow()
@@ -119,8 +224,8 @@ namespace SevenBattles.Preparation
             ResolveContextAndInventory();
             ResolveContentRootIfMissing();
             WarmPoolFromContentIfNeeded();
-            ResolvePageButtonsIfMissing();
-            WirePageButtons();
+            ResolvePageButtonsRootIfMissing();
+            WarmPageButtonsFromRootIfNeeded();
 
             if (_contentRoot == null)
             {
@@ -134,22 +239,25 @@ namespace SevenBattles.Preparation
             }
 
             BuildVisibleEntries();
+            _activePageCount = CalculatePageCount(_visibleEntries.Count);
+            _currentPageIndex = Mathf.Clamp(_currentPageIndex, 0, _activePageCount - 1);
+            EnsurePageButtonPoolSize(_activePageCount);
+            BindPageButtons(_activePageCount);
             EnsureItemPoolSize(PAGE_SIZE);
             EnsureEmptyPoolSize(PAGE_SIZE);
             BindCurrentPage();
+            RefreshPageButtonSelection();
         }
 
         private void OnEnable()
         {
             ResolveContextAndInventory();
-            ResolvePageButtonsIfMissing();
-            WirePageButtons();
             RefreshNow();
         }
 
         private void OnDisable()
         {
-            UnwirePageButtons();
+            UnbindAllPageButtons();
             UnsubscribeFromInventory();
         }
 
@@ -465,134 +573,215 @@ namespace SevenBattles.Preparation
             }
         }
 
-        private void ResolvePageButtonsIfMissing()
+        private void ResolvePageButtonsRootIfMissing()
         {
-            Transform searchRoot = null;
-            if (_inventoryPanelRoot != null)
-            {
-                searchRoot = _inventoryPanelRoot.transform;
-            }
-            else if (_contentRoot != null)
-            {
-                searchRoot = _contentRoot.root;
-            }
-
-            if (searchRoot == null)
+            if (_pageButtonsRoot != null)
             {
                 return;
             }
 
-            if (_page1Button == null)
+            if (_inventoryPanelRoot == null || string.IsNullOrWhiteSpace(_pageButtonsRootObjectName))
             {
-                _page1Button = FindPageButton(searchRoot, "1");
+                return;
             }
 
-            if (_page2Button == null)
+            Transform[] nodes = _inventoryPanelRoot.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < nodes.Length; i++)
             {
-                _page2Button = FindPageButton(searchRoot, "2");
-            }
-
-            if (_page3Button == null)
-            {
-                _page3Button = FindPageButton(searchRoot, "3");
+                Transform node = nodes[i];
+                if (node is RectTransform rect &&
+                    string.Equals(node.name, _pageButtonsRootObjectName, StringComparison.Ordinal))
+                {
+                    _pageButtonsRoot = rect;
+                    return;
+                }
             }
         }
 
-        private static Button FindPageButton(Transform root, string pageLabel)
+        private void WarmPageButtonsFromRootIfNeeded()
         {
-            if (root == null || string.IsNullOrWhiteSpace(pageLabel))
+            if (_pageButtonsWarmed)
             {
-                return null;
+                return;
             }
 
-            Button[] buttons = root.GetComponentsInChildren<Button>(true);
-            for (int i = 0; i < buttons.Length; i++)
+            _pageButtonsWarmed = true;
+            _pageButtonPool.Clear();
+
+            if (_pageButtonsRoot != null)
             {
-                Button button = buttons[i];
+                for (int i = 0; i < _pageButtonsRoot.childCount; i++)
+                {
+                    Transform child = _pageButtonsRoot.GetChild(i);
+                    if (child == null)
+                    {
+                        continue;
+                    }
+
+                    Button button = child.GetComponent<Button>();
+                    if (button == null)
+                    {
+                        button = child.GetComponentInChildren<Button>(true);
+                    }
+
+                    if (button == null)
+                    {
+                        continue;
+                    }
+
+                    AddPageButtonToPool(button);
+                }
+            }
+
+            AddLegacyButtonToPool(_page1Button);
+            AddLegacyButtonToPool(_page2Button);
+            AddLegacyButtonToPool(_page3Button);
+
+            if (_pageButtonPrefab == null && _pageButtonPool.Count > 0)
+            {
+                _pageButtonPrefab = _pageButtonPool[0].Button.gameObject;
+            }
+        }
+
+        private void AddLegacyButtonToPool(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            if (_pageButtonsRoot == null && button.transform.parent is RectTransform parent)
+            {
+                _pageButtonsRoot = parent;
+            }
+
+            AddPageButtonToPool(button);
+        }
+
+        private void AddPageButtonToPool(Button button)
+        {
+            if (button == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < _pageButtonPool.Count; i++)
+            {
+                if (ReferenceEquals(_pageButtonPool[i].Button, button))
+                {
+                    return;
+                }
+            }
+
+            TMP_Text labelTMP = button.GetComponentInChildren<TMP_Text>(true);
+            Text labelText = labelTMP == null ? button.GetComponentInChildren<Text>(true) : null;
+            var view = new PageButtonView(button, labelTMP, labelText);
+            view.Hide();
+            _pageButtonPool.Add(view);
+        }
+
+        private void EnsurePageButtonPoolSize(int requiredCount)
+        {
+            if (requiredCount <= _pageButtonPool.Count)
+            {
+                return;
+            }
+
+            if (_pageButtonsRoot == null)
+            {
+                if (!_missingPageButtonsRootWarnLogged)
+                {
+                    SBLog.Warn("PreparationInventoryListPresenter: Page-buttons root is missing. Dynamic pagination buttons cannot be created.", this);
+                    _missingPageButtonsRootWarnLogged = true;
+                }
+
+                return;
+            }
+
+            GameObject template = _pageButtonPrefab;
+            if (template == null && _pageButtonPool.Count > 0)
+            {
+                template = _pageButtonPool[0].Button.gameObject;
+            }
+
+            if (template == null)
+            {
+                if (!_missingPageTemplateWarnLogged)
+                {
+                    SBLog.Warn("PreparationInventoryListPresenter: Page button prefab/template is missing. Cannot grow page-button pool.", this);
+                    _missingPageTemplateWarnLogged = true;
+                }
+
+                return;
+            }
+
+            while (_pageButtonPool.Count < requiredCount)
+            {
+                GameObject instanceObject = Instantiate(template, _pageButtonsRoot);
+                Button button = instanceObject.GetComponent<Button>();
                 if (button == null)
                 {
-                    continue;
+                    button = instanceObject.GetComponentInChildren<Button>(true);
                 }
 
-                TMP_Text tmpLabel = button.GetComponentInChildren<TMP_Text>(true);
-                if (tmpLabel != null && string.Equals(tmpLabel.text?.Trim(), pageLabel, StringComparison.Ordinal))
+                if (button == null)
                 {
-                    return button;
+                    SBLog.Warn("PreparationInventoryListPresenter: Page button instance has no Button component.", this);
+                    Destroy(instanceObject);
+                    return;
                 }
 
-                Text uiLabel = button.GetComponentInChildren<Text>(true);
-                if (uiLabel != null && string.Equals(uiLabel.text?.Trim(), pageLabel, StringComparison.Ordinal))
-                {
-                    return button;
-                }
+                AddPageButtonToPool(button);
             }
-
-            return null;
         }
 
-        private void WirePageButtons()
+        private void BindPageButtons(int pageCount)
         {
-            if (_pageButtonsWired)
+            int boundCount = Mathf.Min(pageCount, _pageButtonPool.Count);
+            for (int i = 0; i < boundCount; i++)
             {
-                return;
+                PageButtonView view = _pageButtonPool[i];
+                int pageNumber = i + 1;
+                view.Bind(pageNumber, HandleDynamicPageClicked);
+                view.Button.transform.SetSiblingIndex(i);
             }
 
-            if (_page1Button != null)
+            for (int i = boundCount; i < _pageButtonPool.Count; i++)
             {
-                _page1Button.onClick.AddListener(HandlePage1Clicked);
+                _pageButtonPool[i].Hide();
             }
-
-            if (_page2Button != null)
-            {
-                _page2Button.onClick.AddListener(HandlePage2Clicked);
-            }
-
-            if (_page3Button != null)
-            {
-                _page3Button.onClick.AddListener(HandlePage3Clicked);
-            }
-
-            _pageButtonsWired = true;
         }
 
-        private void UnwirePageButtons()
+        private void RefreshPageButtonSelection()
         {
-            if (!_pageButtonsWired)
+            int visibleCount = Mathf.Min(_activePageCount, _pageButtonPool.Count);
+            for (int i = 0; i < visibleCount; i++)
             {
-                return;
+                _pageButtonPool[i].SetSelected(i == _currentPageIndex);
             }
-
-            if (_page1Button != null)
-            {
-                _page1Button.onClick.RemoveListener(HandlePage1Clicked);
-            }
-
-            if (_page2Button != null)
-            {
-                _page2Button.onClick.RemoveListener(HandlePage2Clicked);
-            }
-
-            if (_page3Button != null)
-            {
-                _page3Button.onClick.RemoveListener(HandlePage3Clicked);
-            }
-
-            _pageButtonsWired = false;
         }
 
-        private void HandlePage1Clicked()
+        private void UnbindAllPageButtons()
         {
-            ShowPage(1);
+            for (int i = 0; i < _pageButtonPool.Count; i++)
+            {
+                _pageButtonPool[i].RemoveBinding();
+            }
         }
 
-        private void HandlePage2Clicked()
+        private static int CalculatePageCount(int itemCount)
         {
-            ShowPage(2);
+            if (itemCount <= 0)
+            {
+                return 1;
+            }
+
+            return ((itemCount - 1) / PAGE_SIZE) + 1;
         }
 
-        private void HandlePage3Clicked()
+        private void HandleDynamicPageClicked(int pageNumber)
         {
-            ShowPage(3);
+            ShowPage(pageNumber);
         }
 
         private void ResolvePresentation(InventoryEntry entry, out Sprite icon, out Color backgroundColor, out int quantity)

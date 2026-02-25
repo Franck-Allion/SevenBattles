@@ -105,14 +105,17 @@
   - `_inventoryItemsContentRoot` -> optional explicit reference to `InventoryPanel/Canvas/InventoryView/Right_Panel/ScrollRect/Viewport/Content` (`RectTransform`).
   - `_inventoryItemPrefab` -> optional explicit item tile prefab (`Assets/Prefabs/UI/Item.prefab`) used when pool growth is needed (fallback: existing `Content` children named `Item`).
   - `_inventoryItemEmptyPrefab` -> optional explicit empty-slot prefab (`Assets/Prefabs/UI/ItemEmpty.prefab`) used when page slots are unoccupied.
+  - `_inventoryPageButtonsRoot` -> optional explicit pagination root (`InventoryPanel/.../Pages`) where page buttons are built.
+  - `_inventoryPageButtonPrefab` -> optional page-button template prefab (`Assets/Prefabs/UI/Page.prefab`) used to grow pagination button pool.
+  - `_inventoryPageButtonsRootObjectName` -> auto-discovery name for pagination root when explicit reference is empty (default: `Pages`).
   - `_equipmentDefinitionRegistry` -> optional `EquipmentDefinitionRegistry` used to resolve equipment icons/background colors by ID.
   - `_itemDefinitionRegistry` -> optional `ItemDefinitionRegistry` used to resolve item icons/background colors by ID.
   - Inventory list refresh trigger -> `HandleInventoryButtonClicked` and `SetInventoryPanelVisibleImmediate` call `PreparationInventoryListPresenter.RefreshNow()`.
   - Inventory list filtering -> only `InventoryEntry.Kind` = `Equipment` and `Item` are rendered in `Right_Panel/ScrollRect/Viewport/Content`; other kinds are ignored.
   - Inventory page sizing -> fixed `6 x 5` grid (`30` slots) per page, always rendered even when no entries exist.
   - Inventory empty-slot rendering -> unoccupied slots use `ItemEmpty` views, so pages can be partially or fully empty.
-  - Inventory pagination -> max `3` pages; page buttons are auto-resolved from `InventoryPanel` by button label text (`1`, `2`, `3`) when explicit references are not assigned.
-  - `PreparationInventoryListPresenter` button wiring -> optional explicit `_page1Button`, `_page2Button`, `_page3Button`; fallback auto-discovery remains enabled.
+  - Inventory pagination -> dynamic page count (`ceil(entries / 30)`, minimum `1`) with one button per page.
+  - `PreparationInventoryListPresenter` button wiring -> uses pooled dynamic button instances under `Pages` root and keeps legacy `_page1Button/_page2Button/_page3Button` only as fallback seeds during migration.
   - Inventory list pooling -> item/empty slot instances are pooled and reused on page switches (no per-switch destroy/recreate churn).
   - `_squadSetupController` -> optional explicit `SquadSetupController` reference used to resolve the currently selected unit for inventory preview (auto-found when empty).
   - `_inventoryUnitPreviewAnchor` -> optional explicit `RectTransform` reference for the inventory character preview spawn point (auto-found when empty).
