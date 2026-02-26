@@ -29,11 +29,13 @@ namespace SevenBattles.Tests.Preparation
 
             var equipmentDef = ScriptableObject.CreateInstance<EquipmentDefinition>();
             equipmentDef.Id = "eq.sword";
+            equipmentDef.Name = "Sword";
             equipmentDef.Icon = CreateSprite(Color.red);
             equipmentDef.InventoryBackgroundColor = new Color(0.2f, 0.4f, 0.6f, 1f);
 
             var itemDef = ScriptableObject.CreateInstance<ItemDefinition>();
             itemDef.Id = "item.potion";
+            itemDef.Name = "Potion";
             itemDef.Icon = CreateSprite(Color.green);
             itemDef.InventoryBackgroundColor = new Color(0.7f, 0.5f, 0.2f, 1f);
 
@@ -79,6 +81,9 @@ namespace SevenBattles.Tests.Preparation
             Assert.AreEqual("1", firstText.text);
             Assert.AreEqual(equipmentDef.InventoryBackgroundColor, firstBg.color);
             Assert.AreEqual(equipmentDef.Icon, firstIcon.sprite);
+            var firstTooltip = firstView.GetComponent<PreparationInventoryItemTooltipHandler>();
+            Assert.IsNotNull(firstTooltip);
+            Assert.AreEqual(equipmentDef.Name, firstTooltip.TooltipText);
 
             GameObject secondSlot = GetActiveSlotAt(content, 1);
             var secondView = secondSlot.GetComponent<PreparationInventoryItemEntryView>();
@@ -89,6 +94,9 @@ namespace SevenBattles.Tests.Preparation
             Assert.AreEqual("4", secondText.text);
             Assert.AreEqual(itemDef.InventoryBackgroundColor, secondBg.color);
             Assert.AreEqual(itemDef.Icon, secondIcon.sprite);
+            var secondTooltip = secondView.GetComponent<PreparationInventoryItemTooltipHandler>();
+            Assert.IsNotNull(secondTooltip);
+            Assert.AreEqual(itemDef.Name, secondTooltip.TooltipText);
 
             GameObject thirdSlot = GetActiveSlotAt(content, 2);
             Assert.IsNotNull(thirdSlot);

@@ -55,6 +55,11 @@ namespace SevenBattles.Preparation
         [Header("Category Filter")]
         [SerializeField] private bool _includeEquipment = true;
         [SerializeField] private bool _includeItems = true;
+        [Header("Inventory Tooltip")]
+        [SerializeField, Tooltip("If enabled, inventory item tooltips use a custom cursor offset.")]
+        private bool _overrideInventoryTooltipCursorOffset = true;
+        [SerializeField, Tooltip("Tooltip offset from mouse position in canvas-space UI units.")]
+        private Vector2 _inventoryTooltipCursorOffset = new Vector2(36f, -30f);
 
         private readonly List<InventoryEntry> _visibleEntries = new List<InventoryEntry>(64);
         private readonly List<PreparationInventoryItemEntryView> _itemPool = new List<PreparationInventoryItemEntryView>(PAGE_SIZE);
@@ -511,8 +516,9 @@ namespace SevenBattles.Preparation
                 if (hasEntry && itemView != null)
                 {
                     InventoryEntry entry = _visibleEntries[entryIndex];
-                    ResolvePresentation(entry, out Sprite icon, out Color backgroundColor, out int quantity);
-                    itemView.Bind(icon, backgroundColor, quantity, _fallbackIcon, _fallbackBackgroundColor);
+                    ResolvePresentation(entry, out Sprite icon, out Color backgroundColor, out int quantity, out string displayName);
+                    itemView.ConfigureTooltipCursorOffset(_overrideInventoryTooltipCursorOffset, _inventoryTooltipCursorOffset);
+                    itemView.Bind(icon, backgroundColor, quantity, _fallbackIcon, _fallbackBackgroundColor, displayName);
                     SetSlotActive(itemView.gameObject, slotIndex, true);
                     SetSlotActive(emptyView, slotIndex, false);
                 }
@@ -784,11 +790,17 @@ namespace SevenBattles.Preparation
             ShowPage(pageNumber);
         }
 
-        private void ResolvePresentation(InventoryEntry entry, out Sprite icon, out Color backgroundColor, out int quantity)
+        private void ResolvePresentation(
+            InventoryEntry entry,
+            out Sprite icon,
+            out Color backgroundColor,
+            out int quantity,
+            out string displayName)
         {
             icon = null;
             backgroundColor = _fallbackBackgroundColor;
             quantity = 1;
+            displayName = string.Empty;
 
             if (entry == null)
             {
@@ -807,6 +819,7 @@ namespace SevenBattles.Preparation
                     }
 
                     quantity = Mathf.Max(1, entry.Quantity);
+                    displayName = ResolveDisplayName(definition != null ? definition.Name : null, entry.DefinitionId);
                     break;
                 }
                 case InventoryEntry.EntryKind.Item:
@@ -819,9 +832,20 @@ namespace SevenBattles.Preparation
                     }
 
                     quantity = Mathf.Max(1, entry.Quantity);
+                    displayName = ResolveDisplayName(definition != null ? definition.Name : null, entry.DefinitionId);
                     break;
                 }
             }
+        }
+
+        private static string ResolveDisplayName(string definitionName, string fallbackDefinitionId)
+        {
+            if (!string.IsNullOrWhiteSpace(definitionName))
+            {
+                return definitionName;
+            }
+
+            return fallbackDefinitionId ?? string.Empty;
         }
 
         private EquipmentDefinition ResolveEquipmentDefinition(string definitionId)

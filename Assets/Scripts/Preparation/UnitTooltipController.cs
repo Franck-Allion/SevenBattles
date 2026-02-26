@@ -177,6 +177,12 @@ namespace SevenBattles.Preparation
                         this);
                 }
             }
+            // Keep the controller itself at the end of the canvas hierarchy so the tooltip
+            // is not rendered behind recently re-layered panels (inventory/squad transitions).
+            if (transform.parent != null)
+            {
+                transform.SetAsLastSibling();
+            }
             if (_tooltipView.RootRect != null)
             {
                 _tooltipView.RootRect.SetAsLastSibling();
@@ -461,7 +467,7 @@ namespace SevenBattles.Preparation
         private static Canvas ResolveRootCanvas(Transform context)
         {
             Canvas canvas = context != null ? context.GetComponentInParent<Canvas>() : null;
-            if (canvas == null)
+            if (canvas == null && context == null)
             {
                 canvas = Object.FindFirstObjectByType<Canvas>();
             }

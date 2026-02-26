@@ -133,5 +133,168 @@ namespace SevenBattles.Tests.Preparation
 
             Object.DestroyImmediate(root);
         }
+
+        [Test]
+        public void InventoryItemHover_AfterDelay_ShowsTooltipAndExitHidesIt()
+        {
+            var canvasGo = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            var canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            UnitTooltipController controller = UnitTooltipController.ResolveFor(canvasGo.transform);
+            Assert.IsNotNull(controller);
+            controller.SetShowDelaySeconds(0f);
+
+            var itemGo = new GameObject(
+                "Item",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(PreparationInventoryItemEntryView));
+            itemGo.transform.SetParent(canvasGo.transform, false);
+
+            var handler = itemGo.GetComponent<PreparationInventoryItemTooltipHandler>();
+            Assert.IsNotNull(handler);
+
+            handler.SetTooltipController(controller);
+            handler.SetHoverDelaySeconds(1f);
+            handler.SetTooltipText("Potion");
+
+            handler.OnPointerEnter(null);
+            Assert.IsFalse(controller.IsVisible, "Tooltip should remain hidden until delay elapses.");
+
+            SetPrivate(handler, "_pendingShowTime", Time.unscaledTime - 0.01f);
+            itemGo.SendMessage("Update");
+            Assert.IsTrue(controller.IsVisible, "Tooltip should appear after hover delay.");
+            Assert.AreSame(handler, controller.CurrentOwner);
+
+            handler.OnPointerExit(null);
+            Assert.IsFalse(controller.IsVisible, "Tooltip should hide on pointer exit.");
+            Assert.IsNull(controller.CurrentOwner);
+
+            Object.DestroyImmediate(canvasGo);
+        }
+
+        [Test]
+        public void Show_BringsTooltipControllerToFrontInCanvasHierarchy()
+        {
+            var canvasGo = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            var canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            UnitTooltipController controller = UnitTooltipController.ResolveFor(canvasGo.transform);
+            Assert.IsNotNull(controller);
+
+            var overlay = new GameObject("Overlay", typeof(RectTransform), typeof(Image));
+            overlay.transform.SetParent(canvasGo.transform, false);
+            overlay.transform.SetAsLastSibling();
+
+            Assert.AreNotEqual(
+                canvasGo.transform.childCount - 1,
+                controller.transform.GetSiblingIndex(),
+                "Precondition failed: controller should not already be top-most.");
+
+            controller.Show("Potion", overlay);
+
+            Assert.AreEqual(canvasGo.transform.childCount - 1, controller.transform.GetSiblingIndex());
+
+            Object.DestroyImmediate(canvasGo);
+        }
+
+        [Test]
+        public void InventoryItemHover_ExitIntoChild_DoesNotCancelDelayedTooltip()
+        {
+            var canvasGo = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            var canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            UnitTooltipController controller = UnitTooltipController.ResolveFor(canvasGo.transform);
+            Assert.IsNotNull(controller);
+            controller.SetShowDelaySeconds(0f);
+
+            var itemGo = new GameObject(
+                "Item",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(PreparationInventoryItemEntryView));
+            itemGo.transform.SetParent(canvasGo.transform, false);
+
+            var childGo = new GameObject("ItemIcon", typeof(RectTransform), typeof(Image));
+            childGo.transform.SetParent(itemGo.transform, false);
+
+            var handler = itemGo.GetComponent<PreparationInventoryItemTooltipHandler>();
+            Assert.IsNotNull(handler);
+            handler.SetTooltipController(controller);
+            handler.SetHoverDelaySeconds(1f);
+            handler.SetTooltipText("Potion");
+
+            handler.OnPointerEnter(null);
+
+            var exitEvent = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current)
+            {
+                pointerCurrentRaycast = new UnityEngine.EventSystems.RaycastResult { gameObject = childGo }
+            };
+            handler.OnPointerExit(exitEvent);
+
+            SetPrivate(handler, "_pendingShowTime", Time.unscaledTime - 0.01f);
+            itemGo.SendMessage("Update");
+
+            Assert.IsTrue(controller.IsVisible, "Tooltip should still show when exit target is a child of the same item.");
+            Assert.AreSame(handler, controller.CurrentOwner);
+
+            Object.DestroyImmediate(canvasGo);
+        }
+
+        [Test]
+        public void ResolveFor_ContextWithoutCanvas_ReturnsNull()
+        {
+            var orphan = new GameObject("Orphan", typeof(RectTransform));
+
+            UnitTooltipController controller = UnitTooltipController.ResolveFor(orphan.transform);
+
+            Assert.IsNull(controller);
+
+            Object.DestroyImmediate(orphan);
+        }
+
+        [Test]
+        public void InventoryItemTooltip_AppliesAndRestoresCustomCursorOffset()
+        {
+            var canvasGo = new GameObject("Canvas", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            var canvas = canvasGo.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            UnitTooltipController controller = UnitTooltipController.ResolveFor(canvasGo.transform);
+            Assert.IsNotNull(controller);
+            controller.SetCursorOffset(10f, -8f);
+            controller.SetShowDelaySeconds(0f);
+
+            var itemGo = new GameObject(
+                "Item",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(PreparationInventoryItemEntryView));
+            itemGo.transform.SetParent(canvasGo.transform, false);
+
+            var handler = itemGo.GetComponent<PreparationInventoryItemTooltipHandler>();
+            Assert.IsNotNull(handler);
+            handler.SetTooltipController(controller);
+            handler.SetHoverDelaySeconds(0f);
+            handler.SetTooltipText("Potion");
+
+            SetPrivate(handler, "_overrideTooltipCursorOffset", true);
+            SetPrivate(handler, "_tooltipCursorOffset", new Vector2(44f, -36f));
+
+            handler.OnPointerEnter(null);
+            Assert.IsTrue(controller.IsVisible);
+            Assert.AreEqual(44f, controller.CursorOffsetX, 0.001f);
+            Assert.AreEqual(-36f, controller.CursorOffsetY, 0.001f);
+
+            handler.OnPointerExit(null);
+            Assert.IsFalse(controller.IsVisible);
+            Assert.AreEqual(10f, controller.CursorOffsetX, 0.001f);
+            Assert.AreEqual(-8f, controller.CursorOffsetY, 0.001f);
+
+            Object.DestroyImmediate(canvasGo);
+        }
     }
 }
