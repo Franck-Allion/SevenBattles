@@ -1,6 +1,9 @@
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
+using SevenBattles.Core;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -13,6 +16,7 @@ namespace SevenBattles.Preparation
     public sealed class UnitInfoPanelView : MonoBehaviour
     {
         private const string DefaultLocalizationTable = "UI.Common";
+        private const string InventoryDragGhostObjectName = "InventoryDragGhost";
 
         [SerializeField] private Image _portrait;
         [SerializeField] private TMP_Text _nameLabel;
@@ -37,6 +41,19 @@ namespace SevenBattles.Preparation
         [SerializeField] private TMP_Text _moraleValue;
         [SerializeField] private GameObject _emptyState;
         [SerializeField] private GameObject _statsContainer;
+        [Header("Equipment Slots")]
+        [SerializeField, Tooltip("Enable legacy equipment-slot drag/drop UI in this panel. Keep disabled for squad-only unit info panels (for example Right_UnitInfo in SquadSetupView).")]
+        private bool _enableEquipmentSlots;
+        [SerializeField, Tooltip("Optional explicit player context used to resolve selected owned-unit equipment.")]
+        private PlayerContext _playerContext;
+        [SerializeField, Tooltip("Optional registry used by equipment service to resolve equipment definitions by ID.")]
+        private EquipmentDefinitionRegistry _equipmentDefinitionRegistry;
+        [SerializeField, Tooltip("Optional explicit layout builder responsible for creating and refreshing equipment slots.")]
+        private EquipmentSlotLayoutBuilder _equipmentSlotLayoutBuilder;
+        [SerializeField, Tooltip("Optional root used by EquipmentSlotLayoutBuilder to host slot instances. Auto-created when missing.")]
+        private RectTransform _equipmentSlotsRoot;
+        [SerializeField, Tooltip("Optional inventory drop zone used for reverse drag-to-unequip (slot -> inventory).")]
+        private InventoryDropZone _inventoryDropZone;
         [SerializeField, Tooltip("Child object name used to auto-find stat label TMP under each stat row.")]
         private string _statLabelObjectName = "Label";
 
@@ -55,6 +72,9 @@ namespace SevenBattles.Preparation
         private TMP_Text _protectionLabel;
         private TMP_Text _initiativeLabel;
         private TMP_Text _moraleLabel;
+        private IEquipmentService _equipmentService;
+        private bool _equipmentServiceEventsWired;
+        private bool _inventoryDropZoneEventsWired;
 
         public event System.Action<string, string> NameCommitRequested;
 
@@ -62,6 +82,14 @@ namespace SevenBattles.Preparation
         {
             EnsureNameDisplayRoot();
             EnsureNameInputField();
+            if (_enableEquipmentSlots)
+            {
+                EnsureEquipmentSlotLayoutBuilder();
+                WireEquipmentSlotDropEvents();
+                EnsureInventoryDropZone();
+                WireInventoryDropZoneEvents();
+                ResolveEquipmentService();
+            }
             WireNameEditEvents();
             SetNameEditMode(false);
         }
@@ -69,6 +97,16 @@ namespace SevenBattles.Preparation
         private void OnEnable()
         {
             WireNameEditEvents();
+            if (_enableEquipmentSlots)
+            {
+                EnsureEquipmentSlotLayoutBuilder();
+                WireEquipmentSlotDropEvents();
+                EnsureInventoryDropZone();
+                WireInventoryDropZoneEvents();
+                ResolveEquipmentService();
+                RefreshEquipmentSlotsForSelectedUnit();
+                UpdateEquipmentSlotDragPreviews();
+            }
             RefreshNamePlaceholder();
             RefreshStatLabels();
             LocalizationSettings.SelectedLocaleChanged -= HandleSelectedLocaleChanged;
@@ -81,10 +119,20 @@ namespace SevenBattles.Preparation
             LocalizationSettings.SelectedLocaleChanged -= HandleSelectedLocaleChanged;
             CancelNameEditSilently();
             UnwireNameEditEvents();
+            UnwireEquipmentSlotDropEvents();
+            UnwireInventoryDropZoneEvents();
+            UnwireEquipmentServiceEvents();
         }
 
         private void Update()
         {
+            if (_enableEquipmentSlots)
+            {
+                EnsureInventoryDropZone();
+                WireInventoryDropZoneEvents();
+                UpdateEquipmentSlotDragPreviews();
+            }
+
             if (!_isEditingName)
             {
                 return;
@@ -123,6 +171,7 @@ namespace SevenBattles.Preparation
             _displayName = !string.IsNullOrWhiteSpace(displayName)
                 ? displayName
                 : ResolveDefinitionDisplayName(def);
+            RefreshEquipmentSlotsForSelectedUnit();
 
             if (_portrait != null)
             {
@@ -178,6 +227,7 @@ namespace SevenBattles.Preparation
             CancelNameEditSilently();
             _selectedOwnedUnitId = null;
             _displayName = string.Empty;
+            RefreshEquipmentSlotsForSelectedUnit();
 
             if (_portrait != null)
             {
@@ -210,6 +260,458 @@ namespace SevenBattles.Preparation
 
             ClearNameValidation();
             SetNameEditMode(false);
+        }
+
+        private void EnsureEquipmentSlotLayoutBuilder()
+        {
+            if (!_enableEquipmentSlots)
+            {
+                return;
+            }
+
+            if (_equipmentSlotLayoutBuilder != null)
+            {
+                return;
+            }
+
+            RectTransform slotsRoot = ResolveEquipmentSlotsRoot();
+            if (slotsRoot == null)
+            {
+                return;
+            }
+
+            _equipmentSlotLayoutBuilder = slotsRoot.GetComponent<EquipmentSlotLayoutBuilder>();
+            if (_equipmentSlotLayoutBuilder == null)
+            {
+                _equipmentSlotLayoutBuilder = slotsRoot.gameObject.AddComponent<EquipmentSlotLayoutBuilder>();
+            }
+
+            ConfigureEquipmentSlotLayoutBuilder();
+            WireEquipmentSlotDropEvents();
+        }
+
+        private RectTransform ResolveEquipmentSlotsRoot()
+        {
+            if (_equipmentSlotsRoot != null)
+            {
+                return _equipmentSlotsRoot;
+            }
+
+            RectTransform parentRect = ResolveEquipmentSlotsParent();
+            if (parentRect == null)
+            {
+                return null;
+            }
+
+            Transform existing = parentRect.Find("EquipmentSlots");
+            if (existing is RectTransform existingRect)
+            {
+                _equipmentSlotsRoot = existingRect;
+                return _equipmentSlotsRoot;
+            }
+
+            var rootObject = new GameObject("EquipmentSlots", typeof(RectTransform), typeof(HorizontalLayoutGroup));
+            rootObject.transform.SetParent(parentRect, false);
+
+            _equipmentSlotsRoot = rootObject.GetComponent<RectTransform>();
+            _equipmentSlotsRoot.anchorMin = new Vector2(0f, 0f);
+            _equipmentSlotsRoot.anchorMax = new Vector2(1f, 0f);
+            _equipmentSlotsRoot.pivot = new Vector2(0.5f, 0f);
+            _equipmentSlotsRoot.anchoredPosition = new Vector2(0f, 8f);
+            _equipmentSlotsRoot.sizeDelta = new Vector2(0f, 72f);
+
+            var layout = rootObject.GetComponent<HorizontalLayoutGroup>();
+            layout.childAlignment = TextAnchor.MiddleCenter;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+            layout.spacing = 8f;
+            layout.padding = new RectOffset(8, 8, 0, 0);
+
+            return _equipmentSlotsRoot;
+        }
+
+        private RectTransform ResolveEquipmentSlotsParent()
+        {
+            if (_statsContainer != null)
+            {
+                return _statsContainer.transform as RectTransform;
+            }
+
+            return transform as RectTransform;
+        }
+
+        private void RefreshEquipmentSlotsForSelectedUnit()
+        {
+            if (!_enableEquipmentSlots)
+            {
+                return;
+            }
+
+            EnsureEquipmentSlotLayoutBuilder();
+            if (_equipmentSlotLayoutBuilder == null)
+            {
+                return;
+            }
+
+            ConfigureEquipmentSlotLayoutBuilder();
+            OwnedUnitData ownedUnit = ResolveSelectedOwnedUnit();
+            _equipmentSlotLayoutBuilder.RefreshForUnit(ownedUnit);
+        }
+
+        private void ConfigureEquipmentSlotLayoutBuilder()
+        {
+            if (_equipmentSlotLayoutBuilder == null)
+            {
+                return;
+            }
+
+            _equipmentSlotLayoutBuilder.SetEquipmentDefinitionRegistry(ResolveEquipmentDefinitionRegistry());
+            _equipmentSlotLayoutBuilder.SetDragGhostRoot(ResolveInventoryDragGhostRoot());
+        }
+
+        private void UpdateEquipmentSlotDragPreviews()
+        {
+            if (!_enableEquipmentSlots)
+            {
+                return;
+            }
+
+            EnsureEquipmentSlotLayoutBuilder();
+            if (_equipmentSlotLayoutBuilder == null)
+            {
+                return;
+            }
+
+            IReadOnlyList<EquipmentDropSlotView> slots = _equipmentSlotLayoutBuilder.SlotViews;
+            if (slots == null || slots.Count == 0)
+            {
+                return;
+            }
+
+            bool isDragActive = InventoryItemDragHandler.IsDraggingItem;
+            EquipmentDefinition draggingDefinition = InventoryItemDragHandler.DraggingEquipmentDefinition;
+            bool hasSelectedUnit = ResolveSelectedOwnedUnit() != null;
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                EquipmentDropSlotView slot = slots[i];
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                bool isValidDrop = isDragActive &&
+                    hasSelectedUnit &&
+                    draggingDefinition != null &&
+                    draggingDefinition.SlotType == slot.SlotType;
+                slot.SetDropPreviewState(isDragActive, isValidDrop);
+            }
+        }
+
+        private void WireEquipmentSlotDropEvents()
+        {
+            if (!_enableEquipmentSlots)
+            {
+                return;
+            }
+
+            if (_equipmentSlotLayoutBuilder == null)
+            {
+                return;
+            }
+
+            IReadOnlyList<EquipmentDropSlotView> slots = _equipmentSlotLayoutBuilder.SlotViews;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                EquipmentDropSlotView slot = slots[i];
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                slot.DropReceived -= HandleEquipmentSlotDropReceived;
+                slot.DropReceived += HandleEquipmentSlotDropReceived;
+            }
+        }
+
+        private void UnwireEquipmentSlotDropEvents()
+        {
+            if (_equipmentSlotLayoutBuilder == null)
+            {
+                return;
+            }
+
+            IReadOnlyList<EquipmentDropSlotView> slots = _equipmentSlotLayoutBuilder.SlotViews;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                EquipmentDropSlotView slot = slots[i];
+                if (slot == null)
+                {
+                    continue;
+                }
+
+                slot.DropReceived -= HandleEquipmentSlotDropReceived;
+            }
+        }
+
+        private void EnsureInventoryDropZone()
+        {
+            if (!_enableEquipmentSlots)
+            {
+                return;
+            }
+
+            if (_inventoryDropZone != null)
+            {
+                return;
+            }
+
+            _inventoryDropZone = Object.FindFirstObjectByType<InventoryDropZone>();
+        }
+
+        private void WireInventoryDropZoneEvents()
+        {
+            if (_inventoryDropZoneEventsWired || _inventoryDropZone == null)
+            {
+                return;
+            }
+
+            _inventoryDropZone.DropReceived -= HandleInventoryDropZoneDropReceived;
+            _inventoryDropZone.DropReceived += HandleInventoryDropZoneDropReceived;
+            _inventoryDropZoneEventsWired = true;
+        }
+
+        private void UnwireInventoryDropZoneEvents()
+        {
+            if (!_inventoryDropZoneEventsWired || _inventoryDropZone == null)
+            {
+                return;
+            }
+
+            _inventoryDropZone.DropReceived -= HandleInventoryDropZoneDropReceived;
+            _inventoryDropZoneEventsWired = false;
+        }
+
+        private IEquipmentService ResolveEquipmentService()
+        {
+            if (!_enableEquipmentSlots)
+            {
+                return null;
+            }
+
+            if (_equipmentService != null)
+            {
+                return _equipmentService;
+            }
+
+            PlayerContext context = ResolvePlayerContext();
+            if (context == null)
+            {
+                return null;
+            }
+
+            _equipmentService = new EquipmentService(context, ResolveEquipmentDefinitionRegistry());
+            WireEquipmentServiceEvents();
+            return _equipmentService;
+        }
+
+        private void WireEquipmentServiceEvents()
+        {
+            if (_equipmentServiceEventsWired || _equipmentService == null)
+            {
+                return;
+            }
+
+            _equipmentService.EquipmentChanged += HandleEquipmentChanged;
+            _equipmentServiceEventsWired = true;
+        }
+
+        private void UnwireEquipmentServiceEvents()
+        {
+            if (!_equipmentServiceEventsWired || _equipmentService == null)
+            {
+                return;
+            }
+
+            _equipmentService.EquipmentChanged -= HandleEquipmentChanged;
+            _equipmentServiceEventsWired = false;
+        }
+
+        private void HandleEquipmentChanged(OwnedUnitData _, EquipmentSlotType __, EquipmentDefinition ___)
+        {
+            RefreshEquipmentSlotsForSelectedUnit();
+        }
+
+        private void HandleEquipmentSlotDropReceived(EquipmentDropSlotView slot, PointerEventData eventData)
+        {
+            if (slot == null)
+            {
+                return;
+            }
+
+            IEquipmentService equipmentService = ResolveEquipmentService();
+            if (equipmentService == null)
+            {
+                return;
+            }
+
+            OwnedUnitData selectedUnit = ResolveSelectedOwnedUnit();
+            EquipmentDefinition draggedDefinition = InventoryItemDragHandler.DraggingEquipmentDefinition;
+            if (selectedUnit == null || draggedDefinition == null)
+            {
+                return;
+            }
+
+            if (draggedDefinition.SlotType != slot.SlotType)
+            {
+                return;
+            }
+
+            if (!equipmentService.TryEquip(selectedUnit, draggedDefinition))
+            {
+                return;
+            }
+
+            InventoryItemDragHandler draggedHandler = null;
+            if (eventData != null && eventData.pointerDrag != null)
+            {
+                draggedHandler = eventData.pointerDrag.GetComponentInParent<InventoryItemDragHandler>();
+            }
+
+            if (draggedHandler != null)
+            {
+                draggedHandler.NotifyDropAccepted();
+            }
+
+            RefreshEquipmentSlotsForSelectedUnit();
+            UpdateEquipmentSlotDragPreviews();
+        }
+
+        private void HandleInventoryDropZoneDropReceived(InventoryDropZone _, PointerEventData eventData)
+        {
+            if (!EquipmentDropSlotView.IsDraggingEquippedItem)
+            {
+                return;
+            }
+
+            IEquipmentService equipmentService = ResolveEquipmentService();
+            if (equipmentService == null)
+            {
+                return;
+            }
+
+            OwnedUnitData selectedUnit = ResolveSelectedOwnedUnit();
+            if (selectedUnit == null)
+            {
+                return;
+            }
+
+            EquipmentSlotType? sourceSlot = EquipmentDropSlotView.DraggingFromSlot;
+            if (!sourceSlot.HasValue || !equipmentService.TryUnequip(selectedUnit, sourceSlot.Value))
+            {
+                return;
+            }
+
+            EquipmentDropSlotView draggedSlot = null;
+            if (eventData != null && eventData.pointerDrag != null)
+            {
+                draggedSlot = eventData.pointerDrag.GetComponentInParent<EquipmentDropSlotView>();
+            }
+
+            if (draggedSlot != null)
+            {
+                draggedSlot.NotifyDropAccepted();
+            }
+
+            RefreshEquipmentSlotsForSelectedUnit();
+            UpdateEquipmentSlotDragPreviews();
+        }
+
+        private OwnedUnitData ResolveSelectedOwnedUnit()
+        {
+            if (string.IsNullOrWhiteSpace(_selectedOwnedUnitId))
+            {
+                return null;
+            }
+
+            PlayerContext context = ResolvePlayerContext();
+            if (context == null)
+            {
+                return null;
+            }
+
+            IReadOnlyList<OwnedUnitData> ownedUnits = context.OwnedUnits;
+            for (int i = 0; i < ownedUnits.Count; i++)
+            {
+                OwnedUnitData ownedUnit = ownedUnits[i];
+                if (ownedUnit == null)
+                {
+                    continue;
+                }
+
+                if (string.Equals(ownedUnit.OwnedUnitId, _selectedOwnedUnitId, System.StringComparison.Ordinal))
+                {
+                    return ownedUnit;
+                }
+            }
+
+            return null;
+        }
+
+        private PlayerContext ResolvePlayerContext()
+        {
+            if (PlayerContext.RuntimeInstance != null)
+            {
+                return PlayerContext.RuntimeInstance;
+            }
+
+            if (_playerContext != null)
+            {
+                return _playerContext;
+            }
+
+            PlayerContext[] contexts = Resources.FindObjectsOfTypeAll<PlayerContext>();
+            if (contexts != null && contexts.Length > 0)
+            {
+                _playerContext = contexts[0];
+            }
+
+            return _playerContext;
+        }
+
+        private EquipmentDefinitionRegistry ResolveEquipmentDefinitionRegistry()
+        {
+            if (_equipmentDefinitionRegistry != null)
+            {
+                return _equipmentDefinitionRegistry;
+            }
+
+            EquipmentDefinitionRegistry[] registries = Resources.FindObjectsOfTypeAll<EquipmentDefinitionRegistry>();
+            if (registries != null && registries.Length > 0)
+            {
+                _equipmentDefinitionRegistry = registries[0];
+            }
+
+            return _equipmentDefinitionRegistry;
+        }
+
+        private RectTransform ResolveInventoryDragGhostRoot()
+        {
+            Canvas rootCanvas = GetComponentInParent<Canvas>();
+            if (rootCanvas == null)
+            {
+                return null;
+            }
+
+            Transform existing = rootCanvas.transform.Find(InventoryDragGhostObjectName);
+            if (existing is RectTransform existingRect)
+            {
+                return existingRect;
+            }
+
+            return null;
         }
 
         private static void SetText(TMP_Text target, string value)

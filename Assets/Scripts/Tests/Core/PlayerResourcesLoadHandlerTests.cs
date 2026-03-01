@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using UnityEngine;
+using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
@@ -143,8 +144,85 @@ namespace SevenBattles.Tests.Core
 
             Assert.AreEqual(1, context.OwnedUnits.Count);
             Assert.AreEqual("Wizard-1", context.OwnedUnits[0].CustomName);
+            Assert.IsNotNull(context.OwnedUnits[0].EquippedItems);
+            Assert.AreEqual(8, context.OwnedUnits[0].EquippedItems.Length);
+            Assert.AreEqual(EquipmentSlotType.Weapon, context.OwnedUnits[0].EquippedItems[0].SlotType);
+            Assert.IsTrue(string.IsNullOrEmpty(context.OwnedUnits[0].EquippedItems[0].EquipmentDefinitionId));
             Assert.AreEqual(1, context.ActiveSquadOwnedUnitIds.Count);
             Assert.AreEqual("owned_1", context.ActiveSquadOwnedUnitIds[0]);
+
+            Object.DestroyImmediate(go);
+            Object.DestroyImmediate(registry);
+            Object.DestroyImmediate(definition);
+            Object.DestroyImmediate(context);
+        }
+
+        [Test]
+        public void ApplyLoadedGame_RestoresOwnedUnitEquipmentSlots_WithCorruptEntriesSanitized()
+        {
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            var definition = ScriptableObject.CreateInstance<UnitDefinition>();
+            definition.Id = "wizard_equipment";
+            definition.name = "Wizard";
+
+            var registry = ScriptableObject.CreateInstance<UnitDefinitionRegistry>();
+            SetPrivate(registry, "_definitions", new[] { definition });
+
+            var go = new GameObject("PlayerResourcesLoadHandler");
+            var handler = go.AddComponent<PlayerResourcesLoadHandler>();
+            SetPrivate(handler, "_playerContext", context);
+            SetPrivate(handler, "_unitRegistry", registry);
+
+            var data = new SaveGameData
+            {
+                PlayerOwnedUnits = new PlayerOwnedUnitsSaveData
+                {
+                    Units = new[]
+                    {
+                        new OwnedUnitSaveData
+                        {
+                            OwnedUnitId = "owned_1",
+                            CustomName = "Wizard",
+                            UnitId = "wizard_equipment",
+                            Level = 1,
+                            Xp = 0,
+                            SpellIds = new string[0],
+                            EquippedItems = new[]
+                            {
+                                new EquipmentSlotEntry
+                                {
+                                    SlotType = EquipmentSlotType.Weapon,
+                                    EquipmentDefinitionId = "eq.staff"
+                                },
+                                new EquipmentSlotEntry
+                                {
+                                    SlotType = EquipmentSlotType.Weapon,
+                                    EquipmentDefinitionId = "eq.duplicate"
+                                },
+                                new EquipmentSlotEntry
+                                {
+                                    SlotType = (EquipmentSlotType)999,
+                                    EquipmentDefinitionId = "eq.invalid"
+                                },
+                                new EquipmentSlotEntry
+                                {
+                                    SlotType = EquipmentSlotType.Shield,
+                                    EquipmentDefinitionId = ""
+                                }
+                            }
+                        }
+                    },
+                    ActiveSquadOwnedUnitIds = new[] { "owned_1" }
+                }
+            };
+
+            handler.ApplyLoadedGame(data);
+
+            Assert.AreEqual(1, context.OwnedUnits.Count);
+            Assert.IsNotNull(context.OwnedUnits[0].EquippedItems);
+            Assert.AreEqual(1, context.OwnedUnits[0].EquippedItems.Length);
+            Assert.AreEqual(EquipmentSlotType.Weapon, context.OwnedUnits[0].EquippedItems[0].SlotType);
+            Assert.AreEqual("eq.staff", context.OwnedUnits[0].EquippedItems[0].EquipmentDefinitionId);
 
             Object.DestroyImmediate(go);
             Object.DestroyImmediate(registry);

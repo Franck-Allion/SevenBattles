@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Units;
 
@@ -102,7 +103,8 @@ namespace SevenBattles.Core.Save
                     Definition = definition,
                     Level = entry.Level > 0 ? entry.Level : UnitSpellLoadout.DefaultLevel,
                     Xp = entry.Xp > 0 ? entry.Xp : 0,
-                    Spells = ResolveSpells(entry.SpellIds, definition.Spells)
+                    Spells = ResolveSpells(entry.SpellIds, definition.Spells),
+                    EquippedItems = ResolveEquippedItemsForLoad(entry.EquippedItems)
                 };
 
                 ownedUnits.Add(ownedUnit);
@@ -232,6 +234,53 @@ namespace SevenBattles.Core.Save
             }
 
             return _spellLookup.TryGetValue(spellId, out SpellDefinition resolved) ? resolved : null;
+        }
+
+        private static EquipmentSlotEntry[] SanitizeEquippedItems(EquipmentSlotEntry[] value)
+        {
+            if (value == null || value.Length == 0)
+            {
+                return Array.Empty<EquipmentSlotEntry>();
+            }
+
+            var seenSlots = new HashSet<EquipmentSlotType>();
+            var sanitized = new List<EquipmentSlotEntry>(value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                EquipmentSlotEntry entry = value[i];
+                if (!Enum.IsDefined(typeof(EquipmentSlotType), entry.SlotType))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.EquipmentDefinitionId))
+                {
+                    continue;
+                }
+
+                if (!seenSlots.Add(entry.SlotType))
+                {
+                    continue;
+                }
+
+                sanitized.Add(new EquipmentSlotEntry
+                {
+                    SlotType = entry.SlotType,
+                    EquipmentDefinitionId = entry.EquipmentDefinitionId
+                });
+            }
+
+            return sanitized.Count > 0 ? sanitized.ToArray() : Array.Empty<EquipmentSlotEntry>();
+        }
+
+        private static EquipmentSlotEntry[] ResolveEquippedItemsForLoad(EquipmentSlotEntry[] value)
+        {
+            if (value == null || value.Length == 0)
+            {
+                return OwnedUnitData.CreateDefaultEquippedItems();
+            }
+
+            return SanitizeEquippedItems(value);
         }
     }
 }

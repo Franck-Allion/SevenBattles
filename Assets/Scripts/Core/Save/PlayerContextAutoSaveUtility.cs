@@ -39,6 +39,7 @@ namespace SevenBattles.Core.Save
             public int Level;
             public int Xp;
             public string[] SpellIds;
+            public EquipmentSlotEntry[] EquippedItems;
         }
 
         [Serializable]
@@ -210,7 +211,8 @@ namespace SevenBattles.Core.Save
                     UnitId = owned.Definition.Id,
                     Level = owned.EffectiveLevel,
                     Xp = owned.EffectiveXp,
-                    SpellIds = spellIds.Count > 0 ? spellIds.ToArray() : Array.Empty<string>()
+                    SpellIds = spellIds.Count > 0 ? spellIds.ToArray() : Array.Empty<string>(),
+                    EquippedItems = SanitizeEquippedItems(owned.EquippedItems)
                 });
             }
 
@@ -381,7 +383,8 @@ namespace SevenBattles.Core.Save
                     Definition = definition,
                     Level = Mathf.Max(UnitSpellLoadout.DefaultLevel, saved.Level),
                     Xp = Mathf.Max(0, saved.Xp),
-                    Spells = ResolveSpells(saved.SpellIds, spellLookup)
+                    Spells = ResolveSpells(saved.SpellIds, spellLookup),
+                    EquippedItems = ResolveEquippedItemsForLoad(saved.EquippedItems)
                 });
             }
 
@@ -486,6 +489,53 @@ namespace SevenBattles.Core.Save
             }
 
             return results.Count == 0 ? Array.Empty<SpellDefinition>() : results.ToArray();
+        }
+
+        private static EquipmentSlotEntry[] SanitizeEquippedItems(EquipmentSlotEntry[] value)
+        {
+            if (value == null || value.Length == 0)
+            {
+                return Array.Empty<EquipmentSlotEntry>();
+            }
+
+            var seenSlots = new HashSet<EquipmentSlotType>();
+            var sanitized = new List<EquipmentSlotEntry>(value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                EquipmentSlotEntry entry = value[i];
+                if (!Enum.IsDefined(typeof(EquipmentSlotType), entry.SlotType))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.EquipmentDefinitionId))
+                {
+                    continue;
+                }
+
+                if (!seenSlots.Add(entry.SlotType))
+                {
+                    continue;
+                }
+
+                sanitized.Add(new EquipmentSlotEntry
+                {
+                    SlotType = entry.SlotType,
+                    EquipmentDefinitionId = entry.EquipmentDefinitionId
+                });
+            }
+
+            return sanitized.Count == 0 ? Array.Empty<EquipmentSlotEntry>() : sanitized.ToArray();
+        }
+
+        private static EquipmentSlotEntry[] ResolveEquippedItemsForLoad(EquipmentSlotEntry[] value)
+        {
+            if (value == null || value.Length == 0)
+            {
+                return OwnedUnitData.CreateDefaultEquippedItems();
+            }
+
+            return SanitizeEquippedItems(value);
         }
     }
 }

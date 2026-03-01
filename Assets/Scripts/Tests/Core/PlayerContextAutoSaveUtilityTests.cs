@@ -1,6 +1,7 @@
 using System.IO;
 using NUnit.Framework;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Save;
 using SevenBattles.Core.Units;
@@ -34,7 +35,15 @@ namespace SevenBattles.Tests.Core
                     Definition = unitA,
                     Level = 3,
                     Xp = 12,
-                    Spells = System.Array.Empty<SpellDefinition>()
+                    Spells = System.Array.Empty<SpellDefinition>(),
+                    EquippedItems = new[]
+                    {
+                        new EquipmentSlotEntry
+                        {
+                            SlotType = EquipmentSlotType.Weapon,
+                            EquipmentDefinitionId = "eq.staff"
+                        }
+                    }
                 },
                 new OwnedUnitData
                 {
@@ -43,7 +52,8 @@ namespace SevenBattles.Tests.Core
                     Definition = unitB,
                     Level = 2,
                     Xp = 5,
-                    Spells = System.Array.Empty<SpellDefinition>()
+                    Spells = System.Array.Empty<SpellDefinition>(),
+                    EquippedItems = System.Array.Empty<EquipmentSlotEntry>()
                 }
             });
             context.SetActiveSquadOwnedUnitIds(new[] { "owned_a", "owned_b" });
@@ -72,6 +82,14 @@ namespace SevenBattles.Tests.Core
             Assert.AreEqual(2, context.ActiveSquadOwnedUnitIds.Count);
             Assert.AreEqual("Alpha", context.OwnedUnits[0].CustomName);
             Assert.AreEqual("Beta", context.OwnedUnits[1].CustomName);
+            Assert.IsNotNull(context.OwnedUnits[0].EquippedItems);
+            Assert.AreEqual(1, context.OwnedUnits[0].EquippedItems.Length);
+            Assert.AreEqual(EquipmentSlotType.Weapon, context.OwnedUnits[0].EquippedItems[0].SlotType);
+            Assert.AreEqual("eq.staff", context.OwnedUnits[0].EquippedItems[0].EquipmentDefinitionId);
+            Assert.IsNotNull(context.OwnedUnits[1].EquippedItems);
+            Assert.AreEqual(8, context.OwnedUnits[1].EquippedItems.Length);
+            Assert.AreEqual(EquipmentSlotType.Weapon, context.OwnedUnits[1].EquippedItems[0].SlotType);
+            Assert.IsTrue(string.IsNullOrEmpty(context.OwnedUnits[1].EquippedItems[0].EquipmentDefinitionId));
 
             var activeLoadouts = context.GetActiveSquadLoadoutsNonAlloc();
             Assert.AreEqual(2, activeLoadouts.Count);
@@ -84,6 +102,7 @@ namespace SevenBattles.Tests.Core
             StringAssert.Contains("\"OwnedUnits\"", loadedJson);
             StringAssert.Contains("\"ActiveSquadOwnedUnitIds\"", loadedJson);
             StringAssert.Contains("\"CustomName\"", loadedJson);
+            StringAssert.Contains("\"EquippedItems\"", loadedJson);
 
             UnityEngine.Object.DestroyImmediate(unitB);
             UnityEngine.Object.DestroyImmediate(unitA);

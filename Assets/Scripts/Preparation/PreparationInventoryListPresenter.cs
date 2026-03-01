@@ -17,6 +17,7 @@ namespace SevenBattles.Preparation
     {
         private const string INVENTORY_ITEMS_CONTENT_PATH = "Canvas/InventoryView/Right_Panel/ScrollRect/Viewport/Content";
         private const string DEFAULT_PAGE_BUTTONS_ROOT_NAME = "Pages";
+        private const string DEFAULT_DRAG_GHOST_NAME = "InventoryDragGhost";
         private const int PAGE_COLUMNS = 6;
         private const int PAGE_ROWS = 5;
         private const int PAGE_SIZE = PAGE_COLUMNS * PAGE_ROWS;
@@ -60,8 +61,12 @@ namespace SevenBattles.Preparation
         private bool _overrideInventoryTooltipCursorOffset = true;
         [SerializeField, Tooltip("Tooltip offset from mouse position in canvas-space UI units.")]
         private Vector2 _inventoryTooltipCursorOffset = new Vector2(36f, -30f);
+        [Header("Inventory Drag")]
+        [SerializeField, Tooltip("Optional shared drag ghost root used by inventory item drag handlers. Auto-created under the root canvas when null.")]
+        private RectTransform _dragGhostRoot;
 
         private readonly List<InventoryEntry> _visibleEntries = new List<InventoryEntry>(64);
+        private readonly Dictionary<string, InventoryEntry> _visibleEntriesByKey = new Dictionary<string, InventoryEntry>(64);
         private readonly List<PreparationInventoryItemEntryView> _itemPool = new List<PreparationInventoryItemEntryView>(PAGE_SIZE);
         private readonly List<GameObject> _emptyPool = new List<GameObject>(PAGE_SIZE);
         private readonly Dictionary<string, EquipmentDefinition> _equipmentFallbackLookup = new Dictionary<string, EquipmentDefinition>(StringComparer.Ordinal);
@@ -77,8 +82,10 @@ namespace SevenBattles.Preparation
         private bool _pageButtonsWarmed;
         private bool _missingPageButtonsRootWarnLogged;
         private bool _missingPageTemplateWarnLogged;
+        private bool _missingDragGhostWarnLogged;
         private int _currentPageIndex;
         private int _activePageCount = 1;
+        private InventoryDropZone _inventoryDropZone;
 
         private sealed class PageButtonView
         {
@@ -219,6 +226,7 @@ namespace SevenBattles.Preparation
                 return;
             }
 
+            CancelActiveItemDrags();
             _currentPageIndex = pageIndex;
             BindCurrentPage();
             RefreshPageButtonSelection();
@@ -228,6 +236,8 @@ namespace SevenBattles.Preparation
         {
             ResolveContextAndInventory();
             ResolveContentRootIfMissing();
+            ResolveDragGhostRootIfMissing();
+            EnsureInventoryDropZone();
             WarmPoolFromContentIfNeeded();
             ResolvePageButtonsRootIfMissing();
             WarmPageButtonsFromRootIfNeeded();
@@ -262,8 +272,13 @@ namespace SevenBattles.Preparation
 
         private void OnDisable()
         {
+            CancelActiveItemDrags();
             UnbindAllPageButtons();
             UnsubscribeFromInventory();
+            if (_dragGhostRoot != null)
+            {
+                _dragGhostRoot.gameObject.SetActive(false);
+            }
         }
 
         private void ResolveContextAndInventory()
@@ -351,6 +366,7 @@ namespace SevenBattles.Preparation
 
                 if (view != null)
                 {
+                    EnsureDragComponents(view);
                     _itemPool.Add(view);
                     view.gameObject.SetActive(false);
                     continue;
@@ -377,22 +393,71 @@ namespace SevenBattles.Preparation
         private void BuildVisibleEntries()
         {
             _visibleEntries.Clear();
+            _visibleEntriesByKey.Clear();
             if (_subscribedInventory == null)
             {
                 return;
             }
 
-            int count = _subscribedInventory.CollectEntriesNonAlloc(
-                _visibleEntries,
-                includeEquipment: _includeEquipment,
-                includeSpells: false,
-                includeItems: _includeItems);
-            if (count <= 0)
+            List<InventoryEntry> sourceEntries = _subscribedInventory.Entries;
+            if (sourceEntries == null || sourceEntries.Count == 0)
             {
                 return;
             }
 
+            for (int i = 0; i < sourceEntries.Count; i++)
+            {
+                InventoryEntry sourceEntry = sourceEntries[i];
+                if (sourceEntry == null || string.IsNullOrWhiteSpace(sourceEntry.DefinitionId))
+                {
+                    continue;
+                }
+
+                if (!ShouldIncludeEntryKind(sourceEntry.Kind))
+                {
+                    continue;
+                }
+
+                int quantity = sourceEntry.Kind == InventoryEntry.EntryKind.Item ? sourceEntry.Quantity : 1;
+                if (quantity <= 0)
+                {
+                    continue;
+                }
+
+                string entryKey = sourceEntry.EntryKey;
+                if (_visibleEntriesByKey.TryGetValue(entryKey, out InventoryEntry groupedEntry))
+                {
+                    groupedEntry.Quantity += quantity;
+                    continue;
+                }
+
+                groupedEntry = new InventoryEntry
+                {
+                    Kind = sourceEntry.Kind,
+                    DefinitionId = sourceEntry.DefinitionId,
+                    Quantity = quantity
+                };
+
+                _visibleEntriesByKey.Add(entryKey, groupedEntry);
+                _visibleEntries.Add(groupedEntry);
+            }
+
             _visibleEntries.Sort(CompareEntries);
+        }
+
+        private bool ShouldIncludeEntryKind(InventoryEntry.EntryKind kind)
+        {
+            switch (kind)
+            {
+                case InventoryEntry.EntryKind.Equipment:
+                    return _includeEquipment;
+                case InventoryEntry.EntryKind.Item:
+                    return _includeItems;
+                case InventoryEntry.EntryKind.Spell:
+                    return false;
+                default:
+                    return false;
+            }
         }
 
         private static int CompareEntries(InventoryEntry a, InventoryEntry b)
@@ -455,11 +520,12 @@ namespace SevenBattles.Preparation
                 GameObject instanceObject = Instantiate(prefab, _contentRoot);
                 instanceObject.name = "Item";
                 instanceObject.SetActive(false);
-                PreparationInventoryItemEntryView instance = instanceObject.GetComponent<PreparationInventoryItemEntryView>();
+                PreparationInventoryItemEntryView instance = WarmInventoryItemInstances(instanceObject);
                 if (instance == null)
                 {
-                    instance = instanceObject.AddComponent<PreparationInventoryItemEntryView>();
+                    continue;
                 }
+
                 _itemPool.Add(instance);
             }
         }
@@ -516,14 +582,28 @@ namespace SevenBattles.Preparation
                 if (hasEntry && itemView != null)
                 {
                     InventoryEntry entry = _visibleEntries[entryIndex];
-                    ResolvePresentation(entry, out Sprite icon, out Color backgroundColor, out int quantity, out string displayName);
+                    ResolvePresentation(
+                        entry,
+                        out Sprite icon,
+                        out Color backgroundColor,
+                        out int quantity,
+                        out string displayName,
+                        out EquipmentDefinition equipmentDefinition,
+                        out ItemDefinition itemDefinition);
                     itemView.ConfigureTooltipCursorOffset(_overrideInventoryTooltipCursorOffset, _inventoryTooltipCursorOffset);
                     itemView.Bind(icon, backgroundColor, quantity, _fallbackIcon, _fallbackBackgroundColor, displayName);
+                    itemView.SetBoundData(entry, equipmentDefinition, itemDefinition);
+                    ConfigureItemDrag(itemView, entry, equipmentDefinition, itemDefinition);
                     SetSlotActive(itemView.gameObject, slotIndex, true);
                     SetSlotActive(emptyView, slotIndex, false);
                 }
                 else
                 {
+                    if (itemView != null)
+                    {
+                        itemView.SetBoundData(null, null, null);
+                    }
+                    ConfigureItemDrag(itemView, null, null, null);
                     SetSlotActive(itemView != null ? itemView.gameObject : null, slotIndex, false);
                     SetSlotActive(emptyView, slotIndex, true);
                 }
@@ -795,12 +875,16 @@ namespace SevenBattles.Preparation
             out Sprite icon,
             out Color backgroundColor,
             out int quantity,
-            out string displayName)
+            out string displayName,
+            out EquipmentDefinition equipmentDefinition,
+            out ItemDefinition itemDefinition)
         {
             icon = null;
             backgroundColor = _fallbackBackgroundColor;
             quantity = 1;
             displayName = string.Empty;
+            equipmentDefinition = null;
+            itemDefinition = null;
 
             if (entry == null)
             {
@@ -812,6 +896,7 @@ namespace SevenBattles.Preparation
                 case InventoryEntry.EntryKind.Equipment:
                 {
                     EquipmentDefinition definition = ResolveEquipmentDefinition(entry.DefinitionId);
+                    equipmentDefinition = definition;
                     if (definition != null)
                     {
                         icon = definition.Icon;
@@ -825,6 +910,7 @@ namespace SevenBattles.Preparation
                 case InventoryEntry.EntryKind.Item:
                 {
                     ItemDefinition definition = ResolveItemDefinition(entry.DefinitionId);
+                    itemDefinition = definition;
                     if (definition != null)
                     {
                         icon = definition.Icon;
@@ -835,6 +921,225 @@ namespace SevenBattles.Preparation
                     displayName = ResolveDisplayName(definition != null ? definition.Name : null, entry.DefinitionId);
                     break;
                 }
+            }
+        }
+
+        private void EnsureDragComponents(PreparationInventoryItemEntryView itemView)
+        {
+            if (itemView == null)
+            {
+                return;
+            }
+
+            CanvasGroup canvasGroup = itemView.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = itemView.gameObject.AddComponent<CanvasGroup>();
+            }
+
+            var dragHandler = itemView.GetComponent<InventoryItemDragHandler>();
+            if (dragHandler == null)
+            {
+                dragHandler = itemView.gameObject.AddComponent<InventoryItemDragHandler>();
+            }
+
+            dragHandler.Initialize(_dragGhostRoot);
+        }
+
+        private void ConfigureItemDrag(
+            PreparationInventoryItemEntryView itemView,
+            InventoryEntry entry,
+            EquipmentDefinition equipmentDefinition,
+            ItemDefinition itemDefinition)
+        {
+            if (itemView == null)
+            {
+                return;
+            }
+
+            EnsureDragComponents(itemView);
+            var dragHandler = itemView.GetComponent<InventoryItemDragHandler>();
+            if (dragHandler == null)
+            {
+                return;
+            }
+
+            dragHandler.Initialize(_dragGhostRoot);
+            dragHandler.ConfigureDragPayload(entry, equipmentDefinition, itemDefinition);
+        }
+
+        private PreparationInventoryItemEntryView WarmInventoryItemInstances(GameObject instanceObject)
+        {
+            if (instanceObject == null)
+            {
+                return null;
+            }
+
+            PreparationInventoryItemEntryView instance = instanceObject.GetComponent<PreparationInventoryItemEntryView>();
+            if (instance == null)
+            {
+                instance = instanceObject.AddComponent<PreparationInventoryItemEntryView>();
+            }
+
+            CanvasGroup canvasGroup = instanceObject.GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+            {
+                canvasGroup = instanceObject.AddComponent<CanvasGroup>();
+            }
+
+            InventoryItemDragHandler dragHandler = instanceObject.GetComponent<InventoryItemDragHandler>();
+            if (dragHandler == null)
+            {
+                dragHandler = instanceObject.AddComponent<InventoryItemDragHandler>();
+            }
+
+            dragHandler.Initialize(_dragGhostRoot);
+            return instance;
+        }
+
+        private void ResolveDragGhostRootIfMissing()
+        {
+            Canvas rootCanvas = _contentRoot != null ? _contentRoot.GetComponentInParent<Canvas>() : null;
+            if (rootCanvas == null)
+            {
+                if (!_missingDragGhostWarnLogged)
+                {
+                    SBLog.Warn("PreparationInventoryListPresenter: Could not resolve root canvas for inventory drag ghost.", this);
+                    _missingDragGhostWarnLogged = true;
+                }
+
+                return;
+            }
+
+            if (_dragGhostRoot != null)
+            {
+                if (IsDragGhostRootUsable(_dragGhostRoot, rootCanvas))
+                {
+                    _dragGhostRoot.gameObject.SetActive(false);
+                    _missingDragGhostWarnLogged = false;
+                    return;
+                }
+
+                if (!_missingDragGhostWarnLogged)
+                {
+                    SBLog.Warn(
+                        $"PreparationInventoryListPresenter: Assigned drag ghost root '{_dragGhostRoot.name}' is not usable for inventory canvas '{rootCanvas.name}'. Recreating under inventory canvas.",
+                        this);
+                    _missingDragGhostWarnLogged = true;
+                }
+
+                _dragGhostRoot = null;
+            }
+
+            Transform existing = rootCanvas.transform.Find(DEFAULT_DRAG_GHOST_NAME);
+            if (existing is RectTransform existingRect)
+            {
+                _dragGhostRoot = existingRect;
+                _dragGhostRoot.gameObject.SetActive(false);
+                return;
+            }
+
+            var ghostObject = new GameObject(DEFAULT_DRAG_GHOST_NAME, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            ghostObject.transform.SetParent(rootCanvas.transform, false);
+
+            _dragGhostRoot = ghostObject.GetComponent<RectTransform>();
+            _dragGhostRoot.anchorMin = new Vector2(0.5f, 0.5f);
+            _dragGhostRoot.anchorMax = new Vector2(0.5f, 0.5f);
+            _dragGhostRoot.pivot = new Vector2(0.5f, 0.5f);
+            _dragGhostRoot.sizeDelta = new Vector2(80f, 80f);
+            _dragGhostRoot.localScale = Vector3.one;
+            _dragGhostRoot.SetAsLastSibling();
+
+            Image image = ghostObject.GetComponent<Image>();
+            image.raycastTarget = false;
+            image.enabled = false;
+
+            ghostObject.SetActive(false);
+            _missingDragGhostWarnLogged = false;
+        }
+
+        private static bool IsDragGhostRootUsable(RectTransform dragGhostRoot, Canvas expectedRootCanvas)
+        {
+            if (dragGhostRoot == null || expectedRootCanvas == null)
+            {
+                return false;
+            }
+
+            Canvas ghostCanvas = dragGhostRoot.GetComponentInParent<Canvas>();
+            if (ghostCanvas == null)
+            {
+                return false;
+            }
+
+            Canvas ghostRootCanvas = ghostCanvas.isRootCanvas ? ghostCanvas : ghostCanvas.rootCanvas;
+            if (ghostRootCanvas != expectedRootCanvas)
+            {
+                return false;
+            }
+
+            return IsParentChainActive(dragGhostRoot);
+        }
+
+        private static bool IsParentChainActive(Transform transform)
+        {
+            if (transform == null)
+            {
+                return false;
+            }
+
+            Transform parent = transform.parent;
+            while (parent != null)
+            {
+                if (!parent.gameObject.activeSelf)
+                {
+                    return false;
+                }
+
+                parent = parent.parent;
+            }
+
+            return true;
+        }
+
+        private void EnsureInventoryDropZone()
+        {
+            if (_inventoryDropZone != null)
+            {
+                return;
+            }
+
+            GameObject zoneRoot = null;
+            if (_inventoryPanelRoot != null)
+            {
+                zoneRoot = _inventoryPanelRoot;
+            }
+            else if (_contentRoot != null)
+            {
+                zoneRoot = _contentRoot.gameObject;
+            }
+
+            if (zoneRoot == null)
+            {
+                return;
+            }
+
+            _inventoryDropZone = zoneRoot.GetComponent<InventoryDropZone>();
+            if (_inventoryDropZone == null)
+            {
+                _inventoryDropZone = zoneRoot.AddComponent<InventoryDropZone>();
+            }
+        }
+
+        private static void CancelActiveItemDrags()
+        {
+            if (InventoryItemDragHandler.IsDraggingItem)
+            {
+                InventoryItemDragHandler.CancelActiveDrag();
+            }
+
+            if (EquipmentDropSlotView.IsDraggingEquippedItem)
+            {
+                EquipmentDropSlotView.CancelActiveDrag();
             }
         }
 

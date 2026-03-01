@@ -5,6 +5,7 @@ namespace SevenBattles.Core.Items
         Weapon,
         Shield,
         Helmet,
+        Armor,
         Gloves,
         Boots,
         Ring,

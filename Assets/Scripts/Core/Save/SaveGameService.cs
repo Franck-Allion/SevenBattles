@@ -73,6 +73,7 @@ namespace SevenBattles.Core.Save
         public int Level;
         public int Xp;
         public string[] SpellIds;
+        public EquipmentSlotEntry[] EquippedItems;
     }
 
     [Serializable]
@@ -679,7 +680,8 @@ namespace SevenBattles.Core.Save
                         UnitId = unit.UnitId,
                         Level = unit.Level > 0 ? unit.Level : UnitSpellLoadout.DefaultLevel,
                         Xp = unit.Xp > 0 ? unit.Xp : 0,
-                        SpellIds = sanitizedSpellIds.Count > 0 ? sanitizedSpellIds.ToArray() : Array.Empty<string>()
+                        SpellIds = sanitizedSpellIds.Count > 0 ? sanitizedSpellIds.ToArray() : Array.Empty<string>(),
+                        EquippedItems = SanitizeEquippedItems(unit.EquippedItems)
                     });
                 }
             }
@@ -720,6 +722,43 @@ namespace SevenBattles.Core.Save
             }
 
             return completed.Length;
+        }
+
+        private static EquipmentSlotEntry[] SanitizeEquippedItems(EquipmentSlotEntry[] value)
+        {
+            if (value == null || value.Length == 0)
+            {
+                return Array.Empty<EquipmentSlotEntry>();
+            }
+
+            var seenSlots = new System.Collections.Generic.HashSet<EquipmentSlotType>();
+            var sanitized = new System.Collections.Generic.List<EquipmentSlotEntry>(value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                EquipmentSlotEntry entry = value[i];
+                if (!Enum.IsDefined(typeof(EquipmentSlotType), entry.SlotType))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.EquipmentDefinitionId))
+                {
+                    continue;
+                }
+
+                if (!seenSlots.Add(entry.SlotType))
+                {
+                    continue;
+                }
+
+                sanitized.Add(new EquipmentSlotEntry
+                {
+                    SlotType = entry.SlotType,
+                    EquipmentDefinitionId = entry.EquipmentDefinitionId
+                });
+            }
+
+            return sanitized.Count > 0 ? sanitized.ToArray() : Array.Empty<EquipmentSlotEntry>();
         }
 
         private static bool HasTournamentProgress(TournamentProgressSaveData value)

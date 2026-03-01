@@ -4,6 +4,7 @@ using SevenBattles.Core.Players;
 using SevenBattles.Preparation;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
@@ -167,6 +168,66 @@ namespace SevenBattles.Tests.Preparation
         }
 
         [Test]
+        public void RefreshNow_DuplicateItemEntries_AreGroupedAndDisappearWhenTotalReachesZero()
+        {
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            var inventory = ScriptableObject.CreateInstance<PlayerInventory>();
+            context.Inventory = inventory;
+            PlayerContext.SetRuntimeInstance(context);
+
+            var itemDef = ScriptableObject.CreateInstance<ItemDefinition>();
+            itemDef.Id = "item.potion";
+            itemDef.Name = "Potion";
+            itemDef.Icon = CreateSprite(Color.green);
+
+            var itemRegistry = ScriptableObject.CreateInstance<ItemDefinitionRegistry>();
+            SetPrivate(itemRegistry, "_definitions", new[] { itemDef });
+
+            inventory.Entries.Add(new InventoryEntry
+            {
+                Kind = InventoryEntry.EntryKind.Item,
+                DefinitionId = itemDef.Id,
+                Quantity = 2
+            });
+            inventory.Entries.Add(new InventoryEntry
+            {
+                Kind = InventoryEntry.EntryKind.Item,
+                DefinitionId = itemDef.Id,
+                Quantity = 3
+            });
+
+            var root = new GameObject("PresenterRoot");
+            var content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
+            content.SetParent(root.transform, false);
+
+            var presenter = root.AddComponent<PreparationInventoryListPresenter>();
+            var itemTemplate = CreateEntryTemplate("ItemTemplate");
+            var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
+            presenter.Configure(context, null, content, itemTemplate.gameObject, emptyTemplate, null, itemRegistry);
+            presenter.RefreshNow();
+
+            Assert.AreEqual(1, CountActiveItemViews(content), "Duplicate item entries should be grouped into one visible slot.");
+            Assert.AreEqual("5", GetQuantityAtSlot(content, 0), "Grouped slot should show total quantity.");
+
+            for (int i = 0; i < 5; i++)
+            {
+                Assert.IsTrue(inventory.RemoveItem(itemDef.Id), $"Expected RemoveItem success at iteration {i + 1}.");
+            }
+
+            Assert.AreEqual(0, CountActiveItemViews(content), "Item should disappear when grouped quantity reaches zero.");
+            Assert.AreEqual(PAGE_SIZE, CountActiveEmptySlots(content));
+
+            Object.DestroyImmediate(itemTemplate.gameObject);
+            Object.DestroyImmediate(emptyTemplate);
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(itemRegistry);
+            Object.DestroyImmediate(itemDef.Icon.texture);
+            Object.DestroyImmediate(itemDef);
+            Object.DestroyImmediate(inventory);
+            Object.DestroyImmediate(context);
+        }
+
+        [Test]
         public void PageButtons_AreBuiltFromPrefab_ForEveryRequiredPage_AndCanNavigateBeyondThreePages()
         {
             var context = ScriptableObject.CreateInstance<PlayerContext>();
@@ -269,6 +330,170 @@ namespace SevenBattles.Tests.Preparation
             Object.DestroyImmediate(itemTemplate.gameObject);
             Object.DestroyImmediate(emptyTemplate);
             Object.DestroyImmediate(root);
+            Object.DestroyImmediate(inventory);
+            Object.DestroyImmediate(context);
+        }
+
+        [Test]
+        public void RefreshNow_WiresInventoryDragHandler_AndDragStartsFromEquipmentItem()
+        {
+            ResetInventoryDragStatics();
+            ResetUnitDragStatics();
+
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            var inventory = ScriptableObject.CreateInstance<PlayerInventory>();
+            context.Inventory = inventory;
+            PlayerContext.SetRuntimeInstance(context);
+
+            var equipmentDef = ScriptableObject.CreateInstance<EquipmentDefinition>();
+            equipmentDef.Id = "eq.sword";
+            equipmentDef.Icon = CreateSprite(Color.yellow);
+            equipmentDef.SlotType = EquipmentSlotType.Weapon;
+
+            var equipmentRegistry = ScriptableObject.CreateInstance<EquipmentDefinitionRegistry>();
+            SetPrivate(equipmentRegistry, "_definitions", new[] { equipmentDef });
+
+            inventory.Entries.Add(new InventoryEntry
+            {
+                Kind = InventoryEntry.EntryKind.Equipment,
+                DefinitionId = equipmentDef.Id,
+                Quantity = 1
+            });
+
+            var canvasRoot = new GameObject("CanvasRoot", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            var presenterRoot = new GameObject("PresenterRoot");
+            presenterRoot.transform.SetParent(canvasRoot.transform, false);
+            var content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
+            content.SetParent(canvasRoot.transform, false);
+
+            var presenter = presenterRoot.AddComponent<PreparationInventoryListPresenter>();
+            var itemTemplate = CreateEntryTemplate("ItemTemplate");
+            var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
+            presenter.Configure(context, null, content, itemTemplate.gameObject, emptyTemplate, equipmentRegistry, null);
+            presenter.RefreshNow();
+
+            GameObject activeSlot = GetActiveSlotAt(content, 0);
+            Assert.IsNotNull(activeSlot);
+
+            var canvasGroup = activeSlot.GetComponent<CanvasGroup>();
+            var dragHandler = activeSlot.GetComponent<InventoryItemDragHandler>();
+            Assert.IsNotNull(canvasGroup, "Inventory item should have CanvasGroup for drag fade/raycast control.");
+            Assert.IsNotNull(dragHandler, "Inventory item should have InventoryItemDragHandler wired by presenter.");
+
+            var eventSystemGo = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            var pointerData = new PointerEventData(EventSystem.current)
+            {
+                position = new Vector2(100f, 200f)
+            };
+
+            dragHandler.OnBeginDrag(pointerData);
+
+            Assert.IsTrue(InventoryItemDragHandler.IsDraggingItem);
+            Assert.IsNotNull(InventoryItemDragHandler.DraggingEntry);
+            Assert.AreEqual(equipmentDef.Id, InventoryItemDragHandler.DraggingEntry.DefinitionId);
+            Assert.IsNotNull(InventoryItemDragHandler.DraggingEquipmentDefinition);
+            Assert.AreEqual(equipmentDef.Id, InventoryItemDragHandler.DraggingEquipmentDefinition.Id);
+
+            Transform ghost = canvasRoot.transform.Find("InventoryDragGhost");
+            Assert.IsNotNull(ghost, "Presenter should create and wire a shared drag ghost root.");
+            Assert.IsTrue(ghost.gameObject.activeSelf, "Drag ghost should be active while dragging.");
+
+            dragHandler.OnEndDrag(pointerData);
+
+            Assert.IsFalse(InventoryItemDragHandler.IsDraggingItem);
+            Assert.IsNull(InventoryItemDragHandler.DraggingEntry);
+            Assert.IsNull(InventoryItemDragHandler.DraggingEquipmentDefinition);
+            Assert.IsFalse(ghost.gameObject.activeSelf, "Drag ghost should be hidden when drag ends.");
+
+            Object.DestroyImmediate(eventSystemGo);
+            Object.DestroyImmediate(itemTemplate.gameObject);
+            Object.DestroyImmediate(emptyTemplate);
+            Object.DestroyImmediate(presenterRoot);
+            Object.DestroyImmediate(canvasRoot);
+            Object.DestroyImmediate(equipmentRegistry);
+            Object.DestroyImmediate(equipmentDef.Icon.texture);
+            Object.DestroyImmediate(equipmentDef);
+            Object.DestroyImmediate(inventory);
+            Object.DestroyImmediate(context);
+        }
+
+        [Test]
+        public void ShowPage_WhileDraggingItem_CancelsActiveDragAndHidesGhost()
+        {
+            ResetInventoryDragStatics();
+            ResetUnitDragStatics();
+
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            var inventory = ScriptableObject.CreateInstance<PlayerInventory>();
+            context.Inventory = inventory;
+            PlayerContext.SetRuntimeInstance(context);
+
+            var equipmentDef = ScriptableObject.CreateInstance<EquipmentDefinition>();
+            equipmentDef.Id = "eq.sword";
+            equipmentDef.Icon = CreateSprite(Color.magenta);
+            equipmentDef.SlotType = EquipmentSlotType.Weapon;
+
+            var equipmentRegistry = ScriptableObject.CreateInstance<EquipmentDefinitionRegistry>();
+            SetPrivate(equipmentRegistry, "_definitions", new[] { equipmentDef });
+
+            inventory.Entries.Add(new InventoryEntry
+            {
+                Kind = InventoryEntry.EntryKind.Equipment,
+                DefinitionId = equipmentDef.Id,
+                Quantity = 1
+            });
+
+            for (int i = 0; i < 30; i++)
+            {
+                inventory.Entries.Add(new InventoryEntry
+                {
+                    Kind = InventoryEntry.EntryKind.Item,
+                    DefinitionId = $"item.{i:00}",
+                    Quantity = 1
+                });
+            }
+
+            var canvasRoot = new GameObject("CanvasRoot", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            var presenterRoot = new GameObject("PresenterRoot");
+            presenterRoot.transform.SetParent(canvasRoot.transform, false);
+            var content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
+            content.SetParent(canvasRoot.transform, false);
+
+            var presenter = presenterRoot.AddComponent<PreparationInventoryListPresenter>();
+            var itemTemplate = CreateEntryTemplate("ItemTemplate");
+            var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
+            presenter.Configure(context, null, content, itemTemplate.gameObject, emptyTemplate, equipmentRegistry, null);
+            presenter.RefreshNow();
+
+            var eventSystemGo = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            var pointerData = new PointerEventData(EventSystem.current)
+            {
+                position = new Vector2(150f, 240f)
+            };
+
+            GameObject firstSlot = GetActiveSlotAt(content, 0);
+            Assert.IsNotNull(firstSlot);
+            var dragHandler = firstSlot.GetComponent<InventoryItemDragHandler>();
+            Assert.IsNotNull(dragHandler);
+
+            dragHandler.OnBeginDrag(pointerData);
+            Assert.IsTrue(InventoryItemDragHandler.IsDraggingItem);
+
+            presenter.ShowPage(2);
+
+            Assert.IsFalse(InventoryItemDragHandler.IsDraggingItem, "Changing inventory page should cancel active item drag.");
+            Transform ghost = canvasRoot.transform.Find("InventoryDragGhost");
+            Assert.IsNotNull(ghost);
+            Assert.IsFalse(ghost.gameObject.activeSelf, "Drag ghost should be hidden after page-change cancel.");
+
+            Object.DestroyImmediate(eventSystemGo);
+            Object.DestroyImmediate(itemTemplate.gameObject);
+            Object.DestroyImmediate(emptyTemplate);
+            Object.DestroyImmediate(presenterRoot);
+            Object.DestroyImmediate(canvasRoot);
+            Object.DestroyImmediate(equipmentRegistry);
+            Object.DestroyImmediate(equipmentDef.Icon.texture);
+            Object.DestroyImmediate(equipmentDef);
             Object.DestroyImmediate(inventory);
             Object.DestroyImmediate(context);
         }
@@ -448,6 +673,36 @@ namespace SevenBattles.Tests.Preparation
             texture.SetPixels(pixels);
             texture.Apply(false, false);
             return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        private static void SetPrivate(object target, string fieldName, object value)
+        {
+            var field = target.GetType().GetField(fieldName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.IsNotNull(field, $"Field '{fieldName}' was not found.");
+            field.SetValue(target, value);
+        }
+
+        private static void ResetInventoryDragStatics()
+        {
+            var method = typeof(InventoryItemDragHandler).GetMethod(
+                "ResetStaticState",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            Assert.IsNotNull(method);
+            method.Invoke(null, null);
+        }
+
+        private static void ResetUnitDragStatics()
+        {
+            SetStaticAutoProperty(typeof(UnitDragHandler), "IsDragging", false);
+            SetStaticAutoProperty(typeof(UnitDragHandler), "DraggingLoadout", null);
+        }
+
+        private static void SetStaticAutoProperty(System.Type type, string propertyName, object value)
+        {
+            string fieldName = $"<{propertyName}>k__BackingField";
+            var field = type.GetField(fieldName, System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            Assert.IsNotNull(field, $"Field '{fieldName}' was not found on type '{type.FullName}'.");
+            field.SetValue(null, value);
         }
     }
 }

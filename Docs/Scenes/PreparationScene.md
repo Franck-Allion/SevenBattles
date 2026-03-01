@@ -156,6 +156,7 @@
     - `_allUnitsView` -> `Top_AllSquad` (`AllUnitsGridView`).
     - `_activeSquadView` -> `Bottom_ActiveSquad` (`ActiveSquadGridView`).
     - `_unitInfoView` -> `Right_UnitInfo` (`UnitInfoPanelView`).
+    - `Right_UnitInfo` is squad-information-only; `UnitInfoPanelView` does not create equipment/inventory slot UI unless `_enableEquipmentSlots` is explicitly enabled.
     - `UnitInfoPanelView` auto-localizes stat labels from `UI.Common` (`stats.life`, `stats.attack`, `stats.shoot`, `stats.spell`, `stats.speed`, `stats.luck`, `stats.defense`, `stats.protection`, `stats.initiative`, `stats.morale`) by resolving the `Label` child in each stat row.
     - `Right_UnitInfo/NameText` is clickable and enters inline name edit mode (runtime-created TMP input field).
       - Enter or clicking outside commits rename.

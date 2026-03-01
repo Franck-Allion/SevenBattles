@@ -78,6 +78,66 @@ namespace SevenBattles.Core.Items
             return true;
         }
 
+        public bool RemoveItem(InventoryEntry entry, int quantity = 1)
+        {
+            if (entry == null || quantity <= 0)
+            {
+                return false;
+            }
+
+            EnsureEntriesList();
+
+            int entryIndex = _entries.IndexOf(entry);
+            if (entryIndex < 0)
+            {
+                return false;
+            }
+
+            if (entry.Kind != InventoryEntry.EntryKind.Item || string.IsNullOrWhiteSpace(entry.DefinitionId))
+            {
+                return false;
+            }
+
+            if (entry.Quantity < quantity)
+            {
+                return false;
+            }
+
+            entry.Quantity -= quantity;
+            if (entry.Quantity <= 0)
+            {
+                _entries.RemoveAt(entryIndex);
+            }
+
+            InventoryChanged?.Invoke();
+            return true;
+        }
+
+        public bool RemoveEquipment(string definitionId)
+        {
+            if (string.IsNullOrWhiteSpace(definitionId))
+            {
+                return false;
+            }
+
+            EnsureEntriesList();
+
+            InventoryEntry entry = FindEntryByKind(InventoryEntry.EntryKind.Equipment, definitionId);
+            if (entry == null)
+            {
+                return false;
+            }
+
+            entry.Quantity -= 1;
+            if (entry.Quantity <= 0)
+            {
+                _entries.Remove(entry);
+            }
+
+            InventoryChanged?.Invoke();
+            return true;
+        }
+
         public InventoryEntry FindEntry(string definitionId)
         {
             if (string.IsNullOrWhiteSpace(definitionId))

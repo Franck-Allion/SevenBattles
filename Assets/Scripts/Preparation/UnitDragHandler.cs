@@ -76,6 +76,11 @@ namespace SevenBattles.Preparation
 
         public void OnBeginDrag(PointerEventData eventData)
         {
+            if (InventoryItemDragHandler.IsDraggingItem || EquipmentDropSlotView.IsDraggingEquippedItem)
+            {
+                return;
+            }
+
             UnitSpellLoadout loadout = _portraitView != null ? _portraitView.Loadout : null;
             if (loadout == null || _canvasGroup == null)
             {

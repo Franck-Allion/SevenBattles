@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using SevenBattles.Core.Items;
+using SevenBattles.Core.Players;
 using SevenBattles.Core.Save;
 
 namespace SevenBattles.Tests.Core
@@ -366,7 +368,15 @@ namespace SevenBattles.Tests.Core
                         UnitId = "WizA",
                         Level = 3,
                         Xp = 12,
-                        SpellIds = new[] { "SpellA" }
+                        SpellIds = new[] { "SpellA" },
+                        EquippedItems = new[]
+                        {
+                            new EquipmentSlotEntry
+                            {
+                                SlotType = EquipmentSlotType.Weapon,
+                                EquipmentDefinitionId = "eq.staff"
+                            }
+                        }
                     }
                 },
                 ActiveSquadOwnedUnitIds = new[] { "owned_1" }
@@ -385,10 +395,15 @@ namespace SevenBattles.Tests.Core
             Assert.AreEqual("owned_1", data.PlayerOwnedUnits.Units[0].OwnedUnitId);
             Assert.AreEqual("Archmage", data.PlayerOwnedUnits.Units[0].CustomName);
             Assert.AreEqual("WizA", data.PlayerOwnedUnits.Units[0].UnitId);
+            Assert.IsNotNull(data.PlayerOwnedUnits.Units[0].EquippedItems);
+            Assert.AreEqual(1, data.PlayerOwnedUnits.Units[0].EquippedItems.Length);
+            Assert.AreEqual(EquipmentSlotType.Weapon, data.PlayerOwnedUnits.Units[0].EquippedItems[0].SlotType);
+            Assert.AreEqual("eq.staff", data.PlayerOwnedUnits.Units[0].EquippedItems[0].EquipmentDefinitionId);
             Assert.IsNotNull(data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds);
             Assert.AreEqual("owned_1", data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds[0]);
             StringAssert.Contains("\"PlayerOwnedUnits\"", json);
             StringAssert.Contains("\"CustomName\": \"Archmage\"", json);
+            StringAssert.Contains("\"EquippedItems\"", json);
         }
 
         [Test]
@@ -602,7 +617,7 @@ namespace SevenBattles.Tests.Core
             string path = Path.Combine(saveDir, "save_slot_01.json");
             File.WriteAllText(
                 path,
-                "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1, \"PlayerOwnedUnits\": { \"Units\": [ { \"OwnedUnitId\": \"\", \"UnitId\": \"WizA\", \"CustomName\": \"\", \"Level\": -1, \"Xp\": -3, \"SpellIds\": [\"SpellA\"] }, { \"OwnedUnitId\": \"owned_ok\", \"UnitId\": \"WizB\", \"CustomName\": \"  NameTooLong_12345678901234567890  \", \"Level\": 0, \"Xp\": -7, \"SpellIds\": [null, \"SpellB\", \"\"] } ], \"ActiveSquadOwnedUnitIds\": [null, \"\", \"owned_ok\"] } }");
+                "{ \"Timestamp\": \"2025-01-01 00:00:00\", \"RunNumber\": 1, \"PlayerOwnedUnits\": { \"Units\": [ { \"OwnedUnitId\": \"\", \"UnitId\": \"WizA\", \"CustomName\": \"\", \"Level\": -1, \"Xp\": -3, \"SpellIds\": [\"SpellA\"] }, { \"OwnedUnitId\": \"owned_ok\", \"UnitId\": \"WizB\", \"CustomName\": \"  NameTooLong_12345678901234567890  \", \"Level\": 0, \"Xp\": -7, \"SpellIds\": [null, \"SpellB\", \"\"], \"EquippedItems\": [ { \"SlotType\": 0, \"EquipmentDefinitionId\": \"eq.staff\" }, { \"SlotType\": 0, \"EquipmentDefinitionId\": \"eq.duplicate\" }, { \"SlotType\": 999, \"EquipmentDefinitionId\": \"eq.invalid\" }, { \"SlotType\": 1, \"EquipmentDefinitionId\": \"\" } ] } ], \"ActiveSquadOwnedUnitIds\": [null, \"\", \"owned_ok\"] } }");
 
             var provider = new FakeGameStateProvider
             {
@@ -624,6 +639,10 @@ namespace SevenBattles.Tests.Core
             Assert.IsNotNull(data.PlayerOwnedUnits.Units[0].SpellIds);
             Assert.AreEqual(1, data.PlayerOwnedUnits.Units[0].SpellIds.Length);
             Assert.AreEqual("SpellB", data.PlayerOwnedUnits.Units[0].SpellIds[0]);
+            Assert.IsNotNull(data.PlayerOwnedUnits.Units[0].EquippedItems);
+            Assert.AreEqual(1, data.PlayerOwnedUnits.Units[0].EquippedItems.Length);
+            Assert.AreEqual(EquipmentSlotType.Weapon, data.PlayerOwnedUnits.Units[0].EquippedItems[0].SlotType);
+            Assert.AreEqual("eq.staff", data.PlayerOwnedUnits.Units[0].EquippedItems[0].EquipmentDefinitionId);
             Assert.IsNotNull(data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds);
             Assert.AreEqual(1, data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds.Length);
             Assert.AreEqual("owned_ok", data.PlayerOwnedUnits.ActiveSquadOwnedUnitIds[0]);

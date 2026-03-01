@@ -66,6 +66,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\BattleBoardGameStateSaveProviderTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\TournamentMissionIdUtilTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\TurnOrderControllerTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\UnitInfoPanelViewEquipmentSlotsTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleXpAwarderSyncTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleCursorControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitDefinitionControllerTests.cs" />
@@ -80,16 +81,20 @@
     <Compile Include="Assets\Scripts\Tests\Battle\Save\BattleSessionLoadHandlerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SaveLoadHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleTurnGameStateSaveProviderTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\OwnedUnitDataTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\BattleRewardServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Preparation\UnitTooltipControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsHealTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Preparation\ActiveSquadGridViewTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\BattlefieldDefinitionTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\InventoryItemDragHandlerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\TileColorEffectsTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\ItemEquipServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\UnitShootTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridQuadTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\Homography2DTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Turn\SimpleTurnOrderControllerSpellTargetingTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\EquipmentDropSlotViewTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\ConfirmationMessageBoxHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\EnemyRandomPlacementTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\TournamentDefinitionTests.cs" />
@@ -100,6 +105,7 @@
     <Compile Include="Assets\Scripts\Tests\UI\BattleSpellsHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleGameStateLoadHandlerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\BattleRewardPresenterTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\PlayerInventoryTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\PlayerResourcesLoadHandlerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleXpCalculatorTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleVisualFeedbackServiceTests.cs" />
@@ -121,6 +127,7 @@
     <Compile Include="Assets\Scripts\Tests\Core\PerspectiveGridTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\TournamentProgressStateTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsLevelScalingTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\EquipmentServiceTests.cs" />
     <Compile Include="Assets\Scripts\Tests\UI\SquadPlacementHUDTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\Spells\BattleEnchantmentControllerDisenchantTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleEnchantmentGameStateSaveProviderTests.cs" />

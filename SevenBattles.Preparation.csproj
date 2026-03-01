@@ -66,21 +66,27 @@
     <Compile Include="Assets\Scripts\Preparation\SquadSetupController.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentPathPreviewRenderer.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleStartController.cs" />
+    <Compile Include="Assets\Scripts\Preparation\InventoryDropZone.cs" />
     <Compile Include="Assets\Scripts\Preparation\UnitInfoPanelView.cs" />
     <Compile Include="Assets\Scripts\Preparation\UnitDropZone.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleEllipseGizmo.cs" />
+    <Compile Include="Assets\Scripts\Preparation\InventoryEquipmentPanelPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationResourcesPanelPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationInventoryItemEntryView.cs" />
     <Compile Include="Assets\Scripts\Preparation\UnitPortraitTooltipHandler.cs" />
+    <Compile Include="Assets\Scripts\Preparation\InventoryItemDragHandler.cs" />
     <Compile Include="Assets\Scripts\Preparation\UnitTooltipView.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentBattleMapPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationInventoryListPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationPopupMenuLocalizationController.cs" />
+    <Compile Include="Assets\Scripts\Preparation\EquipmentSlotLayoutBuilder.cs" />
+    <Compile Include="Assets\Scripts\Preparation\EquipmentDropSlotView.cs" />
     <Compile Include="Assets\Scripts\Preparation\TournamentOpponentHoverPanelPresenter.cs" />
     <Compile Include="Assets\Scripts\Preparation\PreparationAutoSaveLoader.cs" />
     <Compile Include="Assets\Scripts\Preparation\UnitTooltipController.cs" />
     <Compile Include="Assets\Scripts\Preparation\ActiveSquadGridView.cs" />
     <Compile Include="Assets\Scripts\Preparation\AllUnitsGridView.cs" />
+    <Compile Include="Assets\Scripts\Preparation\ConsumableDropSlotView.cs" />
     <Compile Include="Assets\Scripts\Preparation\UnitPortraitView.cs" />
   </ItemGroup>
   <ItemGroup>

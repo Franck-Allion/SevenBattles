@@ -1,26 +1,79 @@
 using System;
 using System.Collections.Generic;
 using SevenBattles.Core.Battle;
+using SevenBattles.Core.Items;
 using SevenBattles.Core.Units;
+using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace SevenBattles.Core.Players
 {
+    [Serializable]
+    public struct EquipmentSlotEntry
+    {
+        public EquipmentSlotType SlotType;
+        [FormerlySerializedAs("EquipmentDefinitionId")]
+        public string DefinitionId;
+
+        // Backward-compatible alias for existing code paths migrated incrementally.
+        public string EquipmentDefinitionId
+        {
+            get => DefinitionId;
+            set => DefinitionId = value;
+        }
+    }
+
+    [Serializable]
+    public struct ConsumableSlotEntry
+    {
+        public ConsumableSlotType SlotType;
+        public string DefinitionId;
+    }
+
     /// <summary>
     /// Persistent player-owned unit entry with stable identity.
     /// </summary>
     [Serializable]
-    public sealed class OwnedUnitData
+    public sealed class OwnedUnitData : ISerializationCallbackReceiver
     {
+        private static readonly EquipmentSlotType[] DefaultSlotOrder =
+        {
+            EquipmentSlotType.Weapon,
+            EquipmentSlotType.Shield,
+            EquipmentSlotType.Helmet,
+            EquipmentSlotType.Armor,
+            EquipmentSlotType.Gloves,
+            EquipmentSlotType.Boots,
+            EquipmentSlotType.Ring,
+            EquipmentSlotType.Amulet
+        };
+        private static readonly ConsumableSlotType[] DefaultConsumableSlotOrder =
+        {
+            ConsumableSlotType.Object1,
+            ConsumableSlotType.Object2,
+            ConsumableSlotType.Object3,
+            ConsumableSlotType.Object4
+        };
+
         public string OwnedUnitId;
         public string CustomName;
         public UnitDefinition Definition;
         public int Level = UnitSpellLoadout.DefaultLevel;
         public int Xp;
         public SpellDefinition[] Spells = Array.Empty<SpellDefinition>();
+        [FormerlySerializedAs("_equippedItems")]
+        public EquipmentSlotEntry[] EquippedItems;
+        public ConsumableSlotEntry[] EquippedConsumables = Array.Empty<ConsumableSlotEntry>();
 
         public int EffectiveLevel => Level > 0 ? Level : UnitSpellLoadout.DefaultLevel;
         public int EffectiveXp => Xp > 0 ? Xp : 0;
         public string UnitId => Definition != null ? Definition.Id : null;
+
+        public OwnedUnitData()
+        {
+            EquippedItems = CreateDefaultEquippedItems();
+            EquippedConsumables = CreateDefaultEquippedConsumables();
+        }
 
         public static OwnedUnitData Clone(OwnedUnitData source)
         {
@@ -36,8 +89,59 @@ namespace SevenBattles.Core.Players
                 Definition = source.Definition,
                 Level = source.EffectiveLevel,
                 Xp = source.EffectiveXp,
-                Spells = source.Spells != null ? (SpellDefinition[])source.Spells.Clone() : Array.Empty<SpellDefinition>()
+                Spells = source.Spells != null ? (SpellDefinition[])source.Spells.Clone() : Array.Empty<SpellDefinition>(),
+                EquippedItems = source.EquippedItems != null ? (EquipmentSlotEntry[])source.EquippedItems.Clone() : CreateDefaultEquippedItems(),
+                EquippedConsumables = source.EquippedConsumables != null
+                    ? (ConsumableSlotEntry[])source.EquippedConsumables.Clone()
+                    : CreateDefaultEquippedConsumables()
             };
+        }
+
+        public void OnBeforeSerialize()
+        {
+        }
+
+        public void OnAfterDeserialize()
+        {
+            if (EquippedItems == null || EquippedItems.Length == 0)
+            {
+                EquippedItems = CreateDefaultEquippedItems();
+            }
+
+            if (EquippedConsumables == null || EquippedConsumables.Length == 0)
+            {
+                EquippedConsumables = CreateDefaultEquippedConsumables();
+            }
+        }
+
+        public static EquipmentSlotEntry[] CreateDefaultEquippedItems()
+        {
+            var entries = new EquipmentSlotEntry[DefaultSlotOrder.Length];
+            for (int i = 0; i < DefaultSlotOrder.Length; i++)
+            {
+                entries[i] = new EquipmentSlotEntry
+                {
+                    SlotType = DefaultSlotOrder[i],
+                    DefinitionId = null
+                };
+            }
+
+            return entries;
+        }
+
+        public static ConsumableSlotEntry[] CreateDefaultEquippedConsumables()
+        {
+            var entries = new ConsumableSlotEntry[DefaultConsumableSlotOrder.Length];
+            for (int i = 0; i < DefaultConsumableSlotOrder.Length; i++)
+            {
+                entries[i] = new ConsumableSlotEntry
+                {
+                    SlotType = DefaultConsumableSlotOrder[i],
+                    DefinitionId = null
+                };
+            }
+
+            return entries;
         }
     }
 

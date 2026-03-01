@@ -1,5 +1,6 @@
 using TMPro;
 using SevenBattles.Core.Diagnostics;
+using SevenBattles.Core.Items;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -18,6 +19,13 @@ namespace SevenBattles.Preparation
         [SerializeField, Tooltip("Optional hover tooltip handler used to display item names.")]
         private PreparationInventoryItemTooltipHandler _tooltipHandler;
         private bool _raycastTargetsConfigured;
+        private InventoryEntry _boundEntry;
+        private EquipmentDefinition _resolvedEquipmentDefinition;
+        private ItemDefinition _resolvedItemDefinition;
+
+        public InventoryEntry BoundEntry => _boundEntry;
+        public EquipmentDefinition BoundEquipmentDefinition => _resolvedEquipmentDefinition;
+        public ItemDefinition BoundItemDefinition => _resolvedItemDefinition;
 
         public void Bind(Sprite icon, Color backgroundColor, int quantity, Sprite fallbackIcon, Color fallbackColor)
         {
@@ -66,6 +74,18 @@ namespace SevenBattles.Preparation
             }
 
             _tooltipHandler.SetTooltipCursorOffsetOverride(overrideOffset, offset);
+        }
+
+        public void SetBoundData(InventoryEntry entry, EquipmentDefinition equipmentDefinition, ItemDefinition itemDefinition)
+        {
+            _boundEntry = entry;
+            _resolvedEquipmentDefinition = equipmentDefinition;
+            _resolvedItemDefinition = itemDefinition;
+        }
+
+        public void SetBoundData(InventoryEntry entry, EquipmentDefinition equipmentDefinition)
+        {
+            SetBoundData(entry, equipmentDefinition, null);
         }
 
         private void Awake()

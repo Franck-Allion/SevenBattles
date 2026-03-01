@@ -95,7 +95,7 @@ For each `SaveSlotAsync(int slotIndex)` call:
   - Serializes/deserializes player runtime progression:
     - Gold/Gems
     - Tournament progress (CurrentRoundIndex, CompletedBattles)
-    - Owned units (OwnedUnitId, CustomName, UnitId, Level, Xp, SpellIds)
+    - Owned units (OwnedUnitId, CustomName, UnitId, Level, Xp, SpellIds, EquippedItems)
     - Active squad owned-unit ids
     - Player inventory entries
   - Autosave path: `<Application.persistentDataPath>/Saves/autosave_player_context.json`
@@ -188,6 +188,7 @@ File: `Assets/Scripts/Core/Save/PlayerSquadGameStateSaveProvider.cs`
       public int Level;
       public int Xp;
       public string[] SpellIds;
+      public EquipmentSlotEntry[] EquippedItems; // per-slot equipment definition ids
   }
 
   public sealed class PlayerOwnedUnitsSaveData {
@@ -416,6 +417,7 @@ File: `Assets/Scripts/Core/Save/PlayerResourcesLoadHandler.cs`
 - Applies `SaveGameData.PlayerOwnedUnits` back to `PlayerContext`:
   - Restores `OwnedUnits`.
   - Restores `OwnedUnitData.CustomName` for each unit.
+  - Restores `OwnedUnitData.EquippedItems` for each unit.
   - Missing/empty names are normalized to a safe generated default (`<UnitType>-N`).
   - Restores `ActiveSquadOwnedUnitIds`.
 - Wire this handler into `CompositeGameStateLoadHandler` for scenes that can execute load flows.
@@ -440,7 +442,10 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
         "UnitId": "WizardA",
         "Level": 3,
         "Xp": 12,
-        "SpellIds": ["spell.firebolt"]
+        "SpellIds": ["spell.firebolt"],
+        "EquippedItems": [
+          { "SlotType": 0, "EquipmentDefinitionId": "eq.staff" }
+        ]
       },
       {
         "OwnedUnitId": "owned_b1",
@@ -448,7 +453,8 @@ The JSON produced by `SaveGameService` has the following top‑level structure:
         "UnitId": "WizardB",
         "Level": 2,
         "Xp": 5,
-        "SpellIds": []
+        "SpellIds": [],
+        "EquippedItems": []
       }
     ],
     "ActiveSquadOwnedUnitIds": ["owned_a1", "owned_b1"]

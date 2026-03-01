@@ -83,7 +83,10 @@ namespace SevenBattles.Core.Save
                     UnitId = owned.Definition.Id,
                     Level = owned.EffectiveLevel,
                     Xp = owned.EffectiveXp,
-                    SpellIds = spellIds.Count > 0 ? spellIds.ToArray() : Array.Empty<string>()
+                    SpellIds = spellIds.Count > 0 ? spellIds.ToArray() : Array.Empty<string>(),
+                    EquippedItems = owned.EquippedItems != null
+                        ? (EquipmentSlotEntry[])owned.EquippedItems.Clone()
+                        : Array.Empty<EquipmentSlotEntry>()
                 });
             }
 
