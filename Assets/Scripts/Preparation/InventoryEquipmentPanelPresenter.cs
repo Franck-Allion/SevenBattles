@@ -5,6 +5,7 @@ using SevenBattles.Core.Battle;
 using SevenBattles.Core.Diagnostics;
 using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
+using SevenBattles.Core.Save;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -986,6 +987,7 @@ namespace SevenBattles.Preparation
         {
             OwnedUnitData selected = ResolveSelectedOwnedUnit();
             _selectedUnitData = selected;
+            TryAutoSavePlayerContext();
             if (!AreSameOwnedUnit(changedUnit, selected))
             {
                 return;
@@ -1001,6 +1003,7 @@ namespace SevenBattles.Preparation
         {
             OwnedUnitData selected = ResolveSelectedOwnedUnit();
             _selectedUnitData = selected;
+            TryAutoSavePlayerContext();
             if (!AreSameOwnedUnit(changedUnit, selected))
             {
                 return;
@@ -1110,6 +1113,21 @@ namespace SevenBattles.Preparation
             }
 
             return true;
+        }
+
+        private void TryAutoSavePlayerContext()
+        {
+            PlayerContext context = ResolvePlayerContext();
+            if (context == null)
+            {
+                SBLog.Warn($"{nameof(InventoryEquipmentPanelPresenter)}: Autosave skipped because no PlayerContext is available.", this);
+                return;
+            }
+
+            if (!PlayerContextAutoSaveUtility.TrySaveFromPlayerContext(context, out string path))
+            {
+                SBLog.Warn($"{nameof(InventoryEquipmentPanelPresenter)}: Failed to autosave player context to '{path}'.", this);
+            }
         }
 
         private static bool AreSameOwnedUnit(OwnedUnitData first, OwnedUnitData second)

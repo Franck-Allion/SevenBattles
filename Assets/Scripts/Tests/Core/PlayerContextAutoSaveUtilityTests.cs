@@ -43,6 +43,14 @@ namespace SevenBattles.Tests.Core
                             SlotType = EquipmentSlotType.Weapon,
                             EquipmentDefinitionId = "eq.staff"
                         }
+                    },
+                    EquippedConsumables = new[]
+                    {
+                        new ConsumableSlotEntry
+                        {
+                            SlotType = ConsumableSlotType.Object3,
+                            DefinitionId = "item.potion"
+                        }
                     }
                 },
                 new OwnedUnitData
@@ -90,6 +98,14 @@ namespace SevenBattles.Tests.Core
             Assert.AreEqual(8, context.OwnedUnits[1].EquippedItems.Length);
             Assert.AreEqual(EquipmentSlotType.Weapon, context.OwnedUnits[1].EquippedItems[0].SlotType);
             Assert.IsTrue(string.IsNullOrEmpty(context.OwnedUnits[1].EquippedItems[0].EquipmentDefinitionId));
+            Assert.IsNotNull(context.OwnedUnits[0].EquippedConsumables);
+            Assert.AreEqual(1, context.OwnedUnits[0].EquippedConsumables.Length);
+            Assert.AreEqual(ConsumableSlotType.Object3, context.OwnedUnits[0].EquippedConsumables[0].SlotType);
+            Assert.AreEqual("item.potion", context.OwnedUnits[0].EquippedConsumables[0].DefinitionId);
+            Assert.IsNotNull(context.OwnedUnits[1].EquippedConsumables);
+            Assert.AreEqual(4, context.OwnedUnits[1].EquippedConsumables.Length);
+            Assert.AreEqual(ConsumableSlotType.Object1, context.OwnedUnits[1].EquippedConsumables[0].SlotType);
+            Assert.IsTrue(string.IsNullOrWhiteSpace(context.OwnedUnits[1].EquippedConsumables[0].DefinitionId));
 
             var activeLoadouts = context.GetActiveSquadLoadoutsNonAlloc();
             Assert.AreEqual(2, activeLoadouts.Count);
@@ -103,6 +119,7 @@ namespace SevenBattles.Tests.Core
             StringAssert.Contains("\"ActiveSquadOwnedUnitIds\"", loadedJson);
             StringAssert.Contains("\"CustomName\"", loadedJson);
             StringAssert.Contains("\"EquippedItems\"", loadedJson);
+            StringAssert.Contains("\"EquippedConsumables\"", loadedJson);
 
             UnityEngine.Object.DestroyImmediate(unitB);
             UnityEngine.Object.DestroyImmediate(unitA);
@@ -151,6 +168,63 @@ namespace SevenBattles.Tests.Core
             Assert.AreEqual(1, context.ActiveSquadOwnedUnitIds.Count);
             Assert.AreEqual("owned_a", context.ActiveSquadOwnedUnitIds[0]);
 
+            UnityEngine.Object.DestroyImmediate(unitA);
+            UnityEngine.Object.DestroyImmediate(context);
+            Directory.Delete(tempRoot, true);
+        }
+
+        [Test]
+        public void SaveThenLoad_EmptyActiveSquad_RemainsEmpty()
+        {
+            string tempRoot = Path.Combine(Path.GetTempPath(), "SevenBattles_AutoSaveTests_EmptyActiveSquad");
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, true);
+            }
+
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            var unitA = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitA.Id = "unit.a";
+            var unitB = ScriptableObject.CreateInstance<UnitDefinition>();
+            unitB.Id = "unit.b";
+
+            context.SetOwnedUnits(new[]
+            {
+                new OwnedUnitData
+                {
+                    OwnedUnitId = "owned_a",
+                    CustomName = "Alpha",
+                    Definition = unitA,
+                    Level = 3,
+                    Xp = 12,
+                    Spells = System.Array.Empty<SpellDefinition>()
+                },
+                new OwnedUnitData
+                {
+                    OwnedUnitId = "owned_b",
+                    CustomName = "Beta",
+                    Definition = unitB,
+                    Level = 2,
+                    Xp = 5,
+                    Spells = System.Array.Empty<SpellDefinition>()
+                }
+            });
+            context.SetActiveSquadOwnedUnitIds(System.Array.Empty<string>());
+
+            bool saved = PlayerContextAutoSaveUtility.TrySaveFromPlayerContext(context, out string savePath, tempRoot);
+            Assert.IsTrue(saved);
+            Assert.IsTrue(File.Exists(savePath));
+
+            // Corrupt in-memory state before load to verify persistence behavior.
+            context.SetActiveSquadOwnedUnitIds(new[] { "owned_a", "owned_b" });
+
+            bool loaded = PlayerContextAutoSaveUtility.TryLoadIntoPlayerContext(context, out string loadedPath, tempRoot);
+            Assert.IsTrue(loaded);
+            Assert.AreEqual(savePath, loadedPath);
+            Assert.AreEqual(2, context.OwnedUnits.Count);
+            Assert.AreEqual(0, context.ActiveSquadOwnedUnitIds.Count, "Explicitly empty active squad should remain empty after load.");
+
+            UnityEngine.Object.DestroyImmediate(unitB);
             UnityEngine.Object.DestroyImmediate(unitA);
             UnityEngine.Object.DestroyImmediate(context);
             Directory.Delete(tempRoot, true);

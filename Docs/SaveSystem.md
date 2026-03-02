@@ -95,13 +95,14 @@ For each `SaveSlotAsync(int slotIndex)` call:
   - Serializes/deserializes player runtime progression:
     - Gold/Gems
     - Tournament progress (CurrentRoundIndex, CompletedBattles)
-    - Owned units (OwnedUnitId, CustomName, UnitId, Level, Xp, SpellIds, EquippedItems)
+    - Owned units (OwnedUnitId, CustomName, UnitId, Level, Xp, SpellIds, EquippedItems, EquippedConsumables)
     - Active squad owned-unit ids
     - Player inventory entries
   - Autosave path: `<Application.persistentDataPath>/Saves/autosave_player_context.json`
   - Legacy compatibility:
     - If an older autosave JSON is missing the `OwnedUnits` field, load now preserves current `PlayerContext.OwnedUnits` instead of clearing them.
     - If active squad ids are empty in that legacy case, load seeds `ActiveSquadOwnedUnitIds` from existing owned units up to `MaxSquadSize`.
+    - If `ActiveSquadOwnedUnitIds` is explicitly present as an empty array (`[]`), load preserves an empty active squad (no auto-seeding).
 
 - `Assets/Scripts/UI/BattleResultHUD.cs`
   - Triggers autosave once per battle result popup (Victory or Defeat) after progression/reward application.
@@ -113,6 +114,10 @@ For each `SaveSlotAsync(int slotIndex)` call:
     - after `ISquadService.SquadChanged` (active squad order/composition changes, owned collection changes propagated by squad service),
     - after `IPlayerInventoryService.OwnedUnitChanged` (for example unit rename).
   - Uses `PlayerContextAutoSaveUtility.TrySaveFromPlayerContext` so `ActiveSquadOwnedUnitIds` and `OwnedUnits` (including `CustomName`) are persisted immediately.
+
+- `Assets/Scripts/Preparation/InventoryEquipmentPanelPresenter.cs`
+  - Triggers autosave when selected-unit equipment or consumable loadout changes (`IEquipmentService.EquipmentChanged`, `IItemEquipService.ConsumableChanged`).
+  - Uses `PlayerContextAutoSaveUtility.TrySaveFromPlayerContext` so equip/unequip actions persist immediately.
 
 - `Assets/Scripts/Preparation/PreparationAutoSaveLoader.cs`
   - MonoBehaviour placed on the PreparationScene's _System GameObject.

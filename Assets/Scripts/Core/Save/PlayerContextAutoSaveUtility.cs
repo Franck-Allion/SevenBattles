@@ -40,6 +40,7 @@ namespace SevenBattles.Core.Save
             public int Xp;
             public string[] SpellIds;
             public EquipmentSlotEntry[] EquippedItems;
+            public ConsumableSlotEntry[] EquippedConsumables;
         }
 
         [Serializable]
@@ -212,7 +213,8 @@ namespace SevenBattles.Core.Save
                     Level = owned.EffectiveLevel,
                     Xp = owned.EffectiveXp,
                     SpellIds = spellIds.Count > 0 ? spellIds.ToArray() : Array.Empty<string>(),
-                    EquippedItems = SanitizeEquippedItems(owned.EquippedItems)
+                    EquippedItems = SanitizeEquippedItems(owned.EquippedItems),
+                    EquippedConsumables = SanitizeEquippedConsumables(owned.EquippedConsumables)
                 });
             }
 
@@ -384,15 +386,17 @@ namespace SevenBattles.Core.Save
                     Level = Mathf.Max(UnitSpellLoadout.DefaultLevel, saved.Level),
                     Xp = Mathf.Max(0, saved.Xp),
                     Spells = ResolveSpells(saved.SpellIds, spellLookup),
-                    EquippedItems = ResolveEquippedItemsForLoad(saved.EquippedItems)
+                    EquippedItems = ResolveEquippedItemsForLoad(saved.EquippedItems),
+                    EquippedConsumables = ResolveEquippedConsumablesForLoad(saved.EquippedConsumables)
                 });
             }
 
             OwnedUnitNamingPolicy.NormalizeAllInPlace(ownedList);
             context.SetOwnedUnits(ownedList);
 
+            bool hasExplicitActiveSquad = activeOwnedUnitIds != null;
             var activeIds = new List<string>();
-            if (activeOwnedUnitIds != null && activeOwnedUnitIds.Length > 0)
+            if (hasExplicitActiveSquad && activeOwnedUnitIds.Length > 0)
             {
                 var ownedSet = new HashSet<string>(StringComparer.Ordinal);
                 var selectedSet = new HashSet<string>(StringComparer.Ordinal);
@@ -413,7 +417,9 @@ namespace SevenBattles.Core.Save
                 }
             }
 
-            if (activeIds.Count == 0)
+            // Backward compatibility for legacy autosaves where ActiveSquadOwnedUnitIds is missing.
+            // When the field exists (including explicit empty []), preserve authored/saved intent.
+            if (!hasExplicitActiveSquad && activeIds.Count == 0)
             {
                 for (int i = 0; i < ownedList.Count && activeIds.Count < context.MaxSquadSize; i++)
                 {
@@ -536,6 +542,56 @@ namespace SevenBattles.Core.Save
             }
 
             return SanitizeEquippedItems(value);
+        }
+
+        private static ConsumableSlotEntry[] SanitizeEquippedConsumables(ConsumableSlotEntry[] value)
+        {
+            if (value == null || value.Length == 0)
+            {
+                return Array.Empty<ConsumableSlotEntry>();
+            }
+
+            var seenSlots = new HashSet<ConsumableSlotType>();
+            var sanitized = new List<ConsumableSlotEntry>(value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                ConsumableSlotEntry entry = value[i];
+                if (!Enum.IsDefined(typeof(ConsumableSlotType), entry.SlotType))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(entry.DefinitionId))
+                {
+                    continue;
+                }
+
+                if (!seenSlots.Add(entry.SlotType))
+                {
+                    continue;
+                }
+
+                sanitized.Add(new ConsumableSlotEntry
+                {
+                    SlotType = entry.SlotType,
+                    DefinitionId = entry.DefinitionId
+                });
+            }
+
+            return sanitized.Count == 0 ? Array.Empty<ConsumableSlotEntry>() : sanitized.ToArray();
+        }
+
+        private static ConsumableSlotEntry[] ResolveEquippedConsumablesForLoad(ConsumableSlotEntry[] value)
+        {
+            if (value == null || value.Length == 0)
+            {
+                return OwnedUnitData.CreateDefaultEquippedConsumables();
+            }
+
+            ConsumableSlotEntry[] sanitized = SanitizeEquippedConsumables(value);
+            return sanitized.Length == 0
+                ? OwnedUnitData.CreateDefaultEquippedConsumables()
+                : sanitized;
         }
     }
 }
