@@ -40,6 +40,8 @@ namespace SevenBattles.Preparation
         private Sprite _fallbackIcon;
         [SerializeField, Tooltip("Fallback background tint when a definition is missing color data.")]
         private Color _fallbackBackgroundColor = Color.white;
+        [SerializeField, Tooltip("Optional rarity palette. When set, inventory backgrounds use palette colors by rarity.")]
+        private ItemRarityColorPalette _rarityColorPalette;
         [Header("Pagination Buttons")]
         [SerializeField, Tooltip("Optional explicit root that receives dynamic page buttons. Auto-resolved by object name when null.")]
         private RectTransform _pageButtonsRoot;
@@ -215,6 +217,12 @@ namespace SevenBattles.Preparation
             _equipmentDefinitionRegistry = equipmentDefinitionRegistry;
             _itemDefinitionRegistry = itemDefinitionRegistry;
 
+            RefreshNow();
+        }
+
+        public void SetRarityColorPalette(ItemRarityColorPalette rarityColorPalette)
+        {
+            _rarityColorPalette = rarityColorPalette;
             RefreshNow();
         }
 
@@ -900,7 +908,7 @@ namespace SevenBattles.Preparation
                     if (definition != null)
                     {
                         icon = definition.Icon;
-                        backgroundColor = definition.InventoryBackgroundColor;
+                        backgroundColor = ItemRarityColorUtility.GetInventoryBackgroundColor(definition.Rarity, _rarityColorPalette);
                     }
 
                     quantity = Mathf.Max(1, entry.Quantity);
@@ -914,7 +922,7 @@ namespace SevenBattles.Preparation
                     if (definition != null)
                     {
                         icon = definition.Icon;
-                        backgroundColor = definition.InventoryBackgroundColor;
+                        backgroundColor = ItemRarityColorUtility.GetInventoryBackgroundColor(definition.Rarity, _rarityColorPalette);
                     }
 
                     quantity = Mathf.Max(1, entry.Quantity);

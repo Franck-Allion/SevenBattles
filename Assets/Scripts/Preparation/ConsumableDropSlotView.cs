@@ -15,10 +15,14 @@ namespace SevenBattles.Preparation
     public sealed class ConsumableDropSlotView : MonoBehaviour, IDropHandler, IPointerEnterHandler, IPointerExitHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         private const string DefaultDragGhostName = "InventoryDragGhost";
+        private const string BackgroundChildName = "Bg";
 
         [SerializeField] private ConsumableSlotType _slotType;
         [SerializeField] private Image _iconImage;
+        [SerializeField] private Image _backgroundImage;
         [SerializeField] private RectTransform _dragGhostRoot;
+        [SerializeField, Tooltip("Optional rarity palette used to tint equipped background by rarity.")]
+        private ItemRarityColorPalette _rarityColorPalette;
         [SerializeField, Tooltip("Tint applied while a consumable icon is equipped. Defaults to white to avoid disabled-looking icons.")]
         private Color _equippedIconColor = Color.white;
 
@@ -58,6 +62,8 @@ namespace SevenBattles.Preparation
         public bool IsValidDropPreview => _isValidDropPreview;
         public bool HasEquippedItem => !string.IsNullOrWhiteSpace(_equippedDefinitionId);
         public string EquippedDefinitionId => _equippedDefinitionId;
+        public OwnedUnitData SelectedUnit => _selectedUnit;
+        public IItemEquipService ItemEquipService => _itemEquipService;
 
         public static bool IsDragging { get; set; }
         public static bool IsDraggingEquippedConsumable { get; private set; }
@@ -81,9 +87,12 @@ namespace SevenBattles.Preparation
         private OwnedUnitData _selectedUnit;
         private Image _ghostImage;
         private Image _capturedDefaultIconSource;
+        private Image _capturedDefaultBackgroundSource;
         private Sprite _defaultIconSprite;
         private bool _defaultIconEnabled;
         private Color _defaultIconColor = Color.white;
+        private bool _defaultBackgroundEnabled;
+        private Color _defaultBackgroundColor = Color.white;
         private bool _isDraggingThis;
         private float _previousIconAlpha = 1f;
         private static ConsumableDropSlotView _activeDragHandler;
@@ -115,6 +124,7 @@ namespace SevenBattles.Preparation
             EnsureRootRaycastTarget();
             EnsureHighlightOverlay();
             EnsureIconImage();
+            EnsureBackgroundImage();
             RefreshEquippedIcon();
             ApplyHighlightImmediate(0f, _availableColor, 1f);
         }
@@ -176,6 +186,26 @@ namespace SevenBattles.Preparation
         {
             _dragGhostRoot = dragGhostRoot;
             _ghostImage = null;
+        }
+
+        public void SetIconImage(Image iconImage)
+        {
+            _iconImage = iconImage;
+            CaptureDefaultIconStateIfNeeded();
+            RefreshEquippedIcon();
+        }
+
+        public void SetBackgroundImage(Image backgroundImage)
+        {
+            _backgroundImage = backgroundImage;
+            CaptureDefaultBackgroundStateIfNeeded();
+            RefreshEquippedIcon();
+        }
+
+        public void SetRarityColorPalette(ItemRarityColorPalette rarityColorPalette)
+        {
+            _rarityColorPalette = rarityColorPalette;
+            RefreshBackgroundVisual();
         }
 
         public void SetEquippedItem(string definitionId, ItemDefinition definition)
@@ -460,6 +490,32 @@ namespace SevenBattles.Preparation
             CaptureDefaultIconStateIfNeeded();
         }
 
+        private void EnsureBackgroundImage()
+        {
+            if (_backgroundImage != null)
+            {
+                CaptureDefaultBackgroundStateIfNeeded();
+                return;
+            }
+
+            Transform backgroundTransform = transform.Find(BackgroundChildName);
+            if (backgroundTransform == null)
+            {
+                backgroundTransform = FindByName(transform, BackgroundChildName);
+            }
+
+            if (backgroundTransform != null)
+            {
+                _backgroundImage = backgroundTransform.GetComponent<Image>();
+                if (_backgroundImage == null)
+                {
+                    _backgroundImage = backgroundTransform.GetComponentInChildren<Image>(true);
+                }
+            }
+
+            CaptureDefaultBackgroundStateIfNeeded();
+        }
+
         private static Transform FindChildImageTransform(Transform root)
         {
             if (root == null)
@@ -482,6 +538,26 @@ namespace SevenBattles.Preparation
             return null;
         }
 
+        private static Transform FindByName(Transform root, string objectName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            Transform[] nodes = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                Transform node = nodes[i];
+                if (node != null && string.Equals(node.name, objectName, StringComparison.Ordinal))
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
         private void EnsureRootRaycastTarget()
         {
             Image slotImage = GetComponent<Image>();
@@ -499,6 +575,8 @@ namespace SevenBattles.Preparation
         private void RefreshEquippedIcon()
         {
             EnsureIconImage();
+            EnsureBackgroundImage();
+            RefreshBackgroundVisual();
             if (_iconImage == null)
             {
                 return;
@@ -532,6 +610,39 @@ namespace SevenBattles.Preparation
             _defaultIconEnabled = _iconImage.enabled;
             _defaultIconColor = _iconImage.color;
             _capturedDefaultIconSource = _iconImage;
+        }
+
+        private void CaptureDefaultBackgroundStateIfNeeded()
+        {
+            if (_backgroundImage == null || ReferenceEquals(_capturedDefaultBackgroundSource, _backgroundImage))
+            {
+                return;
+            }
+
+            _defaultBackgroundEnabled = _backgroundImage.enabled;
+            _defaultBackgroundColor = _backgroundImage.color;
+            _capturedDefaultBackgroundSource = _backgroundImage;
+        }
+
+        private void RefreshBackgroundVisual()
+        {
+            if (_backgroundImage == null)
+            {
+                return;
+            }
+
+            CaptureDefaultBackgroundStateIfNeeded();
+            if (_equippedDefinition != null)
+            {
+                Color rarityColor = ItemRarityColorUtility.GetInventoryBackgroundColor(_equippedDefinition.Rarity, _rarityColorPalette);
+                rarityColor.a = _defaultBackgroundColor.a > 0f ? _defaultBackgroundColor.a : rarityColor.a;
+                _backgroundImage.color = rarityColor;
+                _backgroundImage.enabled = true;
+                return;
+            }
+
+            _backgroundImage.enabled = _defaultBackgroundEnabled;
+            _backgroundImage.color = _defaultBackgroundColor;
         }
 
         private void EnsureHighlightOverlay()

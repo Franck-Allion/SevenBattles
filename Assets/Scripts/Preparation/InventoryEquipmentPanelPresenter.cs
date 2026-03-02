@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using SevenBattles.Core;
 using SevenBattles.Core.Battle;
 using SevenBattles.Core.Diagnostics;
@@ -20,6 +19,7 @@ namespace SevenBattles.Preparation
         private const string EquipSlotLeftName = "EquipSlot_L";
         private const string EquipSlotRightName = "EquipSlot_R";
         private const string IconChildName = "Icon";
+        private const string BackgroundChildName = "Bg";
         private const string IconFrameObject1Name = "IconFrame_Object1";
         private const string IconFrameObject2Name = "IconFrame_Object2";
         private const string IconFrameObject3Name = "IconFrame_Object3";
@@ -59,14 +59,6 @@ namespace SevenBattles.Preparation
             ConsumableSlotType.Object4
         };
 
-        private static readonly BindingFlags InstanceFlags =
-            BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-
-        private static FieldInfo s_iconImageField;
-        private static bool s_iconFieldResolved;
-        private static FieldInfo s_consumableIconImageField;
-        private static bool s_consumableIconFieldResolved;
-
         [Header("Panel Roots")]
         [SerializeField, Tooltip("Optional explicit InventoryPanel root. Auto-resolved by name when empty.")]
         private Transform _inventoryPanelRoot;
@@ -84,6 +76,8 @@ namespace SevenBattles.Preparation
         private EquipmentDefinitionRegistry _equipmentDefinitionRegistry;
         [SerializeField, Tooltip("Optional item registry used when creating ItemEquipService and resolving consumable icons.")]
         private ItemDefinitionRegistry _itemDefinitionRegistry;
+        [SerializeField, Tooltip("Optional rarity palette used for equipped-slot background tinting.")]
+        private ItemRarityColorPalette _rarityColorPalette;
         [SerializeField, Tooltip("Optional provider component implementing IEquipmentService.")]
         private MonoBehaviour _equipmentServiceProvider;
         [SerializeField, Tooltip("Optional provider component implementing IItemEquipService.")]
@@ -172,6 +166,36 @@ namespace SevenBattles.Preparation
             {
                 WireConsumableEvents();
             }
+        }
+
+        public void SetRarityColorPalette(ItemRarityColorPalette rarityColorPalette)
+        {
+            _rarityColorPalette = rarityColorPalette;
+            EnsureInitialized();
+
+            for (int i = 0; i < _slotViews.Count; i++)
+            {
+                EquipmentDropSlotView slotView = _slotViews[i];
+                if (slotView == null)
+                {
+                    continue;
+                }
+
+                slotView.SetRarityColorPalette(_rarityColorPalette);
+            }
+
+            for (int i = 0; i < _consumableSlotViews.Count; i++)
+            {
+                ConsumableDropSlotView slotView = _consumableSlotViews[i];
+                if (slotView == null)
+                {
+                    continue;
+                }
+
+                slotView.SetRarityColorPalette(_rarityColorPalette);
+            }
+
+            RefreshForUnit(_selectedUnitData);
         }
 
         /// <summary>
@@ -632,15 +656,19 @@ namespace SevenBattles.Preparation
                 return;
             }
 
-            if (!s_iconFieldResolved)
+            Image backgroundImage = ResolveBackgroundImage(iconFrameRoot);
+            if (backgroundImage == null)
             {
-                s_iconImageField = typeof(EquipmentDropSlotView).GetField("_iconImage", InstanceFlags);
-                s_iconFieldResolved = true;
+                SBLog.Warn(
+                    $"{nameof(InventoryEquipmentPanelPresenter)}: Missing '{BackgroundChildName}' Image under '{iconFrameRoot.name}'.",
+                    this);
             }
 
-            if (s_iconImageField != null && s_iconImageField.FieldType == typeof(Image))
+            slotView.SetIconImage(iconImage);
+            slotView.SetBackgroundImage(backgroundImage);
+            if (_rarityColorPalette != null)
             {
-                s_iconImageField.SetValue(slotView, iconImage);
+                slotView.SetRarityColorPalette(_rarityColorPalette);
             }
         }
 
@@ -655,15 +683,19 @@ namespace SevenBattles.Preparation
                 return;
             }
 
-            if (!s_consumableIconFieldResolved)
+            Image backgroundImage = ResolveBackgroundImage(iconFrameRoot);
+            if (backgroundImage == null)
             {
-                s_consumableIconImageField = typeof(ConsumableDropSlotView).GetField("_iconImage", InstanceFlags);
-                s_consumableIconFieldResolved = true;
+                SBLog.Warn(
+                    $"{nameof(InventoryEquipmentPanelPresenter)}: Missing '{BackgroundChildName}' Image under '{iconFrameRoot.name}'.",
+                    this);
             }
 
-            if (s_consumableIconImageField != null && s_consumableIconImageField.FieldType == typeof(Image))
+            slotView.SetIconImage(iconImage);
+            slotView.SetBackgroundImage(backgroundImage);
+            if (_rarityColorPalette != null)
             {
-                s_consumableIconImageField.SetValue(slotView, iconImage);
+                slotView.SetRarityColorPalette(_rarityColorPalette);
             }
         }
 
@@ -727,6 +759,28 @@ namespace SevenBattles.Preparation
             }
 
             return iconTransform.GetComponentInChildren<Image>(true);
+        }
+
+        private static Image ResolveBackgroundImage(Transform iconFrameRoot)
+        {
+            if (iconFrameRoot == null)
+            {
+                return null;
+            }
+
+            Transform backgroundTransform = FindByName(iconFrameRoot, BackgroundChildName);
+            if (backgroundTransform == null)
+            {
+                return null;
+            }
+
+            Image backgroundImage = backgroundTransform.GetComponent<Image>();
+            if (backgroundImage != null)
+            {
+                return backgroundImage;
+            }
+
+            return backgroundTransform.GetComponentInChildren<Image>(true);
         }
 
         private void WarnForMissingExpectedSlots()

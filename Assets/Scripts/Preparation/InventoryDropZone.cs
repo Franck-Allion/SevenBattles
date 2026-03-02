@@ -35,20 +35,36 @@ namespace SevenBattles.Preparation
         {
             if (EquipmentDropSlotView.IsDraggingEquippedItem)
             {
+                EquipmentDropSlotView draggedSlot = eventData != null && eventData.pointerDrag != null
+                    ? eventData.pointerDrag.GetComponentInParent<EquipmentDropSlotView>()
+                    : null;
+                IEquipmentService effectiveService = _equipmentService ?? draggedSlot?.EquipmentService;
+                OwnedUnitData effectiveUnit = _selectedUnit ?? draggedSlot?.SelectedUnit;
                 EquipmentSlotType? draggingFromSlot = EquipmentDropSlotView.DraggingFromSlot;
-                if (_equipmentService != null &&
-                    _selectedUnit != null &&
+                if (!draggingFromSlot.HasValue && draggedSlot != null)
+                {
+                    draggingFromSlot = draggedSlot.SlotType;
+                }
+
+                if (effectiveService != null &&
+                    effectiveUnit != null &&
                     draggingFromSlot.HasValue &&
-                    _equipmentService.TryUnequip(_selectedUnit, draggingFromSlot.Value))
+                    effectiveService.TryUnequip(effectiveUnit, draggingFromSlot.Value))
                 {
                     NotifyDraggedSlotAccepted(eventData);
+                    if (_enableDiagnostics)
+                    {
+                        Core.Diagnostics.SBLog.Info(
+                            $"InventoryDropZone: Equipment unequipped from slot '{draggingFromSlot.Value}' on unit '{effectiveUnit.OwnedUnitId}'.",
+                            this);
+                    }
                     return;
                 }
 
                 if (_enableDiagnostics)
                 {
                     Core.Diagnostics.SBLog.Warn(
-                        $"InventoryDropZone: Equipment unequip drop rejected (service={(_equipmentService != null ? "yes" : "no")}, unit={(_selectedUnit != null ? _selectedUnit.OwnedUnitId : "<null>")}, slot={draggingFromSlot?.ToString() ?? "<null>"}).",
+                        $"InventoryDropZone: Equipment unequip drop rejected (service={(effectiveService != null ? "yes" : "no")}, unit={(effectiveUnit != null ? effectiveUnit.OwnedUnitId : "<null>")}, slot={draggingFromSlot?.ToString() ?? "<null>"}, draggedSlot={(draggedSlot != null ? draggedSlot.SlotType.ToString() : "<null>")}).",
                         this);
                 }
                 DropReceived?.Invoke(this, eventData);
@@ -57,20 +73,36 @@ namespace SevenBattles.Preparation
 
             if (ConsumableDropSlotView.IsDraggingEquippedConsumable)
             {
+                ConsumableDropSlotView draggedSlot = eventData != null && eventData.pointerDrag != null
+                    ? eventData.pointerDrag.GetComponentInParent<ConsumableDropSlotView>()
+                    : null;
+                IItemEquipService effectiveService = _itemEquipService ?? draggedSlot?.ItemEquipService;
+                OwnedUnitData effectiveUnit = _selectedUnit ?? draggedSlot?.SelectedUnit;
                 ConsumableSlotType? draggingFromSlot = ConsumableDropSlotView.DraggingFromConsumableSlot;
-                if (_itemEquipService != null &&
-                    _selectedUnit != null &&
+                if (!draggingFromSlot.HasValue && draggedSlot != null)
+                {
+                    draggingFromSlot = draggedSlot.SlotType;
+                }
+
+                if (effectiveService != null &&
+                    effectiveUnit != null &&
                     draggingFromSlot.HasValue &&
-                    _itemEquipService.TryUnequip(_selectedUnit, draggingFromSlot.Value))
+                    effectiveService.TryUnequip(effectiveUnit, draggingFromSlot.Value))
                 {
                     NotifyDraggedConsumableSlotAccepted(eventData);
+                    if (_enableDiagnostics)
+                    {
+                        Core.Diagnostics.SBLog.Info(
+                            $"InventoryDropZone: Consumable unequipped from slot '{draggingFromSlot.Value}' on unit '{effectiveUnit.OwnedUnitId}'.",
+                            this);
+                    }
                     return;
                 }
 
                 if (_enableDiagnostics)
                 {
                     Core.Diagnostics.SBLog.Warn(
-                        $"InventoryDropZone: Consumable unequip drop rejected (service={(_itemEquipService != null ? "yes" : "no")}, unit={(_selectedUnit != null ? _selectedUnit.OwnedUnitId : "<null>")}, slot={draggingFromSlot?.ToString() ?? "<null>"}).",
+                        $"InventoryDropZone: Consumable unequip drop rejected (service={(effectiveService != null ? "yes" : "no")}, unit={(effectiveUnit != null ? effectiveUnit.OwnedUnitId : "<null>")}, slot={draggingFromSlot?.ToString() ?? "<null>"}, draggedSlot={(draggedSlot != null ? draggedSlot.SlotType.ToString() : "<null>")}).",
                         this);
                 }
                 DropReceived?.Invoke(this, eventData);

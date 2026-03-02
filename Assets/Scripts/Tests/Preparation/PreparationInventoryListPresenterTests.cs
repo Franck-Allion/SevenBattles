@@ -32,13 +32,13 @@ namespace SevenBattles.Tests.Preparation
             equipmentDef.Id = "eq.sword";
             equipmentDef.Name = "Sword";
             equipmentDef.Icon = CreateSprite(Color.red);
-            equipmentDef.InventoryBackgroundColor = new Color(0.2f, 0.4f, 0.6f, 1f);
+            equipmentDef.Rarity = ItemRarity.Epic;
 
             var itemDef = ScriptableObject.CreateInstance<ItemDefinition>();
             itemDef.Id = "item.potion";
             itemDef.Name = "Potion";
             itemDef.Icon = CreateSprite(Color.green);
-            itemDef.InventoryBackgroundColor = new Color(0.7f, 0.5f, 0.2f, 1f);
+            itemDef.Rarity = ItemRarity.Uncommon;
 
             inventory.Entries.Add(new InventoryEntry
             {
@@ -80,7 +80,7 @@ namespace SevenBattles.Tests.Preparation
             var firstText = firstView.GetComponentInChildren<TMP_Text>(true);
             Assert.IsNotNull(firstView);
             Assert.AreEqual("1", firstText.text);
-            Assert.AreEqual(equipmentDef.InventoryBackgroundColor, firstBg.color);
+            Assert.AreEqual(ItemRarityColorUtility.GetInventoryBackgroundColor(equipmentDef.Rarity), firstBg.color);
             Assert.AreEqual(equipmentDef.Icon, firstIcon.sprite);
             var firstTooltip = firstView.GetComponent<PreparationInventoryItemTooltipHandler>();
             Assert.IsNotNull(firstTooltip);
@@ -93,7 +93,7 @@ namespace SevenBattles.Tests.Preparation
             var secondText = secondView.GetComponentInChildren<TMP_Text>(true);
             Assert.IsNotNull(secondView);
             Assert.AreEqual("4", secondText.text);
-            Assert.AreEqual(itemDef.InventoryBackgroundColor, secondBg.color);
+            Assert.AreEqual(ItemRarityColorUtility.GetInventoryBackgroundColor(itemDef.Rarity), secondBg.color);
             Assert.AreEqual(itemDef.Icon, secondIcon.sprite);
             var secondTooltip = secondView.GetComponent<PreparationInventoryItemTooltipHandler>();
             Assert.IsNotNull(secondTooltip);
@@ -330,6 +330,60 @@ namespace SevenBattles.Tests.Preparation
             Object.DestroyImmediate(itemTemplate.gameObject);
             Object.DestroyImmediate(emptyTemplate);
             Object.DestroyImmediate(root);
+            Object.DestroyImmediate(inventory);
+            Object.DestroyImmediate(context);
+        }
+
+        [Test]
+        public void RefreshNow_WithPaletteOverride_UsesPaletteRarityColor()
+        {
+            var context = ScriptableObject.CreateInstance<PlayerContext>();
+            var inventory = ScriptableObject.CreateInstance<PlayerInventory>();
+            context.Inventory = inventory;
+            PlayerContext.SetRuntimeInstance(context);
+
+            var equipmentDef = ScriptableObject.CreateInstance<EquipmentDefinition>();
+            equipmentDef.Id = "eq.sword";
+            equipmentDef.Name = "Sword";
+            equipmentDef.Icon = CreateSprite(Color.red);
+            equipmentDef.Rarity = ItemRarity.Epic;
+
+            var equipmentRegistry = ScriptableObject.CreateInstance<EquipmentDefinitionRegistry>();
+            SetPrivate(equipmentRegistry, "_definitions", new[] { equipmentDef });
+
+            inventory.Entries.Add(new InventoryEntry
+            {
+                Kind = InventoryEntry.EntryKind.Equipment,
+                DefinitionId = equipmentDef.Id,
+                Quantity = 1
+            });
+
+            var palette = ScriptableObject.CreateInstance<ItemRarityColorPalette>();
+            Color epicOverride = new Color(0.93f, 0.22f, 0.11f, 1f);
+            SetPrivate(palette, "_epicColor", epicOverride);
+
+            var root = new GameObject("PresenterRoot");
+            var content = new GameObject("Content", typeof(RectTransform)).GetComponent<RectTransform>();
+            content.SetParent(root.transform, false);
+
+            var presenter = root.AddComponent<PreparationInventoryListPresenter>();
+            SetPrivate(presenter, "_rarityColorPalette", palette);
+            var itemTemplate = CreateEntryTemplate("ItemTemplate");
+            var emptyTemplate = CreateEmptyTemplate("ItemEmptyTemplate");
+            presenter.Configure(context, null, content, itemTemplate.gameObject, emptyTemplate, equipmentRegistry, null);
+            presenter.RefreshNow();
+
+            var view = GetActiveSlotAt(content, 0).GetComponent<PreparationInventoryItemEntryView>();
+            var bg = view.GetComponent<Image>();
+            Assert.AreEqual(epicOverride, bg.color);
+
+            Object.DestroyImmediate(itemTemplate.gameObject);
+            Object.DestroyImmediate(emptyTemplate);
+            Object.DestroyImmediate(root);
+            Object.DestroyImmediate(palette);
+            Object.DestroyImmediate(equipmentRegistry);
+            Object.DestroyImmediate(equipmentDef.Icon.texture);
+            Object.DestroyImmediate(equipmentDef);
             Object.DestroyImmediate(inventory);
             Object.DestroyImmediate(context);
         }

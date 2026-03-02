@@ -489,9 +489,9 @@
     <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Interface\Annotations\AnnotationDisabler.cs" />
     <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Windows\AboutWindow\AboutPluginsPage.cs" />
     <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Utilities\MD4.cs" />
-    <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Dependencies\ReorderableList\Internal\SerializedPropertyUtility.cs" />
     <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Graph\GraphPointerData.cs" />
     <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Plugin\Changelogs\LegacyLudiqGraphs\Changelog_1_4_6.cs" />
+    <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Dependencies\ReorderableList\Internal\SerializedPropertyUtility.cs" />
     <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Description\GraphDescriptor.cs" />
     <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Inspection\Unity\ColorInspector.cs" />
     <Compile Include="Library\PackageCache\com.unity.visualscripting@1b53f46e931b\Editor\VisualScripting.Core\Reflection\EnumOptionTree.cs" />

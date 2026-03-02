@@ -214,6 +214,82 @@ namespace SevenBattles.Tests.Preparation
         }
 
         [Test]
+        public void SetEquippedItem_TintsBackgroundByRarity_AndRestoresDefaultOnClear()
+        {
+            var slotGo = new GameObject(
+                "WeaponSlot",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(CanvasGroup),
+                typeof(EquipmentDropSlotView));
+            var slot = slotGo.GetComponent<EquipmentDropSlotView>();
+            slot.SetSlotType(EquipmentSlotType.Weapon);
+
+            var bgGo = new GameObject("Bg", typeof(RectTransform), typeof(Image));
+            bgGo.transform.SetParent(slotGo.transform, false);
+            var bgImage = bgGo.GetComponent<Image>();
+            Color defaultBg = new Color(0.17f, 0.21f, 0.28f, 1f);
+            bgImage.color = defaultBg;
+            bgImage.enabled = true;
+
+            slot.SetBackgroundImage(bgImage);
+            slot.SetEquippedItem(null, null);
+
+            var equippedDefinition = ScriptableObject.CreateInstance<EquipmentDefinition>();
+            equippedDefinition.Id = "eq.weapon.rare";
+            equippedDefinition.SlotType = EquipmentSlotType.Weapon;
+            equippedDefinition.Rarity = ItemRarity.Rare;
+
+            slot.SetEquippedItem(equippedDefinition.Id, equippedDefinition);
+            Assert.AreEqual(ItemRarityColorUtility.GetInventoryBackgroundColor(ItemRarity.Rare), bgImage.color);
+            Assert.IsTrue(bgImage.enabled);
+
+            slot.SetEquippedItem(null, null);
+            Assert.AreEqual(defaultBg, bgImage.color);
+            Assert.IsTrue(bgImage.enabled);
+
+            Object.DestroyImmediate(equippedDefinition);
+            Object.DestroyImmediate(slotGo);
+        }
+
+        [Test]
+        public void SetEquippedItem_WithPaletteOverride_UsesPaletteColor()
+        {
+            var slotGo = new GameObject(
+                "WeaponSlot",
+                typeof(RectTransform),
+                typeof(Image),
+                typeof(CanvasGroup),
+                typeof(EquipmentDropSlotView));
+            var slot = slotGo.GetComponent<EquipmentDropSlotView>();
+            slot.SetSlotType(EquipmentSlotType.Weapon);
+
+            var bgGo = new GameObject("Bg", typeof(RectTransform), typeof(Image));
+            bgGo.transform.SetParent(slotGo.transform, false);
+            var bgImage = bgGo.GetComponent<Image>();
+            bgImage.color = new Color(0.17f, 0.21f, 0.28f, 1f);
+            bgImage.enabled = true;
+            slot.SetBackgroundImage(bgImage);
+
+            var palette = ScriptableObject.CreateInstance<ItemRarityColorPalette>();
+            Color rareOverride = new Color(0.12f, 0.34f, 0.95f, 1f);
+            SetPrivateField(palette, "_rareColor", rareOverride);
+            slot.SetRarityColorPalette(palette);
+
+            var equippedDefinition = ScriptableObject.CreateInstance<EquipmentDefinition>();
+            equippedDefinition.Id = "eq.weapon.rare";
+            equippedDefinition.SlotType = EquipmentSlotType.Weapon;
+            equippedDefinition.Rarity = ItemRarity.Rare;
+
+            slot.SetEquippedItem(equippedDefinition.Id, equippedDefinition);
+            Assert.AreEqual(rareOverride, bgImage.color);
+
+            Object.DestroyImmediate(equippedDefinition);
+            Object.DestroyImmediate(palette);
+            Object.DestroyImmediate(slotGo);
+        }
+
+        [Test]
         public void EnsureIconImage_PrefersAuthoredIconChild_AndDoesNotCreateFallbackIconObject()
         {
             var slotGo = new GameObject(

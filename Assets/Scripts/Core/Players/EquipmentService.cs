@@ -1,4 +1,5 @@
 using System;
+using SevenBattles.Core.Diagnostics;
 using SevenBattles.Core.Items;
 
 namespace SevenBattles.Core.Players
@@ -99,6 +100,9 @@ namespace SevenBattles.Core.Players
             EquipmentDefinition equippedDefinition = _definitionResolver.GetById(slotEntry.DefinitionId);
             if (equippedDefinition == null)
             {
+                SBLog.Warn(
+                    $"EquipmentService: TryUnequip failed because definition '{slotEntry.DefinitionId}' could not be resolved for unit '{unit.OwnedUnitId ?? "<none>"}' slot '{slotType}'.",
+                    null);
                 return false;
             }
 
