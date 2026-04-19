@@ -61,6 +61,7 @@ namespace SevenBattles.Preparation
         public bool IsDragPreviewActive => _isDragPreviewActive;
         public bool IsValidDropPreview => _isValidDropPreview;
         public bool HasEquippedItem => !string.IsNullOrWhiteSpace(_equippedDefinitionId);
+        public bool IsSlotLocked => _isSlotLocked;
         public string EquippedDefinitionId => _equippedDefinitionId;
         public OwnedUnitData SelectedUnit => _selectedUnit;
         public IItemEquipService ItemEquipService => _itemEquipService;
@@ -78,6 +79,7 @@ namespace SevenBattles.Preparation
         private bool _isCompletionVisualActive;
         private bool _isDragPreviewActive;
         private bool _isValidDropPreview;
+        private bool _isSlotLocked;
         private float _pulseTime;
         private Vector3 _baseHighlightScale = Vector3.one;
         private bool _highlightReady;
@@ -136,6 +138,13 @@ namespace SevenBattles.Preparation
                 return;
             }
 
+            if (_isSlotLocked)
+            {
+                _pulseTime = 0f;
+                AnimateHighlight(0f, _availableColor, 1f);
+                return;
+            }
+
             if (InventoryItemDragHandler.IsDraggingItem)
             {
                 AnimateInventoryDragHighlight();
@@ -180,6 +189,20 @@ namespace SevenBattles.Preparation
         public void SetSlotType(ConsumableSlotType slotType)
         {
             _slotType = slotType;
+        }
+
+        public void SetSlotLocked(bool isSlotLocked)
+        {
+            if (_isSlotLocked == isSlotLocked)
+            {
+                return;
+            }
+
+            _isSlotLocked = isSlotLocked;
+            if (_isSlotLocked && _isDraggingThis)
+            {
+                EndEquippedDrag();
+            }
         }
 
         public void SetDragGhostRoot(RectTransform dragGhostRoot)
@@ -264,6 +287,17 @@ namespace SevenBattles.Preparation
 
         public void OnDrop(PointerEventData eventData)
         {
+            if (_isSlotLocked)
+            {
+                if (_enableDiagnostics)
+                {
+                    Core.Diagnostics.SBLog.Info($"ConsumableDropSlotView[{_slotType}]: OnDrop ignored because slot is locked.", this);
+                }
+
+                DropReceived?.Invoke(this, eventData);
+                return;
+            }
+
             if (!InventoryItemDragHandler.IsDraggingItem)
             {
                 if (_enableDiagnostics)
@@ -331,6 +365,15 @@ namespace SevenBattles.Preparation
 
         public void OnBeginDrag(PointerEventData eventData)
         {
+            if (_isSlotLocked)
+            {
+                if (_enableDiagnostics)
+                {
+                    Core.Diagnostics.SBLog.Info($"ConsumableDropSlotView[{_slotType}]: OnBeginDrag ignored because slot is locked.", this);
+                }
+                return;
+            }
+
             if (InventoryItemDragHandler.IsDraggingItem || UnitDragHandler.IsDragging || EquipmentDropSlotView.IsDraggingEquippedItem)
             {
                 if (_enableDiagnostics)

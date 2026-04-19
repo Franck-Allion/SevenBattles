@@ -6,6 +6,8 @@ using SevenBattles.Core.Diagnostics;
 using SevenBattles.Core.Items;
 using SevenBattles.Core.Players;
 using SevenBattles.Core.Save;
+using SevenBattles.Core.Units;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -79,6 +81,8 @@ namespace SevenBattles.Preparation
         private ItemDefinitionRegistry _itemDefinitionRegistry;
         [SerializeField, Tooltip("Optional rarity palette used for equipped-slot background tinting.")]
         private ItemRarityColorPalette _rarityColorPalette;
+        [SerializeField, Tooltip("Optional cached view for consumable slot lock visuals in IconFrame_Object1..4.")]
+        private UnitInventorySlotFramesView _unitInventorySlotFramesView;
         [SerializeField, Tooltip("Optional provider component implementing IEquipmentService.")]
         private MonoBehaviour _equipmentServiceProvider;
         [SerializeField, Tooltip("Optional provider component implementing IItemEquipService.")]
@@ -102,6 +106,7 @@ namespace SevenBattles.Preparation
         private OwnedUnitData _selectedUnitData;
         private bool _isInitialized;
         private bool _squadEventsWired;
+        private bool _ownedUnitEventsWired;
         private bool _equipmentEventsWired;
         private bool _consumableEventsWired;
 
@@ -116,6 +121,7 @@ namespace SevenBattles.Preparation
         {
             EnsureInitialized();
             WireSquadEvents();
+            WireOwnedUnitDataEvents();
             WireEquipmentEvents();
             WireConsumableEvents();
             RefreshFromSelectedUnit("enable");
@@ -124,6 +130,7 @@ namespace SevenBattles.Preparation
         private void OnDisable()
         {
             UnwireSquadEvents();
+            UnwireOwnedUnitDataEvents();
             UnwireEquipmentEvents();
             UnwireConsumableEvents();
         }
@@ -131,6 +138,7 @@ namespace SevenBattles.Preparation
         private void OnDestroy()
         {
             UnwireSquadEvents();
+            UnwireOwnedUnitDataEvents();
             UnwireEquipmentEvents();
             UnwireConsumableEvents();
         }
@@ -250,6 +258,11 @@ namespace SevenBattles.Preparation
                     ? _itemEquipService.GetEquipped(unitData, slotType)
                     : ResolveItemDefinition(FindEquippedConsumableDefinitionId(unitData, slotType));
                 string definitionId = definition != null ? definition.Id : FindEquippedConsumableDefinitionId(unitData, slotType);
+                ResolveConsumableSlotAvailability(unitData, slotType, out bool slotExists, out bool slotUnlocked, out int requiredLevel);
+                if (_unitInventorySlotFramesView != null)
+                {
+                    _unitInventorySlotFramesView.SetSlotState(slotType, slotUnlocked, requiredLevel, slotExists);
+                }
 
                 for (int viewIndex = 0; viewIndex < views.Count; viewIndex++)
                 {
@@ -261,7 +274,7 @@ namespace SevenBattles.Preparation
 
                     view.SetSelectedUnit(unitData);
                     view.SetEquippedItem(definitionId, definition);
-                    view.SetCompletionVisual(definition != null);
+                    view.SetCompletionVisual(definition != null && slotUnlocked && slotExists);
                 }
 
                 if (_enableConsumableDiagnostics)
@@ -285,6 +298,7 @@ namespace SevenBattles.Preparation
             ResolveEquipmentService();
             ResolveItemEquipService();
             EnsureInventoryDropZone();
+            ResolveUnitInventorySlotFramesView();
             DiscoverAndConfigureSlots();
             _isInitialized = true;
         }
@@ -450,6 +464,24 @@ namespace SevenBattles.Preparation
             }
         }
 
+        private void ResolveUnitInventorySlotFramesView()
+        {
+            Transform searchRoot = _inventoryPanelRoot != null ? _inventoryPanelRoot : (transform.root != null ? transform.root : transform);
+            if (_unitInventorySlotFramesView == null && searchRoot != null)
+            {
+                _unitInventorySlotFramesView = searchRoot.GetComponentInChildren<UnitInventorySlotFramesView>(true);
+                if (_unitInventorySlotFramesView == null && _inventoryPanelRoot != null)
+                {
+                    _unitInventorySlotFramesView = _inventoryPanelRoot.gameObject.AddComponent<UnitInventorySlotFramesView>();
+                }
+            }
+
+            if (_unitInventorySlotFramesView != null)
+            {
+                _unitInventorySlotFramesView.Configure(searchRoot);
+            }
+        }
+
         private void DiscoverAndConfigureSlots()
         {
             _slotViews.Clear();
@@ -540,6 +572,10 @@ namespace SevenBattles.Preparation
             TryInjectIconImage(slotView, slotFrame);
             TryInjectItemEquipService(slotView);
             RegisterConsumableSlotView(slotType, slotView);
+            if (_unitInventorySlotFramesView != null)
+            {
+                _unitInventorySlotFramesView.BindSlotView(slotType, slotView);
+            }
             if (_enableConsumableDiagnostics)
             {
                 SBLog.Info(
@@ -921,6 +957,19 @@ namespace SevenBattles.Preparation
             _squadEventsWired = true;
         }
 
+        private void WireOwnedUnitDataEvents()
+        {
+            ResolveSquadSetupController();
+            if (_ownedUnitEventsWired || _squadSetupController == null)
+            {
+                return;
+            }
+
+            _squadSetupController.OwnedUnitChanged -= HandleOwnedUnitDataChanged;
+            _squadSetupController.OwnedUnitChanged += HandleOwnedUnitDataChanged;
+            _ownedUnitEventsWired = true;
+        }
+
         private void UnwireSquadEvents()
         {
             if (!_squadEventsWired || _squadSetupController == null)
@@ -930,6 +979,17 @@ namespace SevenBattles.Preparation
 
             _squadSetupController.UnitSelected -= HandleUnitSelected;
             _squadEventsWired = false;
+        }
+
+        private void UnwireOwnedUnitDataEvents()
+        {
+            if (!_ownedUnitEventsWired || _squadSetupController == null)
+            {
+                return;
+            }
+
+            _squadSetupController.OwnedUnitChanged -= HandleOwnedUnitDataChanged;
+            _ownedUnitEventsWired = false;
         }
 
         private void WireEquipmentEvents()
@@ -981,6 +1041,21 @@ namespace SevenBattles.Preparation
         private void HandleUnitSelected(UnitSpellLoadout _)
         {
             RefreshFromSelectedUnit("selection");
+        }
+
+        private void HandleOwnedUnitDataChanged(OwnedUnitData changedUnit)
+        {
+            OwnedUnitData selected = ResolveSelectedOwnedUnit();
+            _selectedUnitData = selected;
+            if (!AreSameOwnedUnit(changedUnit, selected))
+            {
+                return;
+            }
+
+            RefreshForUnit(selected);
+            SBLog.Info(
+                $"{nameof(InventoryEquipmentPanelPresenter)}: Refreshed consumable slot lock states due to owned-unit data change on selected unit '{ResolveOwnedUnitId(selected)}'.",
+                this);
         }
 
         private void HandleEquipmentChanged(OwnedUnitData changedUnit, EquipmentSlotType _, EquipmentDefinition __)
@@ -1049,6 +1124,24 @@ namespace SevenBattles.Preparation
                 return null;
             }
 
+            if (_squadSetupController != null && !string.IsNullOrWhiteSpace(_squadSetupController.SelectedOwnedUnitId))
+            {
+                IReadOnlyList<OwnedUnitData> ownedById = context.OwnedUnits;
+                for (int i = 0; i < ownedById.Count; i++)
+                {
+                    OwnedUnitData candidateById = ownedById[i];
+                    if (candidateById == null)
+                    {
+                        continue;
+                    }
+
+                    if (string.Equals(candidateById.OwnedUnitId, _squadSetupController.SelectedOwnedUnitId, StringComparison.Ordinal))
+                    {
+                        return candidateById;
+                    }
+                }
+            }
+
             if (MatchesLoadout(_selectedUnitData, loadout))
             {
                 return _selectedUnitData;
@@ -1076,6 +1169,33 @@ namespace SevenBattles.Preparation
             }
 
             return fallback;
+        }
+
+        private static void ResolveConsumableSlotAvailability(OwnedUnitData unitData, ConsumableSlotType slotType, out bool slotExists, out bool slotUnlocked, out int requiredLevel)
+        {
+            slotExists = true;
+            slotUnlocked = true;
+            requiredLevel = 1;
+            if (unitData == null || unitData.Definition == null)
+            {
+                return;
+            }
+
+            UnitDefinition definition = unitData.Definition;
+            if (!definition.TryGetConsumableSlotUnlock(slotType, out slotExists, out requiredLevel))
+            {
+                slotExists = true;
+                requiredLevel = 1;
+            }
+
+            if (!slotExists)
+            {
+                slotUnlocked = false;
+                return;
+            }
+
+            int unitLevel = Mathf.Max(UnitSpellLoadout.DefaultLevel, unitData.EffectiveLevel);
+            slotUnlocked = unitLevel >= Mathf.Max(1, requiredLevel);
         }
 
         private static bool MatchesLoadout(OwnedUnitData ownedUnit, UnitSpellLoadout loadout)
@@ -1230,6 +1350,247 @@ namespace SevenBattles.Preparation
             }
 
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Caches inventory consumable slot frame children and applies lock/unlock visuals.
+    /// </summary>
+    public sealed class UnitInventorySlotFramesView : MonoBehaviour
+    {
+        private const string IconFrameObject1Name = "IconFrame_Object1";
+        private const string IconFrameObject2Name = "IconFrame_Object2";
+        private const string IconFrameObject3Name = "IconFrame_Object3";
+        private const string IconFrameObject4Name = "IconFrame_Object4";
+        private const string LockIconChildName = "LockIcon";
+        private const string LockLevelTextChildName = "LockLevelText";
+        private const string LegacyLockLevelTextChildName = "Text";
+        private const string IconChildName = "Icon";
+
+        [SerializeField, Tooltip("Optional explicit root used to find IconFrame_Object1..4. If null, transform.root is used.")]
+        private Transform _searchRoot;
+
+        private readonly SlotFrameRefs[] _slotFrames =
+        {
+            new SlotFrameRefs(ConsumableSlotType.Object1, IconFrameObject1Name),
+            new SlotFrameRefs(ConsumableSlotType.Object2, IconFrameObject2Name),
+            new SlotFrameRefs(ConsumableSlotType.Object3, IconFrameObject3Name),
+            new SlotFrameRefs(ConsumableSlotType.Object4, IconFrameObject4Name)
+        };
+
+        private bool _resolved;
+
+        public void Configure(Transform searchRoot)
+        {
+            _searchRoot = searchRoot;
+            _resolved = false;
+            EnsureResolved();
+        }
+
+        public void BindSlotView(ConsumableSlotType slotType, ConsumableDropSlotView slotView)
+        {
+            if (!TryGetSlotIndex(slotType, out int slotIndex))
+            {
+                return;
+            }
+
+            EnsureResolved();
+            _slotFrames[slotIndex].SlotView = slotView;
+        }
+
+        public void SetSlotState(ConsumableSlotType slotType, bool isUnlocked, int requiredLevel, bool exists)
+        {
+            if (!TryGetSlotIndex(slotType, out int slotIndex))
+            {
+                return;
+            }
+
+            EnsureResolved();
+            SlotFrameRefs slot = _slotFrames[slotIndex];
+            if (slot.FrameRect == null)
+            {
+                return;
+            }
+
+            GameObject frameObject = slot.FrameRect.gameObject;
+            if (frameObject.activeSelf != exists)
+            {
+                frameObject.SetActive(exists);
+            }
+
+            if (!exists)
+            {
+                if (slot.SlotView != null)
+                {
+                    slot.SlotView.SetSlotLocked(true);
+                }
+
+                return;
+            }
+
+            bool isLocked = !isUnlocked;
+            if (slot.LockIcon != null)
+            {
+                slot.LockIcon.SetActive(isLocked);
+            }
+
+            if (slot.LockLevelText != null)
+            {
+                slot.LockLevelText.gameObject.SetActive(isLocked);
+                if (isLocked)
+                {
+                    slot.LockLevelText.text = requiredLevel > 0 ? requiredLevel.ToString() : string.Empty;
+                }
+            }
+
+            if (slot.IconObject != null)
+            {
+                slot.IconObject.SetActive(!isLocked);
+            }
+
+            if (slot.SlotView != null)
+            {
+                slot.SlotView.SetSlotLocked(isLocked);
+            }
+        }
+
+        private void EnsureResolved()
+        {
+            if (_resolved)
+            {
+                return;
+            }
+
+            Transform root = _searchRoot != null ? _searchRoot : (transform.root != null ? transform.root : transform);
+            for (int i = 0; i < _slotFrames.Length; i++)
+            {
+                SlotFrameRefs slot = _slotFrames[i];
+                slot.FrameRect = FindByName(root, slot.FrameName) as RectTransform;
+                if (slot.FrameRect != null)
+                {
+                    slot.LockIcon = ResolveChild(slot.FrameRect, LockIconChildName);
+                    slot.IconObject = ResolveChild(slot.FrameRect, IconChildName);
+                    slot.LockLevelText = ResolveLockLevelText(slot.FrameRect);
+                }
+            }
+
+            _resolved = true;
+        }
+
+        private static TMP_Text ResolveLockLevelText(Transform slotFrameRoot)
+        {
+            if (slotFrameRoot == null)
+            {
+                return null;
+            }
+
+            GameObject lockLevelObject = ResolveChild(slotFrameRoot, LockLevelTextChildName);
+            if (lockLevelObject == null)
+            {
+                lockLevelObject = ResolveChild(slotFrameRoot, LegacyLockLevelTextChildName);
+            }
+
+            if (lockLevelObject != null)
+            {
+                TMP_Text namedText = lockLevelObject.GetComponent<TMP_Text>();
+                if (namedText != null)
+                {
+                    return namedText;
+                }
+            }
+
+            Transform[] nodes = slotFrameRoot.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                Transform node = nodes[i];
+                if (node == null || node == slotFrameRoot)
+                {
+                    continue;
+                }
+
+                TMP_Text candidate = node.GetComponent<TMP_Text>();
+                if (candidate != null)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static GameObject ResolveChild(Transform root, string childName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(childName))
+            {
+                return null;
+            }
+
+            Transform child = root.Find(childName);
+            if (child == null)
+            {
+                child = FindByName(root, childName);
+            }
+
+            return child != null ? child.gameObject : null;
+        }
+
+        private static Transform FindByName(Transform root, string objectName)
+        {
+            if (root == null || string.IsNullOrWhiteSpace(objectName))
+            {
+                return null;
+            }
+
+            Transform[] nodes = root.GetComponentsInChildren<Transform>(true);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                Transform node = nodes[i];
+                if (node != null && string.Equals(node.name, objectName, StringComparison.Ordinal))
+                {
+                    return node;
+                }
+            }
+
+            return null;
+        }
+
+        private static bool TryGetSlotIndex(ConsumableSlotType slotType, out int slotIndex)
+        {
+            switch (slotType)
+            {
+                case ConsumableSlotType.Object1:
+                    slotIndex = 0;
+                    return true;
+                case ConsumableSlotType.Object2:
+                    slotIndex = 1;
+                    return true;
+                case ConsumableSlotType.Object3:
+                    slotIndex = 2;
+                    return true;
+                case ConsumableSlotType.Object4:
+                    slotIndex = 3;
+                    return true;
+                default:
+                    slotIndex = -1;
+                    return false;
+            }
+        }
+
+        private sealed class SlotFrameRefs
+        {
+            public SlotFrameRefs(ConsumableSlotType slotType, string frameName)
+            {
+                SlotType = slotType;
+                FrameName = frameName;
+            }
+
+            public ConsumableSlotType SlotType { get; }
+            public string FrameName { get; }
+            public RectTransform FrameRect;
+            public GameObject LockIcon;
+            public TMP_Text LockLevelText;
+            public GameObject IconObject;
+            public ConsumableDropSlotView SlotView;
         }
     }
 }

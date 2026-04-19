@@ -49,6 +49,7 @@ namespace SevenBattles.Preparation
         public int ActiveSquadCount => _activeSquadLoadouts.Count;
         public bool IsSquadFull => _squadService != null && _squadService.IsSquadFull;
         public UnitSpellLoadout SelectedUnit => _selectedLoadout;
+        public string SelectedOwnedUnitId => _selectedOwnedUnitId;
         public IReadOnlyList<UnitSpellLoadout> AllAvailableUnits => _allAvailableLoadouts;
         public IReadOnlyList<UnitSpellLoadout> ActiveSquad => _activeSquadLoadouts;
 
@@ -56,6 +57,7 @@ namespace SevenBattles.Preparation
         public event Action<UnitSpellLoadout> UnitRemovedFromSquad;
         public event Action SquadChanged;
         public event Action<UnitSpellLoadout> UnitSelected;
+        public event Action<OwnedUnitData> OwnedUnitChanged;
 
         private void Start()
         {
@@ -386,6 +388,8 @@ namespace SevenBattles.Preparation
             {
                 return;
             }
+
+            OwnedUnitChanged?.Invoke(ownedUnit);
 
             RefreshUnitVisualsByOwnedId(ownedUnit.OwnedUnitId);
             if (string.Equals(_selectedOwnedUnitId, ownedUnit.OwnedUnitId, StringComparison.Ordinal) && _unitInfoView != null)

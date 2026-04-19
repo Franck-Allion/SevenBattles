@@ -62,6 +62,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Scripts\Tests\Preparation\InventoryDropZoneTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Core\UnitDefinitionInventorySlotsTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\WorldBattleBootstrapTransitionTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Preparation\TournamentBattleStartControllerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\BattleBoardGameStateSaveProviderTests.cs" />
@@ -89,6 +90,7 @@
     <Compile Include="Assets\Scripts\Tests\Battle\Units\UnitStatsHealTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Preparation\ActiveSquadGridViewTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\BattlefieldDefinitionTests.cs" />
+    <Compile Include="Assets\Scripts\Tests\Preparation\UnitInventorySlotFramesViewTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Preparation\InventoryItemDragHandlerTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Battle\TileColorEffectsTests.cs" />
     <Compile Include="Assets\Scripts\Tests\Core\ItemEquipServiceTests.cs" />
